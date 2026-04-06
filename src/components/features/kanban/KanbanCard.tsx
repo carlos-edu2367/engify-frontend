@@ -1,7 +1,7 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { motion } from "framer-motion";
-import { GripVertical, Pencil, Trash2, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, GripVertical, Pencil, Trash2, User } from "lucide-react";
 import type { ItemResponse } from "@/types/item.types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ interface KanbanCardProps {
   canDrag?: boolean;
   onEdit?: (item: ItemResponse) => void;
   onDelete?: (item: ItemResponse) => void;
+  onMoveBackward?: (itemId: string) => void;
+  onMoveForward?: (itemId: string) => void;
   onOpenDrawer?: (item: ItemResponse) => void;
   responsavelNome?: string;
 }
@@ -22,6 +24,8 @@ export function KanbanCard({
   canDrag = false,
   onEdit,
   onDelete,
+  onMoveBackward,
+  onMoveForward,
   onOpenDrawer,
   responsavelNome,
 }: KanbanCardProps) {
@@ -51,6 +55,16 @@ export function KanbanCard({
 
   function handleActionPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
     e.stopPropagation();
+  }
+
+  function handleMoveBackward(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    onMoveBackward?.(item.id);
+  }
+
+  function handleMoveForward(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    onMoveForward?.(item.id);
   }
 
   return (
@@ -119,6 +133,36 @@ export function KanbanCard({
           </div>
         )}
       </div>
+      {(onMoveBackward || onMoveForward) && (
+        <div className="mt-3 flex items-center gap-1 border-t pt-2">
+          {onMoveBackward && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 flex-1 gap-1 px-2 text-xs"
+              onClick={handleMoveBackward}
+              onPointerDown={handleActionPointerDown}
+            >
+              <ArrowLeft className="h-3 w-3" />
+              Retornar
+            </Button>
+          )}
+          {onMoveForward && (
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="h-7 flex-1 gap-1 px-2 text-xs"
+              onClick={handleMoveForward}
+              onPointerDown={handleActionPointerDown}
+            >
+              Avancar
+              <ArrowRight className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }

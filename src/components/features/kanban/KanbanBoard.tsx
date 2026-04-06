@@ -118,43 +118,64 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
       : items.find((i) => i.id === overId)?.status;
 
     if (!targetStatus) return;
+    moveItem(activeId, targetStatus, overId);
+  }
 
-    const activeItem = items.find((i) => i.id === activeId);
-    if (!activeItem) return;
-
-    if (activeItem.status === targetStatus && activeId === overId) return;
-
-    // Optimistic update com reordenacao consistente entre colunas
+  function moveItem(itemId: string, targetStatus: ItemStatus, overId?: string) {
+    let didUpdate = false;
     queryClient.setQueryData<ItemResponse[]>(["obras", obraId, "items"], (old = []) => {
       const board = groupItemsByStatus(old);
-      const sourceStatus = activeItem.status;
+      const sourceStatus = STATUSES.find((status) => board[status].some((i) => i.id === itemId));
+      if (!sourceStatus) return old;
+
       const sourceItems = board[sourceStatus];
-      const sourceIndex = sourceItems.findIndex((i) => i.id === activeId);
+      const sourceIndex = sourceItems.findIndex((i) => i.id === itemId);
       if (sourceIndex === -1) return old;
 
+      const movingItem = sourceItems[sourceIndex];
+      if (!movingItem) return old;
+
       if (sourceStatus === targetStatus) {
+        if (!overId) return old;
         const targetIndex =
           overId === targetStatus
             ? sourceItems.length - 1
             : sourceItems.findIndex((i) => i.id === overId);
+
         if (targetIndex === -1 || targetIndex === sourceIndex) return old;
         board[targetStatus] = arrayMove(sourceItems, sourceIndex, targetIndex);
       } else {
         const [moving] = sourceItems.splice(sourceIndex, 1);
         const targetItems = board[targetStatus];
-        const overIndex = targetItems.findIndex((i) => i.id === overId);
+        const overIndex = overId ? targetItems.findIndex((i) => i.id === overId) : -1;
         const insertionIndex = overIndex === -1 ? targetItems.length : overIndex;
         targetItems.splice(insertionIndex, 0, { ...moving, status: targetStatus });
       }
 
+      didUpdate = true;
       return STATUSES.flatMap((status) => board[status]);
     });
 
-    // Persiste na API
-    itemsService.update(obraId, activeId, { status: targetStatus }).catch(() => {
+    if (!didUpdate) return;
+
+    itemsService.update(obraId, itemId, { status: targetStatus }).catch(() => {
       toast.error("Erro ao mover item. Revertendo...");
       queryClient.invalidateQueries({ queryKey: ["obras", obraId, "items"] });
     });
+  }
+
+  function handleStepStatus(itemId: string, direction: "backward" | "forward") {
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+
+    const currentStatusIndex = STATUSES.indexOf(item.status);
+    if (currentStatusIndex === -1) return;
+
+    const targetIndex = direction === "forward" ? currentStatusIndex + 1 : currentStatusIndex - 1;
+    const targetStatus = STATUSES[targetIndex];
+    if (!targetStatus) return;
+
+    moveItem(itemId, targetStatus);
   }
 
   function scrollToMobileColumn(status: ItemStatus) {
@@ -303,6 +324,8 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
                 onAddItem={canEdit ? openAddDialog : undefined}
                 onEditItem={canEdit ? openEditDialog : undefined}
                 onDeleteItem={canEdit ? setDeletingItem : undefined}
+                onMoveItemForward={canEdit ? (itemId) => handleStepStatus(itemId, "forward") : undefined}
+                onMoveItemBackward={canEdit ? (itemId) => handleStepStatus(itemId, "backward") : undefined}
                 onOpenDrawer={setDrawerItem}
                 usersMap={usersMap}
                 className="w-full"
@@ -321,6 +344,8 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
               onAddItem={canEdit ? openAddDialog : undefined}
               onEditItem={canEdit ? openEditDialog : undefined}
               onDeleteItem={canEdit ? setDeletingItem : undefined}
+              onMoveItemForward={canEdit ? (itemId) => handleStepStatus(itemId, "forward") : undefined}
+              onMoveItemBackward={canEdit ? (itemId) => handleStepStatus(itemId, "backward") : undefined}
               onOpenDrawer={setDrawerItem}
               usersMap={usersMap}
             />

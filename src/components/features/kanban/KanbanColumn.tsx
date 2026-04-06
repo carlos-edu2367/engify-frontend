@@ -19,6 +19,8 @@ interface KanbanColumnProps {
   onAddItem?: (status: ItemStatus) => void;
   onEditItem?: (item: ItemResponse) => void;
   onDeleteItem?: (item: ItemResponse) => void;
+  onMoveItemBackward?: (itemId: string) => void;
+  onMoveItemForward?: (itemId: string) => void;
   onOpenDrawer?: (item: ItemResponse) => void;
   usersMap?: Record<string, string>;
   className?: string;
@@ -31,6 +33,8 @@ export function KanbanColumn({
   onAddItem,
   onEditItem,
   onDeleteItem,
+  onMoveItemBackward,
+  onMoveItemForward,
   onOpenDrawer,
   usersMap = {},
   className,
@@ -67,6 +71,8 @@ export function KanbanColumn({
                 canDrag={canDrag}
                 onEdit={onEditItem}
                 onDelete={onDeleteItem}
+                onMoveBackward={status !== "planejamento" ? onMoveItemBackward : undefined}
+                onMoveForward={status !== "finalizado" ? onMoveItemForward : undefined}
                 onOpenDrawer={onOpenDrawer}
                 responsavelNome={item.responsavel_id ? usersMap[item.responsavel_id] : undefined}
               />
