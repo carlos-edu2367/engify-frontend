@@ -29,6 +29,7 @@ export function KanbanCard({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging: isSortableDragging,
@@ -38,8 +39,6 @@ export function KanbanCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
-  const dragProps = canDrag ? { ...attributes, ...listeners } : {};
-
   function handleEditClick(e: React.MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
     onEdit?.(item);
@@ -60,20 +59,26 @@ export function KanbanCard({
       style={style}
       layout
       layoutId={item.id}
-      {...dragProps}
       onClick={() => onOpenDrawer?.(item)}
       className={cn(
         "rounded-lg border bg-card p-3 shadow-sm select-none cursor-pointer hover:shadow-md transition-shadow",
-        canDrag && "cursor-grab active:cursor-grabbing touch-none",
         isSortableDragging && "opacity-40",
         isDragging && "kanban-drag-overlay"
       )}
     >
       <div className="flex items-start gap-2">
         {canDrag && (
-          <span className="mt-0.5 text-muted-foreground/70 shrink-0">
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            className="mt-0.5 shrink-0 rounded-sm p-0.5 text-muted-foreground/70 touch-none cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Arrastar item ${item.title}`}
+            {...attributes}
+            {...listeners}
+          >
             <GripVertical className="h-4 w-4" />
-          </span>
+          </button>
         )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium leading-tight">{item.title}</p>

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type { Role } from "@/types/auth.types";
 
 export interface AuthUser {
@@ -13,25 +14,59 @@ interface AuthState {
   accessToken: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
+  isBootstrapping: boolean;
+  hasBootstrapped: boolean;
   setAuth: (token: string, user: AuthUser) => void;
   setAccessToken: (token: string) => void;
   setUser: (user: AuthUser) => void;
+  startBootstrap: () => void;
+  finishBootstrap: () => void;
+  clearAuth: () => void;
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>()((set) => ({
-  accessToken: null,
-  user: null,
-  isAuthenticated: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      accessToken: null,
+      user: null,
+      isAuthenticated: false,
+      isBootstrapping: false,
+      hasBootstrapped: false,
 
-  setAuth: (token, user) =>
-    set({ accessToken: token, user, isAuthenticated: true }),
+      setAuth: (token, user) =>
+        set({ accessToken: token, user, isAuthenticated: true }),
 
-  setAccessToken: (token) =>
-    set({ accessToken: token, isAuthenticated: true }),
+      setAccessToken: (token) =>
+        set({ accessToken: token, isAuthenticated: true }),
 
-  setUser: (user) => set({ user }),
+      setUser: (user) => set({ user }),
 
-  logout: () =>
-    set({ accessToken: null, user: null, isAuthenticated: false }),
-}));
+      startBootstrap: () => set({ isBootstrapping: true }),
+
+      finishBootstrap: () =>
+        set({ isBootstrapping: false, hasBootstrapped: true }),
+
+      clearAuth: () =>
+        set({ accessToken: null, user: null, isAuthenticated: false }),
+
+      logout: () =>
+        set({
+          accessToken: null,
+          user: null,
+          isAuthenticated: false,
+          isBootstrapping: false,
+          hasBootstrapped: true,
+        }),
+    }),
+    {
+      name: "engify-auth",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
+  )
+);

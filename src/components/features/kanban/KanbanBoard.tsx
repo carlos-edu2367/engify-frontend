@@ -1,11 +1,13 @@
 import { type UIEvent, useRef, useState, useMemo } from "react";
 import {
+  closestCorners,
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
+  type DragCancelEvent,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -70,6 +72,7 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   const [deletingItem, setDeletingItem] = useState<ItemResponse | null>(null);
   const [drawerItem, setDrawerItem] = useState<ItemResponse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [mobileStatus, setMobileStatus] = useState<ItemStatus>("planejamento");
   const mobileColumnsRef = useRef<Record<ItemStatus, HTMLDivElement | null>>({
     planejamento: null,
@@ -78,9 +81,9 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   });
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 6 },
+      activationConstraint: { delay: 220, tolerance: 10 },
     })
   );
 
@@ -90,11 +93,18 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   }, [items]);
 
   function handleDragStart(event: DragStartEvent) {
+    setIsDragging(true);
     const item = items.find((i) => i.id === event.active.id);
     setActiveItem(item ?? null);
   }
 
+  function handleDragCancel(_: DragCancelEvent) {
+    setIsDragging(false);
+    setActiveItem(null);
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    setIsDragging(false);
     setActiveItem(null);
     const { active, over } = event;
     if (!over) return;
@@ -123,8 +133,11 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
       if (sourceIndex === -1) return old;
 
       if (sourceStatus === targetStatus) {
-        const targetIndex = sourceItems.findIndex((i) => i.id === overId);
-        if (targetIndex === -1) return old;
+        const targetIndex =
+          overId === targetStatus
+            ? sourceItems.length - 1
+            : sourceItems.findIndex((i) => i.id === overId);
+        if (targetIndex === -1 || targetIndex === sourceIndex) return old;
         board[targetStatus] = arrayMove(sourceItems, sourceIndex, targetIndex);
       } else {
         const [moving] = sourceItems.splice(sourceIndex, 1);
@@ -154,6 +167,7 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   }
 
   function handleMobileBoardScroll(e: UIEvent<HTMLDivElement>) {
+    if (isDragging) return;
     const container = e.currentTarget;
     const center = container.scrollLeft + container.clientWidth / 2;
 
@@ -243,7 +257,13 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
 
   return (
     <>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext
+        collisionDetection={closestCorners}
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragCancel={handleDragCancel}
+        onDragEnd={handleDragEnd}
+      >
         <div className="mb-3 flex gap-2 overflow-x-auto pb-1 md:hidden">
           {STATUSES.map((status) => (
             <Button
@@ -261,7 +281,13 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
           ))}
         </div>
 
-        <div className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth pb-2 md:hidden" onScroll={handleMobileBoardScroll}>
+        <div
+          className={cn(
+            "flex snap-x snap-mandatory overflow-x-auto scroll-smooth pb-2 md:hidden touch-pan-x",
+            isDragging && "snap-none overflow-x-hidden"
+          )}
+          onScroll={handleMobileBoardScroll}
+        >
           {STATUSES.map((status) => (
             <div
               key={status}
