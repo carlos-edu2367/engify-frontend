@@ -30,17 +30,24 @@ export const storageService = {
       content_type: file.type,
     });
 
-    // Auditoria: Supabase exige o prefixo /storage/v1/ em produção para CORS correto.
-    // Algumas configurações de backend retornam a URL sem este prefixo.
+    // Auditoria Robusta: Garantir prefixo /storage/v1/ via API URL nativa
     let finalUrl = upload_url;
-    if (!upload_url.includes("/storage/v1/")) {
-      finalUrl = upload_url.replace(".co/object/", ".co/storage/v1/object/");
+    try {
+      const urlObj = new URL(upload_url);
+      if (!urlObj.pathname.startsWith("/storage/v1/")) {
+        urlObj.pathname = "/storage/v1" + urlObj.pathname;
+        finalUrl = urlObj.toString();
+        console.log("[Storage Audit] URL normalizada para:", finalUrl);
+      }
+    } catch (e) {
+      console.error("[Storage Audit] Falha ao normalizar URL:", e);
     }
 
     await fetch(finalUrl, {
       method: "PUT",
       headers: { "Content-Type": file.type },
       mode: "cors",
+      credentials: "omit", // Garante que nenhum cookie/auth header interfira no signed URL
       body: file,
     });
 
