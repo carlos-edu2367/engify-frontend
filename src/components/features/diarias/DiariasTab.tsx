@@ -74,7 +74,10 @@ export function DiariasTab({ obraId }: DiariasTabProps) {
     setValue: setCreateValue,
     reset: resetCreate,
     formState: { errors: createErrors },
-  } = useForm<DiariaFormValues>({ resolver: zodResolver(diariaSchema) });
+  } = useForm<DiariaFormValues>({
+    resolver: zodResolver(diariaSchema),
+    defaultValues: { obra_id: obraId },
+  });
 
   // ─── Edit ──────────────────────────────────────────────
   const editMutation = useMutation({
@@ -97,7 +100,10 @@ export function DiariasTab({ obraId }: DiariasTabProps) {
     register: registerEdit,
     handleSubmit: handleEdit,
     reset: resetEdit,
-  } = useForm<DiariaFormValues>({ resolver: zodResolver(diariaSchema) });
+  } = useForm<DiariaFormValues>({
+    resolver: zodResolver(diariaSchema),
+    defaultValues: { obra_id: obraId },
+  });
 
   function openEdit(d: DiariesResponse) {
     resetEdit({
