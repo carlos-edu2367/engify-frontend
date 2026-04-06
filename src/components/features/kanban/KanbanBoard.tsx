@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { type UIEvent, useRef, useState, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -40,6 +40,20 @@ const STATUS_LABELS: Record<ItemStatus, string> = {
   finalizado: "Finalizado",
 };
 
+function groupItemsByStatus(items: ItemResponse[]) {
+  const grouped: Record<ItemStatus, ItemResponse[]> = {
+    planejamento: [],
+    em_andamento: [],
+    finalizado: [],
+  };
+
+  for (const item of items) {
+    grouped[item.status].push(item);
+  }
+
+  return grouped;
+}
+
 interface KanbanBoardProps {
   obraId: string;
   items: ItemResponse[];
@@ -56,6 +70,11 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   const [drawerItem, setDrawerItem] = useState<ItemResponse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mobileStatus, setMobileStatus] = useState<ItemStatus>("planejamento");
+  const mobileColumnsRef = useRef<Record<ItemStatus, HTMLDivElement | null>>({
+    planejamento: null,
+    em_andamento: null,
+    finalizado: null,
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -63,15 +82,7 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
 
   // Agrupa items por status
   const itemsByStatus = useMemo(() => {
-    const map: Record<ItemStatus, ItemResponse[]> = {
-      planejamento: [],
-      em_andamento: [],
-      finalizado: [],
-    };
-    for (const item of items) {
-      if (map[item.status]) map[item.status].push(item);
-    }
-    return map;
+    return groupItemsByStatus(items);
   }, [items]);
 
   function handleDragStart(event: DragStartEvent) {
@@ -99,26 +110,27 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
 
     if (activeItem.status === targetStatus && activeId === overId) return;
 
-    // Optimistic update
+    // Optimistic update com reordenacao consistente entre colunas
     queryClient.setQueryData<ItemResponse[]>(["obras", obraId, "items"], (old = []) => {
-      const updated = old.map((i) =>
-        i.id === activeId ? { ...i, status: targetStatus } : i
-      );
-      // Reordena dentro da mesma coluna
-      if (activeItem.status === targetStatus) {
-        const columnItems = updated.filter((i) => i.status === targetStatus);
-        const oldIndex = columnItems.findIndex((i) => i.id === activeId);
-        const newIndex = columnItems.findIndex((i) => i.id === overId);
-        if (oldIndex !== -1 && newIndex !== -1) {
-          const reordered = arrayMove(columnItems, oldIndex, newIndex);
-          return updated.map((i) =>
-            i.status === targetStatus
-              ? reordered.find((r) => r.id === i.id) ?? i
-              : i
-          );
-        }
+      const board = groupItemsByStatus(old);
+      const sourceStatus = activeItem.status;
+      const sourceItems = board[sourceStatus];
+      const sourceIndex = sourceItems.findIndex((i) => i.id === activeId);
+      if (sourceIndex === -1) return old;
+
+      if (sourceStatus === targetStatus) {
+        const targetIndex = sourceItems.findIndex((i) => i.id === overId);
+        if (targetIndex === -1) return old;
+        board[targetStatus] = arrayMove(sourceItems, sourceIndex, targetIndex);
+      } else {
+        const [moving] = sourceItems.splice(sourceIndex, 1);
+        const targetItems = board[targetStatus];
+        const overIndex = targetItems.findIndex((i) => i.id === overId);
+        const insertionIndex = overIndex === -1 ? targetItems.length : overIndex;
+        targetItems.splice(insertionIndex, 0, { ...moving, status: targetStatus });
       }
-      return updated;
+
+      return STATUSES.flatMap((status) => board[status]);
     });
 
     // Persiste na API
@@ -126,6 +138,38 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
       toast.error("Erro ao mover item. Revertendo...");
       queryClient.invalidateQueries({ queryKey: ["obras", obraId, "items"] });
     });
+  }
+
+  function scrollToMobileColumn(status: ItemStatus) {
+    setMobileStatus(status);
+    mobileColumnsRef.current[status]?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "start",
+    });
+  }
+
+  function handleMobileBoardScroll(e: UIEvent<HTMLDivElement>) {
+    const container = e.currentTarget;
+    const center = container.scrollLeft + container.clientWidth / 2;
+
+    let closestStatus: ItemStatus = mobileStatus;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    for (const status of STATUSES) {
+      const el = mobileColumnsRef.current[status];
+      if (!el) continue;
+      const elCenter = el.offsetLeft + el.clientWidth / 2;
+      const distance = Math.abs(center - elCenter);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestStatus = status;
+      }
+    }
+
+    if (closestStatus !== mobileStatus) {
+      setMobileStatus(closestStatus);
+    }
   }
 
   // Form para criar/editar item
@@ -203,7 +247,7 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
               type="button"
               variant={mobileStatus === status ? "default" : "outline"}
               className={cn("h-10 snap-start whitespace-nowrap px-4", mobileStatus === status && "shadow-sm")}
-              onClick={() => setMobileStatus(status)}
+              onClick={() => scrollToMobileColumn(status)}
             >
               {STATUS_LABELS[status]}
               <span className="ml-2 rounded-full bg-background/90 px-2 py-0.5 text-xs text-foreground">
@@ -213,19 +257,28 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
           ))}
         </div>
 
-        <div className="md:hidden">
-          <KanbanColumn
-            key={mobileStatus}
-            status={mobileStatus}
-            items={itemsByStatus[mobileStatus]}
-            canDrag={canEdit}
-            onAddItem={canEdit ? openAddDialog : undefined}
-            onEditItem={canEdit ? openEditDialog : undefined}
-            onDeleteItem={canEdit ? setDeletingItem : undefined}
-            onOpenDrawer={setDrawerItem}
-            usersMap={usersMap}
-            className="w-full"
-          />
+        <div className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth pb-2 md:hidden" onScroll={handleMobileBoardScroll}>
+          {STATUSES.map((status) => (
+            <div
+              key={status}
+              ref={(el) => {
+                mobileColumnsRef.current[status] = el;
+              }}
+              className="min-w-full snap-start pr-2"
+            >
+              <KanbanColumn
+                status={status}
+                items={itemsByStatus[status]}
+                canDrag={canEdit}
+                onAddItem={canEdit ? openAddDialog : undefined}
+                onEditItem={canEdit ? openEditDialog : undefined}
+                onDeleteItem={canEdit ? setDeletingItem : undefined}
+                onOpenDrawer={setDrawerItem}
+                usersMap={usersMap}
+                className="w-full"
+              />
+            </div>
+          ))}
         </div>
 
         <div className="hidden gap-4 overflow-x-auto pb-4 md:flex">

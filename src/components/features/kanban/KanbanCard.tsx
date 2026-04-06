@@ -38,6 +38,7 @@ export function KanbanCard({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+  const dragProps = canDrag ? { ...attributes, ...listeners } : {};
 
   function handleEditClick(e: React.MouseEvent<HTMLButtonElement>) {
     e.stopPropagation();
@@ -49,28 +50,30 @@ export function KanbanCard({
     onDelete?.(item);
   }
 
+  function handleActionPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+  }
+
   return (
     <motion.div
       ref={setNodeRef}
       style={style}
       layout
       layoutId={item.id}
+      {...dragProps}
       onClick={() => onOpenDrawer?.(item)}
       className={cn(
         "rounded-lg border bg-card p-3 shadow-sm select-none cursor-pointer hover:shadow-md transition-shadow",
+        canDrag && "cursor-grab active:cursor-grabbing",
         isSortableDragging && "opacity-40",
         isDragging && "kanban-drag-overlay"
       )}
     >
       <div className="flex items-start gap-2">
         {canDrag && (
-          <button
-            {...attributes}
-            {...listeners}
-            className="mt-0.5 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0"
-          >
+          <span className="mt-0.5 text-muted-foreground/70 shrink-0">
             <GripVertical className="h-4 w-4" />
-          </button>
+          </span>
         )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium leading-tight">{item.title}</p>
@@ -87,7 +90,13 @@ export function KanbanCard({
         {(onEdit || onDelete) && (
           <div className="flex shrink-0 gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
             {onEdit && (
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleEditClick}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={handleEditClick}
+                onPointerDown={handleActionPointerDown}
+              >
                 <Pencil className="h-3 w-3" />
               </Button>
             )}
@@ -97,6 +106,7 @@ export function KanbanCard({
                 size="icon"
                 className="h-7 w-7 text-destructive hover:text-destructive"
                 onClick={handleDeleteClick}
+                onPointerDown={handleActionPointerDown}
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
