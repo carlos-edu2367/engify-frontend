@@ -52,6 +52,16 @@ api.interceptors.response.use(
 
     const originalRequest = axiosError.config;
     const status = axiosError.response?.status;
+    const requestUrl =
+      typeof (originalRequest as { url?: unknown }).url === "string"
+        ? ((originalRequest as { url?: string }).url as string)
+        : "";
+    const isRefreshRequest = requestUrl.includes("/auth/refresh");
+
+    // Nunca tenta "refresh do refresh": deixa a tela tratadora decidir o fluxo.
+    if (status === 401 && isRefreshRequest) {
+      return Promise.reject(error);
+    }
 
     if (status === 401 && !originalRequest._retry) {
       if (isRefreshing) {

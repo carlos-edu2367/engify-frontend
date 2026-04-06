@@ -10,40 +10,48 @@ interface ProtectedRouteProps {
   children?: ReactNode;
 }
 
+let restoreSessionPromise: Promise<void> | null = null;
+
 export function ProtectedRoute({ roles, children }: ProtectedRouteProps) {
   const { isAuthenticated, user, setAccessToken, setUser } = useAuthStore();
   const [initializing, setInitializing] = useState(!isAuthenticated);
   const attempted = useRef(false);
 
   useEffect(() => {
-    // Se já autenticado (não é reload) ou já tentou restaurar, não faz nada
+    // Se ja autenticado (nao e reload) ou ja tentou restaurar, nao faz nada
     if (isAuthenticated || attempted.current) {
       setInitializing(false);
       return;
     }
     attempted.current = true;
 
-    // Tenta restaurar sessão usando o cookie HttpOnly do refresh token
-    authService
-      .refresh()
-      .then(({ access_token }) => {
-        // Injeta o token no store para que o interceptor axios use nas próximas chamadas
-        setAccessToken(access_token);
-        return authService.me();
-      })
-      .then((me) => {
-        setUser({
-          id: me.id,
-          nome: me.nome,
-          email: me.email,
-          role: me.role,
-          teamId: me.team_id,
+    if (!restoreSessionPromise) {
+      // Tenta restaurar sessao usando o cookie HttpOnly do refresh token
+      restoreSessionPromise = authService
+        .refresh()
+        .then(({ access_token }) => {
+          // Injeta o token no store para que o interceptor axios use nas proximas chamadas
+          setAccessToken(access_token);
+          return authService.me();
+        })
+        .then((me) => {
+          setUser({
+            id: me.id,
+            nome: me.nome,
+            email: me.email,
+            role: me.role,
+            teamId: me.team_id,
+          });
+        })
+        .catch(() => {
+          // Cookie expirado ou revogado: usuario vai para login
+        })
+        .finally(() => {
+          restoreSessionPromise = null;
         });
-      })
-      .catch(() => {
-        // Cookie expirado ou revogado — usuário vai para login
-      })
-      .finally(() => setInitializing(false));
+    }
+
+    restoreSessionPromise.finally(() => setInitializing(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (initializing) {

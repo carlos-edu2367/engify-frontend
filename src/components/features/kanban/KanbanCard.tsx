@@ -64,7 +64,7 @@ export function KanbanCard({
       onClick={() => onOpenDrawer?.(item)}
       className={cn(
         "rounded-lg border bg-card p-3 shadow-sm select-none cursor-pointer hover:shadow-md transition-shadow",
-        canDrag && "cursor-grab active:cursor-grabbing",
+        canDrag && "cursor-grab active:cursor-grabbing touch-none",
         isSortableDragging && "opacity-40",
         isDragging && "kanban-drag-overlay"
       )}
