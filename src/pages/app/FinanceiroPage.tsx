@@ -1,0 +1,626 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, Check, QrCode, ChevronDown, ChevronUp } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PageTransition } from "@/components/layout/PageTransition";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
+import { financeiroService } from "@/services/financeiro.service";
+import {
+  movimentacaoSchema,
+  pagamentoSchema,
+  type MovimentacaoFormValues,
+  type PagamentoFormValues,
+} from "@/lib/schemas/financeiro.schemas";
+import { formatISO, parseISO } from "date-fns";
+import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
+import type { MovClass, PagamentoResponse, PagamentoStatus } from "@/types/financeiro.types";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { obrasService } from "@/services/obras.service";
+
+const classeLabels: Record<MovClass, string> = {
+  diarista: "Diarista",
+  servico: "Serviço",
+  contrato: "Contrato",
+  material: "Material",
+  fixo: "Fixo",
+  operacional: "Operacional",
+};
+
+// ─── PIX Code Copy Button ────────────────────────────────────────────────────
+function PixCopyButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      toast.success("Código PIX copiado!");
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors border border-emerald-500/20"
+      title="Copiar código PIX"
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? "Copiado!" : "Copiar"}
+    </button>
+  );
+}
+
+// ─── PIX Block inside a payment card ─────────────────────────────────────────
+function PixBlock({ code }: { code: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+      <button
+        className="flex w-full items-center justify-between gap-2 text-left"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="flex items-center gap-2">
+          <QrCode className="h-4 w-4 text-emerald-500" />
+          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            PIX Copia e Cola disponível
+          </span>
+        </div>
+        {expanded ? (
+          <ChevronUp className="h-4 w-4 text-emerald-500" />
+        ) : (
+          <ChevronDown className="h-4 w-4 text-emerald-500" />
+        )}
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-2">
+          <p className="break-all rounded-md bg-background/80 border border-border px-3 py-2 font-mono text-[11px] text-foreground/80 select-all">
+            {code}
+          </p>
+          <PixCopyButton code={code} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Types and Grouping Component ────────────────────────────────────────────
+interface PagamentoGroup {
+  type: "group";
+  diarist_id: string;
+  diarist_title: string;
+  payment_cod?: string;
+  total_valor: number;
+  items: PagamentoResponse[];
+}
+
+interface PagamentoSingle {
+  type: "single";
+  item: PagamentoResponse;
+}
+
+type RenderablePagamento = PagamentoGroup | PagamentoSingle;
+
+function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Card className="border-emerald-500/30 shadow-sm">
+      <CardContent className="py-4 space-y-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium">{group.diarist_title}</p>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary/70 bg-primary/5">
+                {group.items.length} diárias
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pagamentos pendentes agendados para este diarista
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <p className="font-bold">{formatCurrency(group.total_valor.toString())}</p>
+            <Button size="sm" variant="outline" onClick={() => setExpanded(!expanded)}>
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {group.payment_cod && (
+          <div className="mt-2 text-left">
+            <PixBlock code={group.payment_cod} />
+          </div>
+        )}
+
+        {expanded && (
+          <div className="mt-4 space-y-2 border-t pt-4">
+            {group.items.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-4 rounded-md border border-border/50 bg-muted/20 p-3">
+                 <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{p.details || "Diária"}</p>
+                    {p.data_agendada && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Vencimento: {formatDate(p.data_agendada)}
+                      </p>
+                    )}
+                 </div>
+                 <div className="flex items-center gap-3 shrink-0">
+                    <p className="text-sm font-bold">{formatCurrency(p.valor)}</p>
+                    <Button size="sm" onClick={() => onPay(p.id)}>
+                      Pagar
+                    </Button>
+                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function FinanceiroPage() {
+  const queryClient = useQueryClient();
+  const [createMovOpen, setCreateMovOpen] = useState(false);
+  const [createPagOpen, setCreatePagOpen] = useState(false);
+  const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
+
+  // Filtros de Movimentações
+  const [movPeriodo, setMovPeriodo] = useState<{ start: string; end: string }>({ start: "", end: "" });
+  const [movObraId, setMovObraId] = useState<string>("");
+  const [movClasse, setMovClasse] = useState<MovClass | "all">("all");
+
+  // Filtros de Pagamentos
+  const [pagStatus, setPagStatus] = useState<PagamentoStatus | "all">("all");
+
+  // Obras para o filtro
+  const { data: obrasData } = useQuery({
+    queryKey: ["obras", "all"],
+    queryFn: () => obrasService.list({ limit: 50, status: "all" }),
+  });
+  const obrasOptions = (obrasData?.items ?? []).map((o) => ({ value: o.id, label: o.title }));
+
+  const { data: movsData, isLoading: movsLoading } = useQuery({
+    queryKey: ["financeiro", "movimentacoes", { pStart: movPeriodo.start, pEnd: movPeriodo.end, obra: movObraId, classe: movClasse }],
+    queryFn: () =>
+      financeiroService.listMovimentacoes({
+        limit: 50,
+        period_start: movPeriodo.start ? new Date(movPeriodo.start).toISOString() : undefined,
+        period_end: movPeriodo.end ? new Date(movPeriodo.end + "T23:59:59").toISOString() : undefined,
+        obra_id: movObraId || undefined,
+        classe: movClasse,
+      }),
+  });
+
+  const { data: pagsData, isLoading: pagsLoading } = useQuery({
+    queryKey: ["financeiro", "pagamentos", { status: pagStatus }],
+    queryFn: () => financeiroService.listPagamentos({ limit: 50, status: pagStatus }),
+  });
+
+  const createMovMutation = useMutation({
+    mutationFn: (v: MovimentacaoFormValues) => financeiroService.createMovimentacao(v),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      toast.success("Movimentação registrada!");
+      setCreateMovOpen(false);
+      resetMov();
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const createPagMutation = useMutation({
+    mutationFn: (v: PagamentoFormValues) =>
+      financeiroService.createPagamento({
+        ...v,
+        data_agendada: v.data_agendada
+          ? formatISO(parseISO(v.data_agendada))
+          : undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      toast.success("Pagamento agendado!");
+      setCreatePagOpen(false);
+      resetPag();
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const payMutation = useMutation({
+    mutationFn: (id: string) => financeiroService.payPagamento(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      toast.success("Pagamento efetuado!");
+      setConfirmPayId(null);
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const {
+    register: registerMov,
+    handleSubmit: handleSubmitMov,
+    setValue: setValueMov,
+    reset: resetMov,
+    formState: { errors: errorsMov },
+  } = useForm<MovimentacaoFormValues>({ resolver: zodResolver(movimentacaoSchema) });
+
+  const {
+    register: registerPag,
+    handleSubmit: handleSubmitPag,
+    setValue: setValuePag,
+    reset: resetPag,
+    formState: { errors: errorsPag },
+  } = useForm<PagamentoFormValues>({ resolver: zodResolver(pagamentoSchema) });
+
+  const movs = movsData?.items ?? [];
+  const pags = pagsData?.items ?? [];
+  const totalEntradas = movs.filter((m) => m.type === "entrada").reduce((s, m) => s + parseFloat(m.valor), 0);
+  const totalSaidas = movs.filter((m) => m.type === "saida").reduce((s, m) => s + parseFloat(m.valor), 0);
+  const pendentes = pags.filter((p) => p.status === "aguardando");
+
+  const renderPags: RenderablePagamento[] = [];
+  const pendingByDiarista = new Map<string, PagamentoResponse[]>();
+
+  pags.forEach((p) => {
+    if (p.status === "aguardando" && p.classe === "diarista" && p.diarist_id) {
+      if (!pendingByDiarista.has(p.diarist_id)) {
+        pendingByDiarista.set(p.diarist_id, []);
+      }
+      pendingByDiarista.get(p.diarist_id)!.push(p);
+    } else {
+      renderPags.push({ type: "single", item: p });
+    }
+  });
+
+  pendingByDiarista.forEach((groupItems) => {
+    if (groupItems.length === 1) {
+      renderPags.push({ type: "single", item: groupItems[0] });
+    } else {
+      const total = groupItems.reduce((acc, p) => acc + parseFloat(p.valor), 0);
+      renderPags.push({
+        type: "group",
+        diarist_id: groupItems[0].diarist_id!,
+        diarist_title: groupItems[0].title,
+        payment_cod: groupItems[0].payment_cod,
+        total_valor: total,
+        items: groupItems,
+      });
+    }
+  });
+
+  return (
+    <PageTransition>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Financeiro</h1>
+
+        {/* KPIs */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm text-muted-foreground font-normal">Entradas</CardTitle>
+              <TrendingUp className="h-4 w-4 text-emerald-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                {formatCurrency(totalEntradas)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm text-muted-foreground font-normal">Saídas</CardTitle>
+              <TrendingDown className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-bold text-destructive">{formatCurrency(totalSaidas)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm text-muted-foreground font-normal">Pagamentos Pendentes</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-bold">{pendentes.length}</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="movimentacoes">
+          <TabsList>
+            <TabsTrigger value="movimentacoes">Movimentações</TabsTrigger>
+            <TabsTrigger value="pagamentos">
+              Pagamentos
+              {pendentes.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-xs text-white">
+                  {pendentes.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Movimentações */}
+          <TabsContent value="movimentacoes" className="mt-4 space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                  <Input 
+                    type="date" 
+                    value={movPeriodo.start} 
+                    onChange={(e) => setMovPeriodo(prev => ({ ...prev, start: e.target.value }))}
+                    className="h-9 w-36 text-xs" 
+                    title="Data Inicial"
+                  />
+                  <span className="text-muted-foreground text-xs">até</span>
+                  <Input 
+                    type="date" 
+                    value={movPeriodo.end} 
+                    onChange={(e) => setMovPeriodo(prev => ({ ...prev, end: e.target.value }))}
+                    className="h-9 w-36 text-xs" 
+                    title="Data Final"
+                  />
+                </div>
+                
+                <div className="w-full sm:w-56">
+                  <SearchableSelect 
+                    options={obrasOptions} 
+                    value={movObraId} 
+                    onChange={setMovObraId} 
+                    allOptionLabel="Todas as obras"
+                    placeholder="Filtrar por obra..."
+                  />
+                </div>
+
+                <div className="w-full sm:w-40">
+                  <Select value={movClasse} onValueChange={(v) => setMovClasse(v as MovClass | "all")}>
+                    <SelectTrigger className="h-9 truncate"><SelectValue placeholder="Classe" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas classes</SelectItem>
+                      {Object.entries(classeLabels).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <Button size="sm" onClick={() => setCreateMovOpen(true)} className="shrink-0">
+                <Plus className="h-4 w-4 mr-1" />
+                Nova Movimentação
+              </Button>
+            </div>
+            
+            {movsLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+            ) : movs.length === 0 ? (
+              <div className="py-12 text-center border rounded-lg bg-card text-muted-foreground text-sm">
+                Nenhuma movimentação encontrada com os filtros atuais.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {movs.map((m) => (
+                  <Card key={m.id}>
+                    <CardContent className="flex items-center justify-between py-4">
+                      <div>
+                        <p className="font-medium">{m.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {classeLabels[m.classe]} · {formatDate(m.data_movimentacao)}
+                        </p>
+                      </div>
+                      <p className={m.type === "entrada" ? "font-bold text-emerald-600 dark:text-emerald-400" : "font-bold text-destructive"}>
+                        {m.type === "entrada" ? "+" : "-"}{formatCurrency(m.valor)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Pagamentos */}
+          <TabsContent value="pagamentos" className="mt-4 space-y-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
+              <div className="flex sm:w-48">
+                <Select value={pagStatus} onValueChange={(v) => setPagStatus(v as PagamentoStatus | "all")}>
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="aguardando">Pendentes</SelectItem>
+                    <SelectItem value="pago">Pagos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button size="sm" onClick={() => setCreatePagOpen(true)} className="shrink-0">
+                <Plus className="h-4 w-4 mr-1" />
+                Novo Pagamento
+              </Button>
+            </div>
+            
+            {pagsLoading ? (
+              <div className="space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+            ) : renderPags.length === 0 ? (
+              <div className="py-12 text-center border rounded-lg bg-card text-muted-foreground text-sm">
+                Nenhum pagamento encontrado com os filtros atuais.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {renderPags.map((r) => {
+                  if (r.type === "group") {
+                    return <GroupedPaymentCard key={`group-${r.diarist_id}`} group={r} onPay={setConfirmPayId} />;
+                  }
+
+                  const p = r.item;
+                  return (
+                    <Card
+                      key={p.id}
+                      className={p.status === "aguardando" && p.classe === "diarista" && p.payment_cod
+                        ? "border-emerald-500/30 shadow-sm"
+                        : "shadow-sm"
+                      }
+                    >
+                      <CardContent className="py-4 space-y-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-medium">{p.title}</p>
+                              {p.classe === "diarista" && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary/70">
+                                  Diarista
+                                </Badge>
+                              )}
+                            </div>
+                            {p.details && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">{p.details}</p>
+                            )}
+                            {p.data_agendada && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Vencimento: {formatDate(p.data_agendada)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <p className="font-bold">{formatCurrency(p.valor)}</p>
+                            {p.status === "aguardando" ? (
+                              <Button size="sm" onClick={() => setConfirmPayId(p.id)}>
+                                Pagar
+                              </Button>
+                            ) : (
+                              <Badge variant="success">Pago</Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* PIX block: only for pending diarist payments with a PIX code */}
+                        {p.status === "aguardando" && p.classe === "diarista" && p.payment_cod && (
+                          <div className="mt-2">
+                            <PixBlock code={p.payment_cod} />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Dialog criar movimentação */}
+      <Dialog open={createMovOpen} onOpenChange={setCreateMovOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nova Movimentação</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmitMov((v) => createMovMutation.mutate(v))} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Título *</Label>
+              <Input placeholder="Ex: Compra de cimento" {...registerMov("title")} />
+              {errorsMov.title && <p className="text-xs text-destructive">{errorsMov.title.message}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Tipo *</Label>
+                <Select onValueChange={(v) => setValueMov("type", v as "entrada" | "saida")}>
+                  <SelectTrigger><SelectValue placeholder="Tipo..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entrada">Entrada</SelectItem>
+                    <SelectItem value="saida">Saída</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Classe *</Label>
+                <Select onValueChange={(v) => setValueMov("classe", v as MovClass)}>
+                  <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(classeLabels).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Valor *</Label>
+              <Input placeholder="3200.00" {...registerMov("valor")} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setCreateMovOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={createMovMutation.isPending}>
+                {createMovMutation.isPending ? "Registrando..." : "Registrar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog criar pagamento */}
+      <Dialog open={createPagOpen} onOpenChange={setCreatePagOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Novo Pagamento</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmitPag((v) => createPagMutation.mutate(v))} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Título *</Label>
+              <Input placeholder="Ex: Aluguel do escritório" {...registerPag("title")} />
+              {errorsPag.title && <p className="text-xs text-destructive">{errorsPag.title.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Detalhes (opcional)</Label>
+              <Input placeholder="Referente a..." {...registerPag("details")} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Valor *</Label>
+                <Input placeholder="4500.00" {...registerPag("valor")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Classe *</Label>
+                <Select onValueChange={(v) => setValuePag("classe", v as MovClass)}>
+                  <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(classeLabels).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Data de vencimento (opcional)</Label>
+              <Input type="date" {...registerPag("data_agendada")} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setCreatePagOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={createPagMutation.isPending}>
+                {createPagMutation.isPending ? "Agendando..." : "Agendar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmar pagamento */}
+      <ConfirmDialog
+        open={!!confirmPayId}
+        onOpenChange={(o) => !o && setConfirmPayId(null)}
+        title="Confirmar pagamento"
+        description="Esta ação irá marcar o pagamento como pago e criar uma movimentação de saída. Não pode ser desfeita."
+        confirmLabel="Confirmar pagamento"
+        onConfirm={() => confirmPayId && payMutation.mutate(confirmPayId)}
+        loading={payMutation.isPending}
+      />
+    </PageTransition>
+  );
+}
