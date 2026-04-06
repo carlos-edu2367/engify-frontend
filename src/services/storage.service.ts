@@ -30,9 +30,17 @@ export const storageService = {
       content_type: file.type,
     });
 
-    await fetch(upload_url, {
+    // Auditoria: Supabase exige o prefixo /storage/v1/ em produção para CORS correto.
+    // Algumas configurações de backend retornam a URL sem este prefixo.
+    let finalUrl = upload_url;
+    if (!upload_url.includes("/storage/v1/")) {
+      finalUrl = upload_url.replace(".co/object/", ".co/storage/v1/object/");
+    }
+
+    await fetch(finalUrl, {
       method: "PUT",
       headers: { "Content-Type": file.type },
+      mode: "cors",
       body: file,
     });
 
