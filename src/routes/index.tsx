@@ -21,6 +21,7 @@ import { FinanceiroPage } from "@/pages/app/FinanceiroPage";
 import { MembrosPage } from "@/pages/app/MembrosPage";
 import { ConfiguracoesPage } from "@/pages/app/ConfiguracoesPage";
 import { PerfilPage } from "@/pages/app/PerfilPage";
+import { CalendarioPage } from "@/pages/app/CalendarioPage";
 
 export const router = createBrowserRouter([
   // Grupo público
@@ -49,6 +50,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { path: "/dashboard", element: <DashboardPage /> },
+      { path: "/calendario", element: <CalendarioPage /> },
       { path: "/obras", element: <ObrasPage /> },
       { path: "/obras/:obraId", element: <ObraDetailPage /> },
       {

@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   HardHat,
   CalendarDays,
+  Calendar,
   Wallet,
   Users,
   Settings,
@@ -23,6 +24,12 @@ const navItems = [
     label: "Obras",
     icon: HardHat,
     roles: ["admin", "engenheiro", "financeiro"],
+  },
+  {
+    to: "/calendario",
+    label: "Calendário",
+    icon: Calendar,
+    roles: ["admin", "engenheiro", "financeiro", "cliente"],
   },
   {
     to: "/diarias",
