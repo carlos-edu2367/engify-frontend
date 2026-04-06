@@ -23,15 +23,13 @@ export function MuralTab({ obraId }: MuralTabProps) {
     deletePost,
     isCreating,
     isDeleting,
-    refresh
+    refresh,
   } = useMural(obraId);
 
   async function handlePublish(content: string, mentions: string[], files: File[]) {
     try {
-      // 1. Create Post
       const post = await createPost({ content, mentions });
 
-      // 2. Upload and Register Attachments
       if (files.length > 0) {
         const uploadPromises = files.map(async (file) => {
           const path = await storageService.upload("mural", post.id, file);
@@ -43,7 +41,6 @@ export function MuralTab({ obraId }: MuralTabProps) {
         });
 
         await Promise.all(uploadPromises);
-        // Refresh to show attachments
         refresh();
       }
 
@@ -55,17 +52,17 @@ export function MuralTab({ obraId }: MuralTabProps) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8 animate-in fade-in duration-700">
+    <div className="mx-auto max-w-2xl animate-in space-y-8 fade-in duration-700 pb-36 md:pb-0">
       <div className="flex flex-col gap-1 px-1">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground/90 flex items-center gap-3">
-          <span className="text-3xl">📢</span> Mural da Equipe
-        </h2>
-        <p className="text-sm text-muted-foreground/80 font-medium">
-          Compartilhe atualizações, fotos ou documentos sobre a obra.
+        <h2 className="text-2xl font-bold tracking-tight text-foreground/90">Mural da Equipe</h2>
+        <p className="text-sm font-medium text-muted-foreground/80">
+          Compartilhe atualizacoes, fotos ou documentos sobre a obra.
         </p>
       </div>
 
-      <PostComposer onPublish={handlePublish} isPublishing={isCreating} />
+      <div className="hidden md:block">
+        <PostComposer onPublish={handlePublish} isPublishing={isCreating} />
+      </div>
 
       <Separator className="opacity-40" />
 
@@ -80,6 +77,17 @@ export function MuralTab({ obraId }: MuralTabProps) {
         onDelete={(id) => deletePost(id)}
         isDeleting={isDeleting}
       />
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 backdrop-blur md:hidden">
+        <div className="mx-auto w-full max-w-2xl px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2">
+          <PostComposer
+            onPublish={handlePublish}
+            isPublishing={isCreating}
+            mobileDocked
+            className="shadow-lg"
+          />
+        </div>
+      </div>
     </div>
   );
 }

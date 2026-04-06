@@ -96,15 +96,15 @@ export function ObrasPage() {
     <PageTransition>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold">Obras</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               {data?.total ?? 0} obra{data?.total !== 1 ? "s" : ""} encontrada{data?.total !== 1 ? "s" : ""}
             </p>
           </div>
           <RoleGuard roles={["admin", "engenheiro"]}>
-            <Button onClick={() => setCreateOpen(true)}>
+            <Button onClick={() => setCreateOpen(true)} className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-1" />
               Nova Obra
             </Button>
@@ -112,17 +112,20 @@ export function ObrasPage() {
         </div>
 
         {/* Filtros */}
-        <div className="flex gap-2 flex-wrap">
-          {filterButtons.map((btn) => (
-            <Button
-              key={btn.value}
-              variant={filter === btn.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter(btn.value)}
-            >
-              {btn.label}
-            </Button>
-          ))}
+        <div className="-mx-1 overflow-x-auto px-1 pb-1">
+          <div className="flex w-max snap-x snap-mandatory gap-2 sm:flex-wrap">
+            {filterButtons.map((btn) => (
+              <Button
+                key={btn.value}
+                variant={filter === btn.value ? "default" : "outline"}
+                size="sm"
+                onClick={() => setFilter(btn.value)}
+                className="h-10 snap-start px-4"
+              >
+                {btn.label}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {/* Grid de obras */}
@@ -151,7 +154,7 @@ export function ObrasPage() {
             {obras.map((obra) => (
               <Card
                 key={obra.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="cursor-pointer transition-shadow hover:shadow-md"
                 onClick={() => navigate(`/obras/${obra.id}`)}
               >
                 <CardHeader className="pb-3">
@@ -215,7 +218,7 @@ export function ObrasPage() {
               <Label>Descrição (opcional)</Label>
               <Input placeholder="Descreva a obra..." {...register("description")} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Valor (opcional)</Label>
                 <Input placeholder="150000.00" {...register("valor")} />

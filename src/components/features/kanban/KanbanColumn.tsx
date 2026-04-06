@@ -21,6 +21,7 @@ interface KanbanColumnProps {
   onDeleteItem?: (item: ItemResponse) => void;
   onOpenDrawer?: (item: ItemResponse) => void;
   usersMap?: Record<string, string>;
+  className?: string;
 }
 
 export function KanbanColumn({
@@ -32,6 +33,7 @@ export function KanbanColumn({
   onDeleteItem,
   onOpenDrawer,
   usersMap = {},
+  className,
 }: KanbanColumnProps) {
   const config = columnConfig[status];
   const itemIds = items.map((i) => i.id);
@@ -41,7 +43,8 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        "flex flex-col w-72 shrink-0 rounded-xl border bg-muted/40 p-3 transition-colors",
+        "flex w-72 shrink-0 flex-col rounded-xl border bg-muted/40 p-3 transition-colors",
+        className,
         isOver && "bg-muted/70 ring-2 ring-primary/30"
       )}
     >

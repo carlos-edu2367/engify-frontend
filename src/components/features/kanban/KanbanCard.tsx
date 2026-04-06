@@ -39,6 +39,16 @@ export function KanbanCard({
     transition,
   };
 
+  function handleEditClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    onEdit?.(item);
+  }
+
+  function handleDeleteClick(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    onDelete?.(item);
+  }
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -75,14 +85,19 @@ export function KanbanCard({
           )}
         </div>
         {(onEdit || onDelete) && (
-          <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex shrink-0 gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
             {onEdit && (
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit(item)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleEditClick}>
                 <Pencil className="h-3 w-3" />
               </Button>
             )}
             {onDelete && (
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => onDelete(item)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onClick={handleDeleteClick}
+              >
                 <Trash2 className="h-3 w-3" />
               </Button>
             )}

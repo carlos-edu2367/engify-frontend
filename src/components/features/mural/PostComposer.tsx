@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useUsers } from "@/hooks/useMembros";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface PostComposerProps {
   onPublish: (content: string, mentions: string[], files: File[]) => Promise<void>;
   isPublishing: boolean;
+  className?: string;
+  mobileDocked?: boolean;
 }
 
-export function PostComposer({ onPublish, isPublishing }: PostComposerProps) {
+export function PostComposer({ onPublish, isPublishing, className, mobileDocked = false }: PostComposerProps) {
   const { data: users = [] } = useUsers();
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -107,7 +110,13 @@ export function PostComposer({ onPublish, isPublishing }: PostComposerProps) {
   };
 
   return (
-    <div className="relative rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-all focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5">
+    <div
+      className={cn(
+        "relative rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-all focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5",
+        mobileDocked && "rounded-b-none border-b-0 px-3 pt-3",
+        className
+      )}
+    >
       <Textarea
         ref={textareaRef}
         placeholder="O que está acontecendo na obra? Use @ para mencionar alguém..."
@@ -115,7 +124,10 @@ export function PostComposer({ onPublish, isPublishing }: PostComposerProps) {
         onChange={handleTextChange}
         onKeyDown={handleKeyDown}
         maxLength={2000}
-        className="min-h-[100px] w-full resize-none border-none bg-transparent p-0 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/50"
+        className={cn(
+          "w-full resize-none border-none bg-transparent p-0 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/50",
+          mobileDocked ? "min-h-[84px]" : "min-h-[100px]"
+        )}
       />
       {content.length > 1800 && (
         <p className={`text-right text-[10px] font-medium ${content.length >= 2000 ? "text-destructive" : "text-muted-foreground/60"}`}>
@@ -154,7 +166,7 @@ export function PostComposer({ onPublish, isPublishing }: PostComposerProps) {
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between border-t border-border/40 pt-3">
+      <div className="flex flex-col gap-2 border-t border-border/40 pt-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-1">
           <input
             ref={fileInputRef}
@@ -168,7 +180,7 @@ export function PostComposer({ onPublish, isPublishing }: PostComposerProps) {
             variant="ghost"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            className="h-9 gap-2 rounded-xl text-muted-foreground hover:bg-primary/5 hover:text-primary transition-all"
+            className="h-9 gap-2 rounded-xl text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary"
           >
             <Paperclip className="h-4 w-4" />
             <span className="text-xs font-semibold">Anexar</span>
@@ -179,7 +191,7 @@ export function PostComposer({ onPublish, isPublishing }: PostComposerProps) {
           size="sm"
           onClick={handlePublishClick}
           disabled={isPublishing || (!content.trim() && files.length === 0)}
-          className="h-9 gap-2 px-5 rounded-xl transition-all active:scale-95 bg-primary hover:bg-primary/90 shadow-sm"
+          className="h-10 w-full gap-2 rounded-xl bg-primary px-5 shadow-sm transition-all active:scale-95 hover:bg-primary/90 sm:h-9 sm:w-auto"
         >
           {isPublishing ? (
             <span className="flex items-center gap-2">

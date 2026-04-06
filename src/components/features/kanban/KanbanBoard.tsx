@@ -31,9 +31,14 @@ import {
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { itemSchema, type ItemFormValues } from "@/lib/schemas/obra.schemas";
-import { getApiErrorMessage } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 
 const STATUSES: ItemStatus[] = ["planejamento", "em_andamento", "finalizado"];
+const STATUS_LABELS: Record<ItemStatus, string> = {
+  planejamento: "Planejamento",
+  em_andamento: "Em andamento",
+  finalizado: "Finalizado",
+};
 
 interface KanbanBoardProps {
   obraId: string;
@@ -50,6 +55,7 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   const [deletingItem, setDeletingItem] = useState<ItemResponse | null>(null);
   const [drawerItem, setDrawerItem] = useState<ItemResponse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mobileStatus, setMobileStatus] = useState<ItemStatus>("planejamento");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -190,9 +196,41 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   return (
     <>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="mb-3 flex gap-2 overflow-x-auto pb-1 md:hidden">
           {STATUSES.map((status) => (
+            <Button
+              key={status}
+              type="button"
+              variant={mobileStatus === status ? "default" : "outline"}
+              className={cn("h-10 snap-start whitespace-nowrap px-4", mobileStatus === status && "shadow-sm")}
+              onClick={() => setMobileStatus(status)}
+            >
+              {STATUS_LABELS[status]}
+              <span className="ml-2 rounded-full bg-background/90 px-2 py-0.5 text-xs text-foreground">
+                {itemsByStatus[status].length}
+              </span>
+            </Button>
+          ))}
+        </div>
+
+        <div className="md:hidden">
           <KanbanColumn
+            key={mobileStatus}
+            status={mobileStatus}
+            items={itemsByStatus[mobileStatus]}
+            canDrag={canEdit}
+            onAddItem={canEdit ? openAddDialog : undefined}
+            onEditItem={canEdit ? openEditDialog : undefined}
+            onDeleteItem={canEdit ? setDeletingItem : undefined}
+            onOpenDrawer={setDrawerItem}
+            usersMap={usersMap}
+            className="w-full"
+          />
+        </div>
+
+        <div className="hidden gap-4 overflow-x-auto pb-4 md:flex">
+          {STATUSES.map((status) => (
+            <KanbanColumn
               key={status}
               status={status}
               items={itemsByStatus[status]}

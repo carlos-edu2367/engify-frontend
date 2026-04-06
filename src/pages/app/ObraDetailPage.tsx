@@ -69,9 +69,7 @@ export function ObraDetailPage() {
     enabled: canEdit,
   });
 
-  const usersMap = Object.fromEntries(
-    users.map((u) => [u.user_id, u.nome])
-  );
+  const usersMap = Object.fromEntries(users.map((u) => [u.user_id, u.nome]));
 
   const updateMutation = useMutation({
     mutationFn: (values: ObraFormValues) => obrasService.update(obraId!, values),
@@ -121,6 +119,11 @@ export function ObraDetailPage() {
     setEditOpen(true);
   }
 
+  function handleCopyClientLink() {
+    navigator.clipboard.writeText(`${window.location.origin}/obras/${obraId}/cliente`);
+    toast.success("Link copiado para a area de transferencia");
+  }
+
   if (isLoading) {
     return (
       <PageTransition>
@@ -136,48 +139,47 @@ export function ObraDetailPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-start gap-4">
+      <div className="space-y-6 pb-24 md:pb-0">
+        <div className="flex items-start gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/obras")} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold truncate">{obra.title}</h1>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="truncate text-xl font-bold sm:text-2xl">{obra.title}</h1>
               <Badge variant={statusVariants[obra.status]}>{statusLabels[obra.status]}</Badge>
             </div>
-            
-            <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                {obra.responsavel_id && usersMap[obra.responsavel_id] && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                        <User className="h-4 w-4" />
-                        <span>Responsável: {usersMap[obra.responsavel_id]}</span>
-                    </div>
-                )}
-                {obra.data_entrega && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                        <Calendar className="h-4 w-4" />
-                        <span>Prazo: {formatDate(obra.data_entrega)}</span>
-                    </div>
-                )}
-                {obra.valor && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground font-medium">
-                        <Wallet className="h-4 w-4" />
-                        <span>Valor: {formatCurrency(obra.valor)}</span>
-                    </div>
-                )}
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {obra.responsavel_id && usersMap[obra.responsavel_id] && (
+                <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm font-medium">Responsavel: {usersMap[obra.responsavel_id]}</span>
+                </div>
+              )}
+              {obra.data_entrega && (
+                <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-sm font-medium">Prazo: {formatDate(obra.data_entrega)}</span>
+                </div>
+              )}
+              {obra.valor && (
+                <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-muted-foreground">
+                  <Wallet className="h-4 w-4" />
+                  <span className="text-sm font-medium">Valor: {formatCurrency(obra.valor)}</span>
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex gap-2 shrink-0">
+          <div className="hidden shrink-0 gap-2 md:flex">
             <RoleGuard roles={["admin", "engenheiro"]}>
               <Button variant="outline" size="sm" onClick={openEdit}>
-                <Pencil className="h-4 w-4 mr-1" />
+                <Pencil className="mr-1 h-4 w-4" />
                 Editar
               </Button>
             </RoleGuard>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="h-9 w-9">
@@ -187,22 +189,19 @@ export function ObraDetailPage() {
               <DropdownMenuContent align="end" className="w-56">
                 <RoleGuard roles={["admin", "engenheiro"]}>
                   <DropdownMenuItem onClick={() => setStatusOpen(true)}>
-                    <CheckCircle className="h-4 w-4 mr-2" />
+                    <CheckCircle className="mr-2 h-4 w-4" />
                     Atualizar status
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => {
-                      navigator.clipboard.writeText(`${window.location.origin}/obras/${obraId}/cliente`);
-                      toast.success("Link copiado para a área de transferência");
-                  }}>
-                    <LinkIcon className="h-4 w-4 mr-2" />
+                  <DropdownMenuItem onClick={handleCopyClientLink}>
+                    <LinkIcon className="mr-2 h-4 w-4" />
                     Copiar link do cliente
                   </DropdownMenuItem>
                 </RoleGuard>
-                
+
                 <RoleGuard roles={["admin"]}>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                     Excluir obra
                   </DropdownMenuItem>
                 </RoleGuard>
@@ -210,30 +209,24 @@ export function ObraDetailPage() {
             </DropdownMenu>
           </div>
         </div>
-        
-        {/* Descrição */}
+
         {obra.description && (
           <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">Descrição</p>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{obra.description}</p>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Descricao</p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{obra.description}</p>
           </div>
         )}
 
         <Tabs defaultValue="kanban">
-          <TabsList>
+          <TabsList className="overflow-x-auto whitespace-nowrap">
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
             <TabsTrigger value="mural">Mural</TabsTrigger>
-            <TabsTrigger value="diarias">Diárias</TabsTrigger>
+            <TabsTrigger value="diarias">Diarias</TabsTrigger>
             <TabsTrigger value="imagens">Imagens</TabsTrigger>
           </TabsList>
 
           <TabsContent value="kanban" className="mt-4">
-            <KanbanBoard
-              obraId={obraId!}
-              items={items}
-              canEdit={canEdit}
-              usersMap={usersMap}
-            />
+            <KanbanBoard obraId={obraId!} items={items} canEdit={canEdit} usersMap={usersMap} />
           </TabsContent>
 
           <TabsContent value="mural" className="mt-4">
@@ -250,7 +243,6 @@ export function ObraDetailPage() {
         </Tabs>
       </div>
 
-      {/* Dialog editar obra */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
@@ -258,12 +250,12 @@ export function ObraDetailPage() {
           </DialogHeader>
           <form onSubmit={handleSubmit((v) => updateMutation.mutate(v))} className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Título</Label>
+              <Label>Titulo</Label>
               <Input {...register("title")} />
               {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Responsável</Label>
+              <Label>Responsavel</Label>
               <Select onValueChange={(v) => setValue("responsavel_id", v)} defaultValue={obra.responsavel_id}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
@@ -278,10 +270,10 @@ export function ObraDetailPage() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Descrição (opcional)</Label>
+              <Label>Descricao (opcional)</Label>
               <Input {...register("description")} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Valor (opcional)</Label>
                 <Input placeholder="150000.00" {...register("valor")} />
@@ -303,7 +295,6 @@ export function ObraDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog atualizar status */}
       <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -331,17 +322,55 @@ export function ObraDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Confirmar exclusão */}
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Remover obra"
-        description={`Remover "${obra.title}"? Os dados serão preservados mas a obra não aparecerá mais nas listagens.`}
+        description={`Remover "${obra.title}"? Os dados serao preservados mas a obra nao aparecera mais nas listagens.`}
         confirmLabel="Remover"
         variant="destructive"
         onConfirm={() => deleteMutation.mutate()}
         loading={deleteMutation.isPending}
       />
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-2xl gap-2">
+          <RoleGuard roles={["admin", "engenheiro"]}>
+            <Button variant="outline" className="h-11 flex-1" onClick={openEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </Button>
+          </RoleGuard>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <RoleGuard roles={["admin", "engenheiro"]}>
+                <DropdownMenuItem onClick={() => setStatusOpen(true)}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Atualizar status
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyClientLink}>
+                  <LinkIcon className="mr-2 h-4 w-4" />
+                  Copiar link do cliente
+                </DropdownMenuItem>
+              </RoleGuard>
+
+              <RoleGuard roles={["admin"]}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir obra
+                </DropdownMenuItem>
+              </RoleGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
     </PageTransition>
   );
 }
