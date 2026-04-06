@@ -98,7 +98,7 @@ function buildDeadlinesIcs(obras: ObraResponse[]) {
   return `${lines.join("\r\n")}\r\n`;
 }
 
-async function fetchAllObras(limit = 100) {
+async function fetchAllObras(limit = 50) {
   const items: ObraResponse[] = [];
   let page = 1;
   let hasNext = true;
@@ -121,7 +121,7 @@ export function CalendarioPage() {
 
   const { data: obras = [], isLoading } = useQuery({
     queryKey: ["obras", "deadlines", { all: true }],
-    queryFn: () => fetchAllObras(100),
+    queryFn: () => fetchAllObras(50),
   });
 
   const obrasComPrazo = useMemo(() => {
@@ -298,4 +298,3 @@ export function CalendarioPage() {
     </PageTransition>
   );
 }
-
