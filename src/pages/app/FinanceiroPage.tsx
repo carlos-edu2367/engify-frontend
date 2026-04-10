@@ -23,13 +23,36 @@ import {
   type MovimentacaoFormValues,
   type PagamentoFormValues,
 } from "@/lib/schemas/financeiro.schemas";
-import { formatISO, parseISO, format } from "date-fns";
+import { formatISO, parseISO, format, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
 import type { MovClass, MovimentacaoResponse, PagamentoResponse, PagamentoStatus } from "@/types/financeiro.types";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
+
+function getDueStatus(dataAgendada: string | undefined, status: string): "today" | "overdue" | null {
+  if (!dataAgendada || status !== "aguardando") return null;
+  const due = startOfDay(parseISO(dataAgendada));
+  if (isToday(due)) return "today";
+  if (isBefore(due, startOfDay(new Date()))) return "overdue";
+  return null;
+}
+
+function DueBadge({ status }: { status: "today" | "overdue" }) {
+  if (status === "today") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+        Vence hoje
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
+      Atrasado
+    </span>
+  );
+}
 
 const classeLabels: Record<MovClass, string> = {
   diarista: "Diarista",
@@ -126,8 +149,16 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
     ? format(parseISO(group.data_agendada), "EEEE", { locale: ptBR })
     : null;
 
+  const dueStatus = getDueStatus(group.data_agendada, "aguardando");
+
+  const borderClass = dueStatus === "overdue"
+    ? "border-red-500/40"
+    : dueStatus === "today"
+    ? "border-amber-500/40"
+    : "border-emerald-500/30";
+
   return (
-    <Card className="border-emerald-500/30 shadow-sm">
+    <Card className={`${borderClass} shadow-sm`}>
       <CardContent className="py-4 space-y-0">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -141,6 +172,7 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary/70 bg-primary/5">
                 {group.items.length} diárias
               </Badge>
+              {dueStatus && <DueBadge status={dueStatus} />}
             </div>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               <p className="text-xs text-muted-foreground">
@@ -178,9 +210,14 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{p.details || "Diária"}</p>
                     {p.data_agendada && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Vencimento: {formatDate(p.data_agendada)}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <p className="text-xs text-muted-foreground">
+                          Vencimento: {formatDate(p.data_agendada)}
+                        </p>
+                        {getDueStatus(p.data_agendada, p.status) && (
+                          <DueBadge status={getDueStatus(p.data_agendada, p.status)!} />
+                        )}
+                      </div>
                     )}
                  </div>
                  <div className="flex items-center gap-3 shrink-0">
@@ -525,13 +562,18 @@ export function FinanceiroPage() {
                   }
 
                   const p = r.item;
+                  const singleDueStatus = getDueStatus(p.data_agendada, p.status);
+                  const singleBorder = singleDueStatus === "overdue"
+                    ? "border-red-500/40"
+                    : singleDueStatus === "today"
+                    ? "border-amber-500/40"
+                    : p.status === "aguardando" && p.payment_cod
+                    ? "border-emerald-500/30"
+                    : "";
                   return (
                     <Card
                       key={p.id}
-                      className={p.status === "aguardando" && p.payment_cod
-                        ? "border-emerald-500/30 shadow-sm"
-                        : "shadow-sm"
-                      }
+                      className={`shadow-sm ${singleBorder}`}
                     >
                       <CardContent className="py-4 space-y-0">
                         <div className="flex items-start justify-between gap-4">
@@ -553,6 +595,7 @@ export function FinanceiroPage() {
                                   Vencimento: {formatDate(p.data_agendada)}
                                 </p>
                               )}
+                              {singleDueStatus && <DueBadge status={singleDueStatus} />}
                               {p.obra_id && (
                                 <button
                                   onClick={() => navigate(`/obras/${p.obra_id}`)}
