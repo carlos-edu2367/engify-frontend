@@ -34,7 +34,7 @@ export interface CreateFirstUserRequest {
 
 export interface InviteRequest {
   email: string;
-  role: Exclude<Role, "admin" | "super_admin">;
+  role: Exclude<Role, "super_admin">;
 }
 
 export interface InviteResponse {
