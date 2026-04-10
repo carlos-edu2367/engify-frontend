@@ -24,21 +24,17 @@ export const registerInviteSchema = z
     path: ["confirmar_senha"],
   });
 
+// Step 1: solicitar link de recuperação por email
 export const recoveryStep1Schema = z.object({
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
-  cpf: z
-    .string()
-    .transform((v) => v.replace(/\D/g, ""))
-    .optional(),
+  email: z.string().email("Email inválido"),
 });
 
-export const recoveryStep2Schema = z.object({
-  code: z.string().min(1, "Insira o código recebido por email"),
-});
-
-export const recoveryStep3Schema = z
+// Step 2: definir nova senha (chegou pelo link do email com uid + token)
+export const recoveryResetSchema = z
   .object({
-    new_password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
+    new_password: z
+      .string()
+      .min(6, "Senha deve ter ao menos 6 caracteres"),
     confirm_password: z.string(),
   })
   .refine((d) => d.new_password === d.confirm_password, {
@@ -49,5 +45,4 @@ export const recoveryStep3Schema = z
 export type LoginFormValues = z.infer<typeof loginSchema>;
 export type RegisterInviteFormValues = z.infer<typeof registerInviteSchema>;
 export type RecoveryStep1Values = z.infer<typeof recoveryStep1Schema>;
-export type RecoveryStep2Values = z.infer<typeof recoveryStep2Schema>;
-export type RecoveryStep3Values = z.infer<typeof recoveryStep3Schema>;
+export type RecoveryResetValues = z.infer<typeof recoveryResetSchema>;
