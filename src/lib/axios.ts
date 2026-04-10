@@ -17,13 +17,29 @@ function processQueue(error: unknown, token: string | null = null) {
   failedQueue = [];
 }
 
+// Aguarda o bootstrap terminar antes de prosseguir
+function waitForBootstrap(): Promise<void> {
+  return new Promise((resolve) => {
+    if (useAuthStore.getState().hasBootstrapped) {
+      resolve();
+      return;
+    }
+    const unsub = useAuthStore.subscribe((state) => {
+      if (state.hasBootstrapped) {
+        unsub();
+        resolve();
+      }
+    });
+  });
+}
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL as string,
-  withCredentials: true, // envia cookie refresh_token automaticamente
+  withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
-// Injeta access_token em toda request (getState fora do React tree)
+// Injeta access_token em toda request
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
@@ -58,16 +74,32 @@ api.interceptors.response.use(
         : "";
     const isRefreshRequest = requestUrl.includes("/auth/refresh");
 
-    // Nunca tenta "refresh do refresh": deixa a tela tratadora decidir o fluxo.
+    // Nunca tenta "refresh do refresh"
     if (status === 401 && isRefreshRequest) {
       return Promise.reject(error);
     }
 
     if (status === 401 && !originalRequest._retry) {
+      // FIX 3: Se o bootstrap ainda está em andamento, aguarda ele terminar
+      // e retenta com o token que ele definiu — evita refresh paralelo.
+      if (useAuthStore.getState().isBootstrapping) {
+        await waitForBootstrap();
+        const newToken = useAuthStore.getState().accessToken;
+        if (newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          originalRequest._retry = true;
+          return api(originalRequest);
+        }
+        return Promise.reject(error);
+      }
+
+      // FIX 1: Requests concorrentes entram na fila e recebem _retry = true
+      // antes de retentar, evitando loop de refresh se o retry receber outro 401.
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         }).then((token) => {
+          originalRequest._retry = true;
           originalRequest.headers.Authorization = `Bearer ${token}`;
           return api(originalRequest);
         });
@@ -86,7 +118,12 @@ api.interceptors.response.use(
         useAuthStore.getState().setAccessToken(newToken);
         processQueue(null, newToken);
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest);
+
+        // FIX 2: await garante que isRefreshing só é resetado após o retry
+        // concluir, evitando que um 401 chegando nesse intervalo dispare
+        // um novo ciclo de refresh em paralelo.
+        const retryResponse = await api(originalRequest);
+        return retryResponse;
       } catch (refreshError) {
         processQueue(refreshError, null);
         useAuthStore.getState().logout();
