@@ -25,6 +25,8 @@ import { RoleGuard } from "@/components/shared/RoleGuard";
 import { obrasService } from "@/services/obras.service";
 import { itemsService } from "@/services/items.service";
 import { usersService } from "@/services/users.service";
+import { CategoriaObraSelect } from "@/components/features/categorias/CategoriaObraSelect";
+import { useAllCategoriasObras } from "@/hooks/useCategoriasObras";
 import { obraSchema, type ObraFormValues } from "@/lib/schemas/obra.schemas";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
 import type { ObraStatus } from "@/types/obra.types";
@@ -70,13 +72,24 @@ export function ObraDetailPage() {
     enabled: canEdit,
   });
 
+  const { data: categoriasData } = useAllCategoriasObras();
+  const categoriasMap = Object.fromEntries(
+    (categoriasData?.items ?? []).map((c) => [c.id, c])
+  );
+
   const usersMap = Object.fromEntries(users.map((u) => [u.user_id, u.nome]));
 
   const updateMutation = useMutation({
-    mutationFn: (values: ObraFormValues) => obrasService.update(obraId!, values),
+    mutationFn: (values: ObraFormValues) =>
+      obrasService.update(obraId!, {
+        ...values,
+        categoria_id: values.categoria_id ?? null,
+        remove_categoria: values.categoria_id === null,
+      }),
     onSuccess: (updated) => {
       queryClient.setQueryData(["obras", obraId], updated);
       queryClient.invalidateQueries({ queryKey: ["obras"] });
+      queryClient.invalidateQueries({ queryKey: ["obras", "by-categoria"] });
       toast.success("Obra atualizada com sucesso!");
       setEditOpen(false);
     },
@@ -106,6 +119,7 @@ export function ObraDetailPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ObraFormValues>({
     resolver: zodResolver(obraSchema),
@@ -117,6 +131,7 @@ export function ObraDetailPage() {
     setValue("responsavel_id", obra.responsavel_id);
     setValue("description", obra.description ?? "");
     if (obra.valor) setValue("valor", parseFloat(obra.valor));
+    setValue("categoria_id", obra.categoria_id ?? null);
     setEditOpen(true);
   }
 
@@ -149,6 +164,22 @@ export function ObraDetailPage() {
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="truncate text-xl font-bold sm:text-2xl">{obra.title}</h1>
               <Badge variant={statusVariants[obra.status]}>{statusLabels[obra.status]}</Badge>
+              {obra.categoria_id && categoriasMap[obra.categoria_id] && (
+                <div
+                  className="flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-2.5 py-0.5"
+                  title={categoriasMap[obra.categoria_id].title}
+                >
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor: categoriasMap[obra.categoria_id].cor ?? "#64748b",
+                    }}
+                  />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {categoriasMap[obra.categoria_id].title}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -274,6 +305,13 @@ export function ObraDetailPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Categoria (opcional)</Label>
+              <CategoriaObraSelect
+                value={watch("categoria_id")}
+                onValueChange={(v) => setValue("categoria_id", v)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Descricao (opcional)</Label>

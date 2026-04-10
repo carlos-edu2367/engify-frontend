@@ -5,7 +5,8 @@ export const obraSchema = z.object({
   responsavel_id: z.string().uuid("Selecione um responsável"),
   description: z.string().optional(),
   valor: z.coerce.number().positive("Valor deve ser positivo").optional(),
-  data_entrega: z.string().optional(),
+  data_entrega: z.string().optional().transform((v) => v === "" ? undefined : v),
+  categoria_id: z.string().uuid().nullable().optional(),
 });
 
 export const itemSchema = z.object({

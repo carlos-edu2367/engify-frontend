@@ -12,6 +12,7 @@ export interface ObraResponse {
   valor?: string;
   data_entrega?: string;
   created_date: string;
+  categoria_id?: string | null;
 }
 
 export interface CreateObraRequest {
@@ -20,6 +21,7 @@ export interface CreateObraRequest {
   description?: string;
   valor?: number;
   data_entrega?: string;
+  categoria_id?: string | null;
 }
 
 export interface UpdateObraRequest {
@@ -28,6 +30,8 @@ export interface UpdateObraRequest {
   description?: string;
   valor?: number;
   data_entrega?: string;
+  categoria_id?: string | null;
+  remove_categoria?: boolean;
 }
 
 export interface UpdateObraStatusRequest {
