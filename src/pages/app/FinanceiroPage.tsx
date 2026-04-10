@@ -684,6 +684,10 @@ export function FinanceiroPage() {
               <Label>Data de vencimento (opcional)</Label>
               <Input type="date" {...registerPag("data_agendada")} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Código de pagamento (opcional)</Label>
+              <Input placeholder="PIX copia e cola, código de barras..." {...registerPag("payment_cod")} />
+            </div>
             <DialogFooter>
               <Button variant="outline" type="button" onClick={() => setCreatePagOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={createPagMutation.isPending}>
