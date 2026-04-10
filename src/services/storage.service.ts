@@ -43,13 +43,19 @@ export const storageService = {
       console.error("[Storage Audit] Falha ao normalizar URL:", e);
     }
 
-    await fetch(finalUrl, {
+    const uploadResponse = await fetch(finalUrl, {
       method: "PUT",
       headers: { "Content-Type": file.type },
       mode: "cors",
       credentials: "omit", // Garante que nenhum cookie/auth header interfira no signed URL
       body: file,
     });
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        `Falha no upload: HTTP ${uploadResponse.status} ${uploadResponse.statusText}`
+      );
+    }
 
     return path;
   },

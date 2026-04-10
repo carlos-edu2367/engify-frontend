@@ -10,6 +10,7 @@ import { KanbanBoard } from "@/components/features/kanban/KanbanBoard";
 import { MuralTab } from "@/components/features/mural/MuralTab";
 import { DiariasTab } from "@/components/features/diarias/DiariasTab";
 import { ImagensTab } from "@/components/features/imagens/ImagensTab";
+import { PagamentosTab } from "@/components/features/pagamentos/PagamentosTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -223,6 +224,7 @@ export function ObraDetailPage() {
             <TabsTrigger value="mural">Mural</TabsTrigger>
             <TabsTrigger value="diarias">Diarias</TabsTrigger>
             <TabsTrigger value="imagens">Imagens</TabsTrigger>
+            <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="kanban" className="mt-4">
@@ -239,6 +241,10 @@ export function ObraDetailPage() {
 
           <TabsContent value="imagens" className="mt-4">
             <ImagensTab obraId={obraId!} canEdit={canEdit} />
+          </TabsContent>
+
+          <TabsContent value="pagamentos" className="mt-4">
+            <PagamentosTab obraId={obraId!} />
           </TabsContent>
         </Tabs>
       </div>

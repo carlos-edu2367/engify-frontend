@@ -242,6 +242,7 @@ export function MembrosPage() {
               <Select onValueChange={(v) => setValueInvite("role", v as InviteFormValues["role"])}>
                 <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="engenheiro">Engenheiro</SelectItem>
                   <SelectItem value="financeiro">Financeiro</SelectItem>
                   <SelectItem value="cliente">Cliente</SelectItem>

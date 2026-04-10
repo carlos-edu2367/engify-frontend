@@ -2,12 +2,15 @@ import { api } from "@/lib/axios";
 import type {
   ObraResponse,
   ObraClienteResponse,
+  PublicObraResponse,
   CreateObraRequest,
   UpdateObraRequest,
   UpdateObraStatusRequest,
   ObraStatus,
 } from "@/types/obra.types";
 import type { PaginatedResponse } from "@/types/api.types";
+import type { PagamentoResponse, CreateObraPagamentoRequest } from "@/types/financeiro.types";
+import type { ObraImageResponse, CreateAttachmentRequest } from "@/types/attachment.types";
 
 export const obrasService = {
   list: (params: { page?: number; limit?: number; status?: ObraStatus | "all" } = {}) => {
@@ -37,4 +40,15 @@ export const obrasService = {
 
   getClienteView: (id: string) =>
     api.get<ObraClienteResponse>(`/obras/${id}/cliente`).then((r) => r.data),
+
+  getPublicView: (id: string) =>
+    api.get<PublicObraResponse>(`/public/obras/${id}`).then((r) => r.data),
+
+  createPagamento: (obraId: string, data: CreateObraPagamentoRequest) =>
+    api.post<PagamentoResponse>(`/obras/${obraId}/pagamentos`, data).then((r) => r.data),
+
+  addImage: (obraId: string, data: CreateAttachmentRequest) =>
+    api
+      .post<ObraImageResponse>(`/obras/${obraId}/images`, data)
+      .then((r) => r.data),
 };

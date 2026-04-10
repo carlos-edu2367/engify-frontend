@@ -38,10 +38,10 @@ export function DiariasTab({ obraId }: DiariasTabProps) {
 
   const { data, isLoading } = useQuery({
     queryKey: ["diarias", { obra: obraId }],
-    queryFn: () => diariasService.list({ start: startISO, end: endISO, limit: 100 }),
+    queryFn: () => diariasService.list({ start: startISO, end: endISO, limit: 100, obra_id: obraId }),
   });
 
-  const diarias = (data?.items ?? []).filter((d) => d.obra_id === obraId);
+  const diarias = data?.items ?? [];
 
   const { data: diaristasData } = useQuery({
     queryKey: ["diaristas"],

@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { Upload, ImageIcon, X, ZoomIn, Loader2 } from "lucide-react";
 import { obrasService } from "@/services/obras.service";
 import { storageService } from "@/services/storage.service";
-import { itemsService } from "@/services/items.service";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoleGuard } from "@/components/shared/RoleGuard";
@@ -124,7 +123,7 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
     try {
       for (const file of files) {
         const path = await storageService.upload("obra", obraId, file);
-        await itemsService.addAttachment(obraId, obraId, {
+        await obrasService.addImage(obraId, {
           file_path: path,
           file_name: file.name,
           content_type: file.type,
@@ -145,7 +144,7 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {images.length} imagem{images.length !== 1 ? "ns" : ""} nesta obra
+          {images.length} {images.length !== 1 ? "imagens" : "imagem"} nesta obra
         </p>
         <RoleGuard roles={["admin", "engenheiro"]}>
           <div>

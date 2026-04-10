@@ -76,4 +76,28 @@ export interface ListPagamentosParams {
   page?: number;
   limit?: number;
   status?: PagamentoStatus | "all";
+  obra_id?: string;
+}
+
+export interface CreateObraPagamentoRequest {
+  title: string;
+  details: string;
+  valor: string;
+  data_agendada: string;
+  payment_cod: string;
+}
+
+export interface MovimentacaoAttachmentResponse {
+  id: string;
+  movimentacao_id: string;
+  file_path: string;
+  file_name: string;
+  content_type: string;
+  created_at: string;
+}
+
+export interface CreateMovimentacaoAttachmentRequest {
+  file_path: string;
+  file_name: string;
+  content_type: string;
 }

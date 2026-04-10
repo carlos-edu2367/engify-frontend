@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, Check, QrCode, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, Check, QrCode, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -22,11 +23,13 @@ import {
   type MovimentacaoFormValues,
   type PagamentoFormValues,
 } from "@/lib/schemas/financeiro.schemas";
-import { formatISO, parseISO } from "date-fns";
+import { formatISO, parseISO, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
-import type { MovClass, PagamentoResponse, PagamentoStatus } from "@/types/financeiro.types";
+import type { MovClass, MovimentacaoResponse, PagamentoResponse, PagamentoStatus } from "@/types/financeiro.types";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
+import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
 
 const classeLabels: Record<MovClass, string> = {
   diarista: "Diarista",
@@ -103,6 +106,8 @@ interface PagamentoGroup {
   diarist_title: string;
   payment_cod?: string;
   total_valor: number;
+  data_agendada?: string;
+  obra_id?: string;
   items: PagamentoResponse[];
 }
 
@@ -115,6 +120,11 @@ type RenderablePagamento = PagamentoGroup | PagamentoSingle;
 
 function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (id: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
+
+  const dateLabel = group.data_agendada
+    ? format(parseISO(group.data_agendada), "EEEE", { locale: ptBR })
+    : null;
 
   return (
     <Card className="border-emerald-500/30 shadow-sm">
@@ -122,14 +132,30 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-medium">{group.diarist_title}</p>
+              <p className="font-medium">
+                {group.diarist_title}
+                {dateLabel && (
+                  <span className="font-normal text-muted-foreground"> — {dateLabel}</span>
+                )}
+              </p>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary/70 bg-primary/5">
                 {group.items.length} diárias
               </Badge>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Pagamentos pendentes agendados para este diarista
-            </p>
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <p className="text-xs text-muted-foreground">
+                Pagamentos pendentes agendados para este diarista
+              </p>
+              {group.obra_id && (
+                <button
+                  onClick={() => navigate(`/obras/${group.obra_id}`)}
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Building2 className="h-3 w-3" />
+                  Ver Obra
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
             <p className="font-bold">{formatCurrency(group.total_valor.toString())}</p>
@@ -174,9 +200,12 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
 
 export function FinanceiroPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [createMovOpen, setCreateMovOpen] = useState(false);
   const [createPagOpen, setCreatePagOpen] = useState(false);
   const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
+  const [selectedMov, setSelectedMov] = useState<MovimentacaoResponse | null>(null);
+  const [movFormObraId, setMovFormObraId] = useState<string>("");
 
   // Filtros de Movimentações
   const [movPeriodo, setMovPeriodo] = useState<{ start: string; end: string }>({ start: "", end: "" });
@@ -216,6 +245,7 @@ export function FinanceiroPage() {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success("Movimentação registrada!");
       setCreateMovOpen(false);
+      setMovFormObraId("");
       resetMov();
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
@@ -271,20 +301,25 @@ export function FinanceiroPage() {
   const pendentes = pags.filter((p) => p.status === "aguardando");
 
   const renderPags: RenderablePagamento[] = [];
-  const pendingByDiarista = new Map<string, PagamentoResponse[]>();
+  // Key: `${diarist_id}|${dateKey}` to group by diarist AND day
+  const pendingByDiaristaAndDate = new Map<string, PagamentoResponse[]>();
 
   pags.forEach((p) => {
     if (p.status === "aguardando" && p.classe === "diarista" && p.diarist_id) {
-      if (!pendingByDiarista.has(p.diarist_id)) {
-        pendingByDiarista.set(p.diarist_id, []);
+      const dateKey = p.data_agendada
+        ? format(parseISO(p.data_agendada), "yyyy-MM-dd")
+        : "sem-data";
+      const groupKey = `${p.diarist_id}|${dateKey}`;
+      if (!pendingByDiaristaAndDate.has(groupKey)) {
+        pendingByDiaristaAndDate.set(groupKey, []);
       }
-      pendingByDiarista.get(p.diarist_id)!.push(p);
+      pendingByDiaristaAndDate.get(groupKey)!.push(p);
     } else {
       renderPags.push({ type: "single", item: p });
     }
   });
 
-  pendingByDiarista.forEach((groupItems) => {
+  pendingByDiaristaAndDate.forEach((groupItems) => {
     if (groupItems.length === 1) {
       renderPags.push({ type: "single", item: groupItems[0] });
     } else {
@@ -295,6 +330,8 @@ export function FinanceiroPage() {
         diarist_title: groupItems[0].title,
         payment_cod: groupItems[0].payment_cod,
         total_valor: total,
+        data_agendada: groupItems[0].data_agendada,
+        obra_id: groupItems[0].obra_id,
         items: groupItems,
       });
     }
@@ -411,17 +448,41 @@ export function FinanceiroPage() {
             ) : (
               <div className="space-y-2">
                 {movs.map((m) => (
-                  <Card key={m.id}>
-                    <CardContent className="flex items-center justify-between py-4">
-                      <div>
-                        <p className="font-medium">{m.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                  <Card
+                    key={m.id}
+                    className="cursor-pointer hover:border-primary/40 hover:shadow-md transition-all"
+                    onClick={() => setSelectedMov(m)}
+                  >
+                    <CardContent className="flex items-center justify-between gap-4 py-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">{m.title}</p>
+                          {m.obra_id && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-primary/70 border border-primary/20 rounded px-1 py-0.5 bg-primary/5 shrink-0">
+                              <Building2 className="h-2.5 w-2.5" />
+                              Obra
+                            </span>
+                          )}
+                          {m.pagamento_id && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-amber-600 border border-amber-500/20 rounded px-1 py-0.5 bg-amber-500/5 shrink-0">
+                              <Receipt className="h-2.5 w-2.5" />
+                              Agendado
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {classeLabels[m.classe]} · {formatDate(m.data_movimentacao)}
+                          {m.natureza === "open_finance" && (
+                            <span className="ml-1.5 text-blue-500">· Open Finance</span>
+                          )}
                         </p>
                       </div>
-                      <p className={m.type === "entrada" ? "font-bold text-emerald-600 dark:text-emerald-400" : "font-bold text-destructive"}>
-                        {m.type === "entrada" ? "+" : "-"}{formatCurrency(m.valor)}
-                      </p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className={m.type === "entrada" ? "font-bold text-emerald-600 dark:text-emerald-400" : "font-bold text-destructive"}>
+                          {m.type === "entrada" ? "+" : "−"}{formatCurrency(m.valor)}
+                        </p>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -459,14 +520,15 @@ export function FinanceiroPage() {
               <div className="space-y-3">
                 {renderPags.map((r) => {
                   if (r.type === "group") {
-                    return <GroupedPaymentCard key={`group-${r.diarist_id}`} group={r} onPay={setConfirmPayId} />;
+                    const groupKey = `group-${r.diarist_id}-${r.data_agendada ?? "sem-data"}`;
+                    return <GroupedPaymentCard key={groupKey} group={r} onPay={setConfirmPayId} />;
                   }
 
                   const p = r.item;
                   return (
                     <Card
                       key={p.id}
-                      className={p.status === "aguardando" && p.classe === "diarista" && p.payment_cod
+                      className={p.status === "aguardando" && p.payment_cod
                         ? "border-emerald-500/30 shadow-sm"
                         : "shadow-sm"
                       }
@@ -485,11 +547,22 @@ export function FinanceiroPage() {
                             {p.details && (
                               <p className="text-xs text-muted-foreground truncate mt-0.5">{p.details}</p>
                             )}
-                            {p.data_agendada && (
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                Vencimento: {formatDate(p.data_agendada)}
-                              </p>
-                            )}
+                            <div className="flex items-center gap-3 flex-wrap mt-0.5">
+                              {p.data_agendada && (
+                                <p className="text-xs text-muted-foreground">
+                                  Vencimento: {formatDate(p.data_agendada)}
+                                </p>
+                              )}
+                              {p.obra_id && (
+                                <button
+                                  onClick={() => navigate(`/obras/${p.obra_id}`)}
+                                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                                >
+                                  <Building2 className="h-3 w-3" />
+                                  Ver Obra
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3 shrink-0">
                             <p className="font-bold">{formatCurrency(p.valor)}</p>
@@ -503,8 +576,8 @@ export function FinanceiroPage() {
                           </div>
                         </div>
 
-                        {/* PIX block: only for pending diarist payments with a PIX code */}
-                        {p.status === "aguardando" && p.classe === "diarista" && p.payment_cod && (
+                        {/* PIX block: for all pending payments with a PIX code */}
+                        {p.status === "aguardando" && p.payment_cod && (
                           <div className="mt-2">
                             <PixBlock code={p.payment_cod} />
                           </div>
@@ -556,8 +629,18 @@ export function FinanceiroPage() {
               <Label>Valor *</Label>
               <Input placeholder="3200.00" {...registerMov("valor")} />
             </div>
+            <div className="space-y-1.5">
+              <Label>Obra (opcional)</Label>
+              <SearchableSelect
+                options={obrasOptions}
+                value={movFormObraId}
+                onChange={(v) => { setMovFormObraId(v); setValueMov("obra_id", v || undefined); }}
+                allOptionLabel="Nenhuma obra"
+                placeholder="Vincular a uma obra..."
+              />
+            </div>
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setCreateMovOpen(false)}>Cancelar</Button>
+              <Button variant="outline" type="button" onClick={() => { setCreateMovOpen(false); setMovFormObraId(""); }}>Cancelar</Button>
               <Button type="submit" disabled={createMovMutation.isPending}>
                 {createMovMutation.isPending ? "Registrando..." : "Registrar"}
               </Button>
@@ -610,6 +693,12 @@ export function FinanceiroPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Detail sheet de movimentação */}
+      <MovimentacaoDetailSheet
+        mov={selectedMov}
+        onClose={() => setSelectedMov(null)}
+      />
 
       {/* Confirmar pagamento */}
       <ConfirmDialog

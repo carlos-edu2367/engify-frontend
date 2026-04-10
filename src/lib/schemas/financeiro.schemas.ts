@@ -18,5 +18,14 @@ export const pagamentoSchema = z.object({
   obra_id: z.string().optional(),
 });
 
+export const obraPagamentoSchema = z.object({
+  title: z.string().min(3, "Título é obrigatório"),
+  details: z.string().min(3, "Detalhes são obrigatórios"),
+  valor: z.string().min(1, "Valor é obrigatório"),
+  data_agendada: z.string().min(1, "Data é obrigatória"),
+  payment_cod: z.string().min(3, "Código PIX é obrigatório"),
+});
+
 export type MovimentacaoFormValues = z.infer<typeof movimentacaoSchema>;
 export type PagamentoFormValues = z.infer<typeof pagamentoSchema>;
+export type ObraPagamentoFormValues = z.infer<typeof obraPagamentoSchema>;

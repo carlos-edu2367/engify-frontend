@@ -49,3 +49,35 @@ export interface ObraClienteResponse {
   items: ObraClienteItemResponse[];
   images: ObraImageResponse[];
 }
+
+// ── Visão Pública (sem autenticação) ─────────────────────────────────────────
+
+export interface PublicItemAttachmentView {
+  id: string;
+  file_name: string;
+  download_url: string;
+  content_type: string;
+}
+
+export interface PublicItemView {
+  id: string;
+  title: string;
+  status: ObraStatus;
+  attachments: PublicItemAttachmentView[];
+}
+
+export interface PublicImageView {
+  id: string;
+  file_name: string;
+  download_url: string;
+}
+
+export interface PublicObraResponse {
+  id: string;
+  title: string;
+  description?: string;
+  status: ObraStatus;
+  data_entrega?: string;
+  items: PublicItemView[];
+  images: PublicImageView[];
+}

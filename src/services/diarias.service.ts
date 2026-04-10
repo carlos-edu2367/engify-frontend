@@ -7,7 +7,7 @@ import type {
 import type { PaginatedResponse } from "@/types/api.types";
 
 export const diariasService = {
-  list: (params: { start: string; end: string; page?: number; limit?: number }) =>
+  list: (params: { start: string; end: string; page?: number; limit?: number; obra_id?: string }) =>
     api
       .get<PaginatedResponse<DiariesResponse>>("/diarias", { params })
       .then((r) => r.data),
