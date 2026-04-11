@@ -38,6 +38,7 @@ export interface PagamentoResponse {
   status: PagamentoStatus;
   data_agendada?: string;
   payment_cod?: string;
+  pix_copy_and_past?: string;
   obra_id?: string;
   diarist_id?: string;
   payment_date?: string;

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, Check, QrCode, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -30,6 +30,7 @@ import type { MovClass, MovimentacaoResponse, PagamentoResponse, PagamentoStatus
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
+import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 
 function getDueStatus(dataAgendada: string | undefined, status: string): "today" | "overdue" | null {
   if (!dataAgendada || status !== "aguardando") return null;
@@ -64,70 +65,12 @@ const classeLabels: Record<MovClass, string> = {
 };
 
 // ─── PIX Code Copy Button ────────────────────────────────────────────────────
-function PixCopyButton({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true);
-      toast.success("Código PIX copiado!");
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors border border-emerald-500/20"
-      title="Copiar código PIX"
-    >
-      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {copied ? "Copiado!" : "Copiar"}
-    </button>
-  );
-}
-
 // ─── PIX Block inside a payment card ─────────────────────────────────────────
-function PixBlock({ code }: { code: string }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-      <button
-        className="flex w-full items-center justify-between gap-2 text-left"
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <div className="flex items-center gap-2">
-          <QrCode className="h-4 w-4 text-emerald-500" />
-          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-            PIX Copia e Cola disponível
-          </span>
-        </div>
-        {expanded ? (
-          <ChevronUp className="h-4 w-4 text-emerald-500" />
-        ) : (
-          <ChevronDown className="h-4 w-4 text-emerald-500" />
-        )}
-      </button>
-
-      {expanded && (
-        <div className="mt-3 space-y-2">
-          <p className="break-all rounded-md bg-background/80 border border-border px-3 py-2 font-mono text-[11px] text-foreground/80 select-all">
-            {code}
-          </p>
-          <PixCopyButton code={code} />
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ─── Types and Grouping Component ────────────────────────────────────────────
 interface PagamentoGroup {
   type: "group";
   diarist_id: string;
   diarist_title: string;
-  payment_cod?: string;
   total_valor: number;
   data_agendada?: string;
   obra_id?: string;
@@ -197,17 +140,12 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
           </div>
         </div>
 
-        {group.payment_cod && (
-          <div className="mt-2 text-left">
-            <PixBlock code={group.payment_cod} />
-          </div>
-        )}
-
         {expanded && (
           <div className="mt-4 space-y-2 border-t pt-4">
             {group.items.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-4 rounded-md border border-border/50 bg-muted/20 p-3">
-                 <div className="min-w-0 flex-1">
+              <div key={p.id} className="rounded-md border border-border/50 bg-muted/20 p-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{p.details || "Diária"}</p>
                     {p.data_agendada && (
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
@@ -219,13 +157,19 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
                         )}
                       </div>
                     )}
-                 </div>
-                 <div className="flex items-center gap-3 shrink-0">
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
                     <p className="text-sm font-bold">{formatCurrency(p.valor)}</p>
                     <Button size="sm" onClick={() => onPay(p.id)}>
                       Pagar
                     </Button>
-                 </div>
+                  </div>
+                </div>
+                {p.status === "aguardando" && p.pix_copy_and_past && (
+                  <div className="mt-3">
+                    <PixQrCodeBlock payload={p.pix_copy_and_past} originalCode={p.payment_cod} compact />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -365,7 +309,6 @@ export function FinanceiroPage() {
         type: "group",
         diarist_id: groupItems[0].diarist_id!,
         diarist_title: groupItems[0].title,
-        payment_cod: groupItems[0].payment_cod,
         total_valor: total,
         data_agendada: groupItems[0].data_agendada,
         obra_id: groupItems[0].obra_id,
@@ -619,10 +562,25 @@ export function FinanceiroPage() {
                           </div>
                         </div>
 
-                        {/* PIX block: for all pending payments with a PIX code */}
-                        {p.status === "aguardando" && p.payment_cod && (
+                        {p.payment_cod && (
                           <div className="mt-2">
-                            <PixBlock code={p.payment_cod} />
+                            <button
+                              onClick={() =>
+                                navigator.clipboard.writeText(p.payment_cod!).then(() => {
+                                  toast.success("CÃ³digo de pagamento copiado!");
+                                })
+                              }
+                              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                              title="Copiar cÃ³digo original"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                              <span className="font-mono truncate max-w-[260px]">{p.payment_cod}</span>
+                            </button>
+                          </div>
+                        )}
+                        {p.status === "aguardando" && p.pix_copy_and_past && (
+                          <div className="mt-2">
+                            <PixQrCodeBlock payload={p.pix_copy_and_past} originalCode={p.payment_cod} />
                           </div>
                         )}
                       </CardContent>

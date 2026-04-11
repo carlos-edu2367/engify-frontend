@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoleGuard } from "@/components/shared/RoleGuard";
+import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { financeiroService } from "@/services/financeiro.service";
 import { obrasService } from "@/services/obras.service";
 import { obraPagamentoSchema, type ObraPagamentoFormValues } from "@/lib/schemas/financeiro.schemas";
@@ -139,6 +140,16 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
                       <Copy className="h-3 w-3" />
                       <span className="font-mono truncate max-w-[200px]">{p.payment_cod}</span>
                     </button>
+                  )}
+
+                  {p.status === "aguardando" && p.pix_copy_and_past && (
+                    <div className="pt-2">
+                      <PixQrCodeBlock
+                        payload={p.pix_copy_and_past}
+                        originalCode={p.payment_cod}
+                        compact
+                      />
+                    </div>
                   )}
                 </div>
               </CardContent>

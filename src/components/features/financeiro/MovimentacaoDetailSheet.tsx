@@ -35,6 +35,7 @@ import { obrasService } from "@/services/obras.service";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import type { MovimentacaoResponse, MovimentacaoAttachmentResponse } from "@/types/financeiro.types";
+import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 
 const classeLabels: Record<string, string> = {
   diarista: "Diarista",
@@ -392,6 +393,15 @@ export function MovimentacaoDetailSheet({ mov, onClose }: MovimentacaoDetailShee
                               Pago
                             </Badge>
                           </div>
+                          {pagamento.pix_copy_and_past && (
+                            <div className="pt-2">
+                              <PixQrCodeBlock
+                                payload={pagamento.pix_copy_and_past}
+                                originalCode={pagamento.payment_cod}
+                                compact
+                              />
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="pl-6 space-y-1.5">
