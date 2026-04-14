@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { CategoriasTab } from "@/components/features/categorias/CategoriasTab";
@@ -367,7 +368,12 @@ export function ObrasPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Descrição (opcional)</Label>
-              <Input placeholder="Descreva a obra..." {...register("description")} />
+              <Textarea
+                placeholder="Descreva a obra..."
+                rows={3}
+                className="resize-none"
+                {...register("description")}
+              />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
