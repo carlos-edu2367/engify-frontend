@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt, CheckCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -84,7 +84,7 @@ interface PagamentoSingle {
 
 type RenderablePagamento = PagamentoGroup | PagamentoSingle;
 
-function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (id: string) => void }) {
+function GroupedPaymentCard({ group, onPay, onPayAll }: { group: PagamentoGroup; onPay: (id: string) => void; onPayAll: (ids: string[]) => void }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
 
@@ -132,8 +132,18 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <p className="font-bold">{formatCurrency(group.total_valor.toString())}</p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10 hidden sm:flex"
+              onClick={() => onPayAll(group.items.map((i) => i.id))}
+              title="Marcar todos como pago"
+            >
+              <CheckCheck className="h-3.5 w-3.5 mr-1" />
+              Pagar todos
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setExpanded(!expanded)}>
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </Button>
@@ -142,6 +152,17 @@ function GroupedPaymentCard({ group, onPay }: { group: PagamentoGroup; onPay: (i
 
         {expanded && (
           <div className="mt-4 space-y-2 border-t pt-4">
+            <div className="flex sm:hidden justify-end mb-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10"
+                onClick={() => onPayAll(group.items.map((i) => i.id))}
+              >
+                <CheckCheck className="h-3.5 w-3.5 mr-1" />
+                Pagar todos
+              </Button>
+            </div>
             {group.items.map((p) => (
               <div key={p.id} className="rounded-md border border-border/50 bg-muted/20 p-3">
                 <div className="flex items-center justify-between gap-4">
@@ -185,6 +206,7 @@ export function FinanceiroPage() {
   const [createMovOpen, setCreateMovOpen] = useState(false);
   const [createPagOpen, setCreatePagOpen] = useState(false);
   const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
+  const [confirmPayAllIds, setConfirmPayAllIds] = useState<string[] | null>(null);
   const [selectedMov, setSelectedMov] = useState<MovimentacaoResponse | null>(null);
   const [movFormObraId, setMovFormObraId] = useState<string>("");
 
@@ -255,6 +277,16 @@ export function FinanceiroPage() {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success("Pagamento efetuado!");
       setConfirmPayId(null);
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const baixaLoteMutation = useMutation({
+    mutationFn: (ids: string[]) => financeiroService.baixaLotePagamentos({ pagamento_ids: ids }),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      toast.success(`${result.quantidade} pagamentos marcados como pagos — ${formatCurrency(result.valor_total.toString())}`);
+      setConfirmPayAllIds(null);
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -501,7 +533,7 @@ export function FinanceiroPage() {
                 {renderPags.map((r) => {
                   if (r.type === "group") {
                     const groupKey = `group-${r.diarist_id}-${r.data_agendada ?? "sem-data"}`;
-                    return <GroupedPaymentCard key={groupKey} group={r} onPay={setConfirmPayId} />;
+                    return <GroupedPaymentCard key={groupKey} group={r} onPay={setConfirmPayId} onPayAll={setConfirmPayAllIds} />;
                   }
 
                   const p = r.item;
@@ -714,6 +746,17 @@ export function FinanceiroPage() {
         confirmLabel="Confirmar pagamento"
         onConfirm={() => confirmPayId && payMutation.mutate(confirmPayId)}
         loading={payMutation.isPending}
+      />
+
+      {/* Confirmar baixa em lote */}
+      <ConfirmDialog
+        open={!!confirmPayAllIds}
+        onOpenChange={(o) => !o && setConfirmPayAllIds(null)}
+        title="Marcar todos como pago"
+        description={`Esta ação irá marcar ${confirmPayAllIds?.length ?? 0} pagamentos como pagos em uma única operação e criar uma movimentação de saída consolidada. Não pode ser desfeita.`}
+        confirmLabel="Confirmar pagamento em lote"
+        onConfirm={() => confirmPayAllIds && baixaLoteMutation.mutate(confirmPayAllIds)}
+        loading={baixaLoteMutation.isPending}
       />
     </PageTransition>
   );

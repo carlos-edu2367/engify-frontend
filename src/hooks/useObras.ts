@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { obrasService } from "@/services/obras.service";
-import type { ObraStatus, CreateObraRequest, UpdateObraRequest } from "@/types/obra.types";
+import type { ObraStatus, CreateObraRequest, UpdateObraRequest, RecebimentoRequest } from "@/types/obra.types";
 
 export function useObrasList(params: { status?: ObraStatus | "all"; limit?: number } = {}) {
   return useQuery({
@@ -49,5 +49,25 @@ export function useDeleteObra() {
   return useMutation({
     mutationFn: (id: string) => obrasService.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["obras"] }),
+  });
+}
+
+export function useRegistrarRecebimento(obraId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: RecebimentoRequest) => obrasService.registrarRecebimento(obraId!, data),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(["obras", obraId], updated);
+      queryClient.invalidateQueries({ queryKey: ["obras", obraId, "entradas"] });
+    },
+  });
+}
+
+export function useObraEntradas(obraId: string | undefined) {
+  return useQuery({
+    queryKey: ["obras", obraId, "entradas"],
+    queryFn: () => obrasService.listEntradas(obraId!, { limit: 50 }),
+    enabled: !!obraId,
+    staleTime: 5 * 60 * 1000,
   });
 }

@@ -297,8 +297,35 @@ export function ObrasPage() {
                       </CardHeader>
                       <CardContent className="space-y-2">
                         {obra.valor && (
-                          <p className="text-sm font-semibold">
-                            {formatCurrency(obra.valor)}
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">
+                              {formatCurrency(obra.valor)}
+                            </p>
+                            {obra.total_recebido !== undefined && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-xs text-muted-foreground">
+                                    Recebido: {formatCurrency(obra.total_recebido)}
+                                  </p>
+                                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                    {Math.min(100, Math.round((parseFloat(obra.total_recebido) / parseFloat(obra.valor)) * 100))}%
+                                  </p>
+                                </div>
+                                <div className="w-full bg-muted rounded-full h-1.5">
+                                  <div
+                                    className="bg-emerald-500 h-1.5 rounded-full"
+                                    style={{
+                                      width: `${Math.min(100, Math.round((parseFloat(obra.total_recebido) / parseFloat(obra.valor)) * 100))}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!obra.valor && obra.total_recebido !== undefined && (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                            Recebido: {formatCurrency(obra.total_recebido)}
                           </p>
                         )}
                         {obra.data_entrega && (

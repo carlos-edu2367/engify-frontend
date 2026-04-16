@@ -102,3 +102,13 @@ export interface CreateMovimentacaoAttachmentRequest {
   file_name: string;
   content_type: string;
 }
+
+export interface BaixaLoteRequest {
+  pagamento_ids: string[];
+}
+
+export interface BaixaLoteResponse {
+  quantidade: number;
+  valor_total: number;
+  movimentacao_id: string;
+}

@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Trash2, MoreVertical, Link as LinkIcon, User, Calendar, Wallet, CheckCircle } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, MoreVertical, Link as LinkIcon, User, Calendar, Wallet, CheckCircle, TrendingDown, Plus, Paperclip } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { obrasService } from "@/services/obras.service";
+import { useRegistrarRecebimento, useObraEntradas } from "@/hooks/useObras";
+import { EntradaAnexosSheet } from "@/components/features/financeiro/EntradaAnexosSheet";
+import type { ObraEntradaResponse } from "@/types/obra.types";
 import { itemsService } from "@/services/items.service";
 import { usersService } from "@/services/users.service";
 import { CategoriaObraSelect } from "@/components/features/categorias/CategoriaObraSelect";
@@ -53,6 +56,9 @@ export function ObraDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [recebimentoOpen, setRecebimentoOpen] = useState(false);
+  const [recebimentoValor, setRecebimentoValor] = useState("");
+  const [selectedEntrada, setSelectedEntrada] = useState<ObraEntradaResponse | null>(null);
 
   const { data: obra, isLoading } = useQuery({
     queryKey: ["obras", obraId],
@@ -114,6 +120,9 @@ export function ObraDetailPage() {
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
+
+  const recebimentoMutation = useRegistrarRecebimento(obraId);
+  const { data: entradasData } = useObraEntradas(obraId);
 
   const {
     register,
@@ -201,6 +210,19 @@ export function ObraDetailPage() {
                   <span className="text-sm font-medium">Valor: {formatCurrency(obra.valor)}</span>
                 </div>
               )}
+              {obra.total_recebido !== undefined && (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-emerald-700 dark:text-emerald-400">
+                  <TrendingDown className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    Recebido: {formatCurrency(obra.total_recebido)}
+                    {obra.valor && (
+                      <span className="text-xs text-muted-foreground ml-1">
+                        ({Math.round((parseFloat(obra.total_recebido) / parseFloat(obra.valor)) * 100)}%)
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -256,6 +278,7 @@ export function ObraDetailPage() {
             <TabsTrigger value="diarias">Diarias</TabsTrigger>
             <TabsTrigger value="imagens">Imagens</TabsTrigger>
             <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
+            <TabsTrigger value="recebimentos">Recebimentos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="kanban" className="mt-4">
@@ -276,6 +299,78 @@ export function ObraDetailPage() {
 
           <TabsContent value="pagamentos" className="mt-4">
             <PagamentosTab obraId={obraId!} />
+          </TabsContent>
+
+          <TabsContent value="recebimentos" className="mt-4 space-y-4">
+            {/* Resumo */}
+            {obra.valor && (
+              <div className="rounded-lg border border-border/60 bg-card p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Progresso de Recebimento</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatCurrency(obra.total_recebido ?? "0")} de {formatCurrency(obra.valor)}
+                    </p>
+                  </div>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                    {Math.min(100, Math.round((parseFloat(obra.total_recebido ?? "0") / parseFloat(obra.valor)) * 100))}%
+                  </p>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2.5">
+                  <div
+                    className="bg-emerald-500 h-2.5 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, Math.round((parseFloat(obra.total_recebido ?? "0") / parseFloat(obra.valor)) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {!obra.valor && obra.total_recebido !== undefined && (
+              <div className="rounded-lg border border-border/60 bg-card p-4">
+                <p className="text-sm font-medium">Total Recebido</p>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                  {formatCurrency(obra.total_recebido)}
+                </p>
+              </div>
+            )}
+
+            {/* Botão registrar */}
+            <RoleGuard roles={["admin", "engenheiro"]}>
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => { setRecebimentoValor(""); setRecebimentoOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Registrar Recebimento
+                </Button>
+              </div>
+            </RoleGuard>
+
+            {/* Lista de entradas */}
+            <div className="space-y-2">
+              {(entradasData?.items ?? []).length === 0 ? (
+                <div className="py-10 text-center border rounded-lg bg-card text-muted-foreground text-sm">
+                  Nenhum recebimento registrado ainda.
+                </div>
+              ) : (
+                (entradasData?.items ?? []).map((entrada) => (
+                  <button
+                    key={entrada.id}
+                    onClick={() => setSelectedEntrada(entrada)}
+                    className="w-full flex items-center justify-between gap-4 rounded-lg border border-border/60 bg-card px-4 py-3 text-left hover:border-primary/40 hover:shadow-sm transition-all"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{entrada.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{formatDate(entrada.data_movimentacao)}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <p className="font-bold text-emerald-600 dark:text-emerald-400">+{formatCurrency(entrada.valor)}</p>
+                      <Paperclip className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
@@ -376,6 +471,60 @@ export function ObraDetailPage() {
         onConfirm={() => deleteMutation.mutate()}
         loading={deleteMutation.isPending}
       />
+
+      <EntradaAnexosSheet
+        entrada={selectedEntrada}
+        onClose={() => setSelectedEntrada(null)}
+      />
+
+      <Dialog open={recebimentoOpen} onOpenChange={setRecebimentoOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Registrar Recebimento</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const valor = parseFloat(recebimentoValor);
+              if (!valor || valor <= 0) {
+                toast.error("Informe um valor positivo.");
+                return;
+              }
+              recebimentoMutation.mutate(
+                { valor },
+                {
+                  onSuccess: () => {
+                    toast.success("Recebimento registrado!");
+                    setRecebimentoOpen(false);
+                  },
+                  onError: (err) => toast.error(getApiErrorMessage(err)),
+                }
+              );
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-1.5">
+              <Label>Valor recebido *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="5000.00"
+                value={recebimentoValor}
+                onChange={(e) => setRecebimentoValor(e.target.value)}
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setRecebimentoOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={recebimentoMutation.isPending}>
+                {recebimentoMutation.isPending ? "Registrando..." : "Registrar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-2xl gap-2">

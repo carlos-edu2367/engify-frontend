@@ -7,6 +7,8 @@ import type {
   UpdateObraRequest,
   UpdateObraStatusRequest,
   ObraStatus,
+  RecebimentoRequest,
+  ObraEntradaResponse,
 } from "@/types/obra.types";
 import type { PaginatedResponse } from "@/types/api.types";
 import type { PagamentoResponse, CreateObraPagamentoRequest } from "@/types/financeiro.types";
@@ -50,5 +52,13 @@ export const obrasService = {
   addImage: (obraId: string, data: CreateAttachmentRequest) =>
     api
       .post<ObraImageResponse>(`/obras/${obraId}/images`, data)
+      .then((r) => r.data),
+
+  registrarRecebimento: (obraId: string, data: RecebimentoRequest) =>
+    api.post<ObraResponse>(`/obras/${obraId}/recebimentos`, data).then((r) => r.data),
+
+  listEntradas: (obraId: string, params: { page?: number; limit?: number } = {}) =>
+    api
+      .get<PaginatedResponse<ObraEntradaResponse>>(`/obras/${obraId}/entradas`, { params })
       .then((r) => r.data),
 };

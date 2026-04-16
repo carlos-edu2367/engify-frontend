@@ -5,6 +5,7 @@ import type {
   CreatePagamentoRequest,
   UpdatePagamentoRequest,
   CreateMovimentacaoAttachmentRequest,
+  BaixaLoteRequest,
 } from "@/types/financeiro.types";
 
 export function useMovimentacoes(params: { limit?: number } = {}) {
@@ -83,5 +84,13 @@ export function useDeleteMovimentacaoAttachment(movId: string) {
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "movimentacoes", movId, "attachments"],
       }),
+  });
+}
+
+export function useBaixaLotePagamentos() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BaixaLoteRequest) => financeiroService.baixaLotePagamentos(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["financeiro"] }),
   });
 }

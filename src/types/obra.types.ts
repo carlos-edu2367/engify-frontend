@@ -10,9 +10,22 @@ export interface ObraResponse {
   team_id?: string;
   status: ObraStatus;
   valor?: string;
+  total_recebido?: string;
   data_entrega?: string;
   created_date: string;
   categoria_id?: string | null;
+}
+
+export interface RecebimentoRequest {
+  valor: number;
+}
+
+export interface ObraEntradaResponse {
+  id: string;
+  title: string;
+  valor: string;
+  data_movimentacao: string;
+  obra_id: string;
 }
 
 export interface CreateObraRequest {

@@ -9,6 +9,8 @@ import type {
   ListPagamentosParams,
   MovimentacaoAttachmentResponse,
   CreateMovimentacaoAttachmentRequest,
+  BaixaLoteRequest,
+  BaixaLoteResponse,
 } from "@/types/financeiro.types";
 import type { PaginatedResponse } from "@/types/api.types";
 
@@ -59,4 +61,7 @@ export const financeiroService = {
 
   deleteAttachment: (movId: string, attId: string) =>
     api.delete(`/financeiro/movimentacoes/${movId}/attachments/${attId}`).then((r) => r.data),
+
+  baixaLotePagamentos: (data: BaixaLoteRequest) =>
+    api.post<BaixaLoteResponse>("/financeiro/pagamentos/baixa-lote", data).then((r) => r.data),
 };
