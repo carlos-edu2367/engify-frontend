@@ -17,7 +17,9 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ItemResponse, ItemStatus } from "@/types/item.types";
+import type { ObraResponse, ObraStatus } from "@/types/obra.types";
 import { itemsService } from "@/services/items.service";
+import { obrasService } from "@/services/obras.service";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCardOverlay } from "./KanbanCard";
 import { ItemDrawer } from "./ItemDrawer";
@@ -43,6 +45,13 @@ const STATUS_LABELS: Record<ItemStatus, string> = {
   finalizado: "Finalizado",
 };
 
+function computeObraStatus(items: ItemResponse[]): ObraStatus {
+  if (items.length === 0) return "planejamento";
+  if (items.every((i) => i.status === "finalizado")) return "finalizado";
+  if (items.some((i) => i.status === "em_andamento")) return "em_andamento";
+  return "planejamento";
+}
+
 function groupItemsByStatus(items: ItemResponse[]) {
   const grouped: Record<ItemStatus, ItemResponse[]> = {
     planejamento: [],
@@ -66,6 +75,17 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoardProps) {
   const queryClient = useQueryClient();
+
+  function syncObraStatus(updatedItems: ItemResponse[]) {
+    const newStatus = computeObraStatus(updatedItems);
+    const current = queryClient.getQueryData<ObraResponse>(["obras", obraId]);
+    if (!current || current.status === newStatus) return;
+    queryClient.setQueryData<ObraResponse>(["obras", obraId], { ...current, status: newStatus });
+    obrasService.updateStatus(obraId, { status: newStatus }).catch(() => {
+      queryClient.invalidateQueries({ queryKey: ["obras", obraId] });
+    });
+  }
+
   const [activeItem, setActiveItem] = useState<ItemResponse | null>(null);
   const [addingToStatus, setAddingToStatus] = useState<ItemStatus | null>(null);
   const [editingItem, setEditingItem] = useState<ItemResponse | null>(null);
@@ -158,9 +178,13 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
 
     if (!didUpdate) return;
 
+    const updatedItems = queryClient.getQueryData<ItemResponse[]>(["obras", obraId, "items"]) ?? [];
+    syncObraStatus(updatedItems);
+
     itemsService.update(obraId, itemId, { status: targetStatus }).catch(() => {
       toast.error("Erro ao mover item. Revertendo...");
       queryClient.invalidateQueries({ queryKey: ["obras", obraId, "items"] });
+      queryClient.invalidateQueries({ queryKey: ["obras", obraId] });
     });
   }
 
@@ -237,6 +261,8 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
         ...old,
         { ...newItem, status: addingToStatus! },
       ]);
+      const updatedItems = queryClient.getQueryData<ItemResponse[]>(["obras", obraId, "items"]) ?? [];
+      syncObraStatus(updatedItems);
       setAddingToStatus(null);
       reset();
       toast.success("Item criado com sucesso!");
@@ -268,6 +294,8 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
       queryClient.setQueryData<ItemResponse[]>(["obras", obraId, "items"], (old = []) =>
         old.filter((i) => i.id !== deletingItem.id)
       );
+      const updatedItems = queryClient.getQueryData<ItemResponse[]>(["obras", obraId, "items"]) ?? [];
+      syncObraStatus(updatedItems);
       setDeletingItem(null);
     } catch (err) {
       toast.error(getApiErrorMessage(err));
