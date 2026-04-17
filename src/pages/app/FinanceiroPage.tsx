@@ -31,6 +31,9 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
+import { buildPixPayload } from "@/lib/pix";
+import { teamsService } from "@/services/teams.service";
+import type { DiaristResponse } from "@/types/team.types";
 
 function getDueStatus(dataAgendada: string | undefined, status: string): "today" | "overdue" | null {
   if (!dataAgendada || status !== "aguardando") return null;
@@ -75,6 +78,8 @@ interface PagamentoGroup {
   data_agendada?: string;
   obra_id?: string;
   items: PagamentoResponse[];
+  pix_payload?: string;
+  pix_key?: string;
 }
 
 interface PagamentoSingle {
@@ -84,7 +89,24 @@ interface PagamentoSingle {
 
 type RenderablePagamento = PagamentoGroup | PagamentoSingle;
 
-function GroupedPaymentCard({ group, onPay, onPayAll }: { group: PagamentoGroup; onPay: (id: string) => void; onPayAll: (ids: string[]) => void }) {
+interface PayAllPreview {
+  ids: string[];
+  diaristTitle: string;
+  totalValor: number;
+  itemCount: number;
+  pixPayload?: string;
+  pixKey?: string;
+}
+
+function GroupedPaymentCard({
+  group,
+  onPay,
+  onPayAll,
+}: {
+  group: PagamentoGroup;
+  onPay: (id: string) => void;
+  onPayAll: (group: PagamentoGroup) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
 
@@ -138,8 +160,8 @@ function GroupedPaymentCard({ group, onPay, onPayAll }: { group: PagamentoGroup;
               size="sm"
               variant="outline"
               className="text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10 hidden sm:flex"
-              onClick={() => onPayAll(group.items.map((i) => i.id))}
-              title="Marcar todos como pago"
+              onClick={() => onPayAll(group)}
+              title="Pagar tudo deste diarista"
             >
               <CheckCheck className="h-3.5 w-3.5 mr-1" />
               Pagar todos
@@ -157,7 +179,7 @@ function GroupedPaymentCard({ group, onPay, onPayAll }: { group: PagamentoGroup;
                 size="sm"
                 variant="outline"
                 className="text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10"
-                onClick={() => onPayAll(group.items.map((i) => i.id))}
+                onClick={() => onPayAll(group)}
               >
                 <CheckCheck className="h-3.5 w-3.5 mr-1" />
                 Pagar todos
@@ -206,7 +228,7 @@ export function FinanceiroPage() {
   const [createMovOpen, setCreateMovOpen] = useState(false);
   const [createPagOpen, setCreatePagOpen] = useState(false);
   const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
-  const [confirmPayAllIds, setConfirmPayAllIds] = useState<string[] | null>(null);
+  const [payAllPreview, setPayAllPreview] = useState<PayAllPreview | null>(null);
   const [selectedMov, setSelectedMov] = useState<MovimentacaoResponse | null>(null);
   const [movFormObraId, setMovFormObraId] = useState<string>("");
 
@@ -223,7 +245,14 @@ export function FinanceiroPage() {
     queryKey: ["obras", "all"],
     queryFn: () => obrasService.list({ limit: 50, status: "all" }),
   });
+  const { data: diaristasData } = useQuery({
+    queryKey: ["diaristas"],
+    queryFn: () => teamsService.getDiaristas(1, 200),
+  });
   const obrasOptions = (obrasData?.items ?? []).map((o) => ({ value: o.id, label: o.title }));
+  const diaristasMap = Object.fromEntries(
+    ((diaristasData?.items ?? []) as DiaristResponse[]).map((d) => [d.id, d])
+  );
 
   const { data: movsData, isLoading: movsLoading } = useQuery({
     queryKey: ["financeiro", "movimentacoes", { pStart: movPeriodo.start, pEnd: movPeriodo.end, obra: movObraId, classe: movClasse }],
@@ -286,7 +315,7 @@ export function FinanceiroPage() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success(`${result.quantidade} pagamentos marcados como pagos — ${formatCurrency(result.valor_total.toString())}`);
-      setConfirmPayAllIds(null);
+      setPayAllPreview(null);
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -337,6 +366,17 @@ export function FinanceiroPage() {
       renderPags.push({ type: "single", item: groupItems[0] });
     } else {
       const total = groupItems.reduce((acc, p) => acc + parseFloat(p.valor), 0);
+      const diarista = diaristasMap[groupItems[0].diarist_id!];
+      const pixKey = diarista?.chave_pix?.trim();
+      const pixPayload = pixKey
+        ? buildPixPayload({
+            pixKey,
+            amount: total,
+            recipientName: diarista?.nome || groupItems[0].title,
+            description: `Pagamento ${groupItems.length} diarias`,
+            txid: groupItems[0].diarist_id?.replace(/-/g, "").slice(0, 25) || "***",
+          })
+        : undefined;
       renderPags.push({
         type: "group",
         diarist_id: groupItems[0].diarist_id!,
@@ -345,6 +385,8 @@ export function FinanceiroPage() {
         data_agendada: groupItems[0].data_agendada,
         obra_id: groupItems[0].obra_id,
         items: groupItems,
+        pix_payload: pixPayload,
+        pix_key: pixKey,
       });
     }
   });
@@ -533,7 +575,23 @@ export function FinanceiroPage() {
                 {renderPags.map((r) => {
                   if (r.type === "group") {
                     const groupKey = `group-${r.diarist_id}-${r.data_agendada ?? "sem-data"}`;
-                    return <GroupedPaymentCard key={groupKey} group={r} onPay={setConfirmPayId} onPayAll={setConfirmPayAllIds} />;
+                    return (
+                      <GroupedPaymentCard
+                        key={groupKey}
+                        group={r}
+                        onPay={setConfirmPayId}
+                        onPayAll={(group) =>
+                          setPayAllPreview({
+                            ids: group.items.map((item) => item.id),
+                            diaristTitle: group.diarist_title,
+                            totalValor: group.total_valor,
+                            itemCount: group.items.length,
+                            pixPayload: group.pix_payload,
+                            pixKey: group.pix_key,
+                          })
+                        }
+                      />
+                    );
                   }
 
                   const p = r.item;
@@ -748,16 +806,54 @@ export function FinanceiroPage() {
         loading={payMutation.isPending}
       />
 
-      {/* Confirmar baixa em lote */}
-      <ConfirmDialog
-        open={!!confirmPayAllIds}
-        onOpenChange={(o) => !o && setConfirmPayAllIds(null)}
-        title="Marcar todos como pago"
-        description={`Esta ação irá marcar ${confirmPayAllIds?.length ?? 0} pagamentos como pagos em uma única operação e criar uma movimentação de saída consolidada. Não pode ser desfeita.`}
-        confirmLabel="Confirmar pagamento em lote"
-        onConfirm={() => confirmPayAllIds && baixaLoteMutation.mutate(confirmPayAllIds)}
-        loading={baixaLoteMutation.isPending}
-      />
+      <Dialog open={!!payAllPreview} onOpenChange={(o) => !o && setPayAllPreview(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Pagar todas as diárias</DialogTitle>
+          </DialogHeader>
+
+          {payAllPreview && (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-medium">{payAllPreview.diaristTitle}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {payAllPreview.itemCount} pagamento{payAllPreview.itemCount !== 1 ? "s" : ""} consolidados neste lote
+                    </p>
+                  </div>
+                  <p className="text-lg font-bold">{formatCurrency(payAllPreview.totalValor.toString())}</p>
+                </div>
+              </div>
+
+              {payAllPreview.pixPayload ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Use o QR Code ou o PIX copia e cola abaixo para pagar o valor total deste grupo.
+                  </p>
+                  <PixQrCodeBlock payload={payAllPreview.pixPayload} originalCode={payAllPreview.pixKey} />
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-300">
+                  Este diarista ainda não tem uma chave PIX cadastrada, então não foi possível gerar um QR Code consolidado no front-end.
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPayAllPreview(null)}>
+                  Fechar
+                </Button>
+                <Button
+                  onClick={() => baixaLoteMutation.mutate(payAllPreview.ids)}
+                  disabled={baixaLoteMutation.isPending}
+                >
+                  {baixaLoteMutation.isPending ? "Confirmando..." : "Marcar todos como pagos"}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PageTransition>
   );
 }
