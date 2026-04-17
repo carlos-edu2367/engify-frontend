@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, Pencil, Trash2, MoreVertical, Link as LinkIcon, User, Calendar, Wallet, CheckCircle, TrendingDown, Plus, Paperclip } from "lucide-react";
@@ -50,6 +50,8 @@ const statusVariants: Record<ObraStatus, "info" | "warning" | "success"> = {
 export function ObraDetailPage() {
   const { obraId } = useParams<{ obraId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") ?? "kanban";
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === "admin" || user?.role === "engenheiro";
@@ -271,7 +273,7 @@ export function ObraDetailPage() {
           </div>
         )}
 
-        <Tabs defaultValue="kanban">
+        <Tabs defaultValue={initialTab}>
           <TabsList className="overflow-x-auto whitespace-nowrap">
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
             <TabsTrigger value="mural">Mural</TabsTrigger>

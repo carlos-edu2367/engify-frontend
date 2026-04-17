@@ -16,6 +16,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { authService } from "@/services/auth.service";
 import { getInitials } from "@/lib/utils";
 import { queryClient } from "@/lib/query-client";
+import { NotificacoesDropdown } from "@/components/layout/NotificacoesDropdown";
 
 const breadcrumbMap: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -69,6 +70,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
+          <NotificacoesDropdown />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

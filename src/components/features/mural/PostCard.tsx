@@ -54,11 +54,17 @@ export function PostCard({
     currentUserRole?.toUpperCase() === "ADMIN" ||
     (!!post.author_id && post.author_id === currentUserId);
 
+  const isMentioned = !!currentUserId && post.mentions.includes(currentUserId);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group flex gap-3 rounded-2xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:border-border/80 hover:shadow-md md:gap-3.5 md:p-5"
+      className={
+        isMentioned
+          ? "group flex gap-3 rounded-2xl border border-primary/40 bg-primary/5 p-4 shadow-sm ring-1 ring-primary/20 transition-all hover:border-primary/60 hover:shadow-md md:gap-3.5 md:p-5"
+          : "group flex gap-3 rounded-2xl border border-border/50 bg-card p-4 shadow-sm transition-all hover:border-border/80 hover:shadow-md md:gap-3.5 md:p-5"
+      }
     >
       <div className="flex h-9 w-9 shrink-0 select-none items-center justify-center overflow-hidden rounded-full border border-primary/10 bg-gradient-to-br from-primary/10 to-primary/20 shadow-inner md:h-10 md:w-10">
         <span className="text-xs font-bold tracking-wider text-primary">
