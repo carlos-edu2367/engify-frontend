@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Upload, ImageIcon, X, ZoomIn, Loader2 } from "lucide-react";
+import { Upload, ImageIcon, X, ZoomIn, Loader2, Video } from "lucide-react";
 import { obrasService } from "@/services/obras.service";
 import { storageService } from "@/services/storage.service";
 import { Button } from "@/components/ui/button";
@@ -10,44 +10,72 @@ import { RoleGuard } from "@/components/shared/RoleGuard";
 import { cn } from "@/lib/utils";
 import type { ObraImageResponse } from "@/types/attachment.types";
 
+const ACCEPTED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+];
+
 interface ImagensTabProps {
   obraId: string;
   canEdit: boolean;
 }
 
-function ImageCard({
-  image,
+function isVideo(item: ObraImageResponse): boolean {
+  if (item.content_type) return item.content_type.startsWith("video/");
+  const ext = item.file_name.split(".").pop()?.toLowerCase();
+  return ext === "mp4" || ext === "mov" || ext === "webm";
+}
+
+function MediaCard({
+  item,
   onRemove,
   canRemove,
 }: {
-  image: ObraImageResponse & { downloadUrl?: string };
+  item: ObraImageResponse & { downloadUrl?: string };
   onRemove?: () => void;
   canRemove: boolean;
 }) {
   const [lightbox, setLightbox] = useState(false);
+  const video = isVideo(item);
 
   return (
     <>
       <div className="group relative aspect-square rounded-xl overflow-hidden border border-border/50 bg-muted/30 cursor-pointer shadow-sm hover:shadow-md transition-shadow">
-        {image.downloadUrl ? (
-          <img
-            src={image.downloadUrl}
-            alt={image.file_name}
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onClick={() => setLightbox(true)}
-          />
+        {item.downloadUrl ? (
+          video ? (
+            <video
+              src={item.downloadUrl}
+              className="h-full w-full object-cover"
+              onClick={() => setLightbox(true)}
+              muted
+              playsInline
+            />
+          ) : (
+            <img
+              src={item.downloadUrl}
+              alt={item.file_name}
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onClick={() => setLightbox(true)}
+            />
+          )
         ) : (
           <div className="h-full w-full flex items-center justify-center" onClick={() => setLightbox(true)}>
-            <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+            {video ? (
+              <Video className="h-8 w-8 text-muted-foreground/40" />
+            ) : (
+              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+            )}
           </div>
         )}
 
-        {/* Overlay hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-          <ZoomIn className="h-6 w-6 text-white drop-shadow" />
+          {video ? <Video className="h-6 w-6 text-white drop-shadow" /> : <ZoomIn className="h-6 w-6 text-white drop-shadow" />}
         </div>
 
-        {/* Botão remover */}
         {canRemove && onRemove && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -57,24 +85,32 @@ function ImageCard({
           </button>
         )}
 
-        {/* Nome */}
         <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <p className="text-[10px] text-white truncate">{image.file_name}</p>
+          <p className="text-[10px] text-white truncate">{item.file_name}</p>
         </div>
       </div>
 
-      {/* Lightbox simples */}
-      {lightbox && image.downloadUrl && (
+      {lightbox && item.downloadUrl && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setLightbox(false)}
         >
-          <img
-            src={image.downloadUrl}
-            alt={image.file_name}
-            className="max-h-full max-w-full rounded-lg shadow-2xl object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+          {video ? (
+            <video
+              src={item.downloadUrl}
+              className="max-h-full max-w-full rounded-lg shadow-2xl"
+              controls
+              autoPlay
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={item.downloadUrl}
+              alt={item.file_name}
+              className="max-h-full max-w-full rounded-lg shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
           <button
             className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
             onClick={() => setLightbox(false)}
@@ -92,7 +128,6 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  // A obra cliente view retorna as imagens
   const { data: clienteData, isLoading } = useQuery({
     queryKey: ["obras", obraId, "cliente"],
     queryFn: () => obrasService.getClienteView(obraId),
@@ -100,7 +135,6 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
 
   const images = clienteData?.images ?? [];
 
-  // Busca URLs de download para cada imagem
   const downloadUrls = useQuery({
     queryKey: ["obras", obraId, "imagens-urls", images.map((i) => i.file_path)],
     queryFn: async () => {
@@ -117,22 +151,27 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
   });
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+    const files = Array.from(e.target.files ?? []).filter((f) =>
+      ACCEPTED_TYPES.includes(f.type)
+    );
     if (!files.length) return;
+
     setIsUploading(true);
     try {
-      for (const file of files) {
-        const path = await storageService.upload("obra", obraId, file);
-        await obrasService.addImage(obraId, {
-          file_path: path,
-          file_name: file.name,
-          content_type: file.type,
-        });
-      }
+      // Etapa 1 + 2a: obtém URLs e faz PUT em paralelo
+      const uploaded = await storageService.uploadBatch("obra", obraId, files);
+
+      // Etapa 2b: registra todos de uma vez no backend
+      await obrasService.addImagesBatch(obraId, uploaded.map((u) => ({
+        file_path: u.path,
+        file_name: u.file_name,
+        content_type: u.content_type,
+      })));
+
       queryClient.invalidateQueries({ queryKey: ["obras", obraId, "cliente"] });
-      toast.success(`${files.length} imagem${files.length > 1 ? "ns" : ""} adicionada${files.length > 1 ? "s" : ""}!`);
+      toast.success(`${files.length} arquivo${files.length > 1 ? "s" : ""} adicionado${files.length > 1 ? "s" : ""}!`);
     } catch {
-      toast.error("Erro ao fazer upload da imagem.");
+      toast.error("Erro ao fazer upload dos arquivos.");
     } finally {
       setIsUploading(false);
       e.target.value = "";
@@ -141,10 +180,9 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {images.length} {images.length !== 1 ? "imagens" : "imagem"} nesta obra
+          {images.length} {images.length !== 1 ? "arquivos" : "arquivo"} nesta obra
         </p>
         <RoleGuard roles={["admin", "engenheiro"]}>
           <div>
@@ -152,7 +190,7 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/jpeg,image/png,image/webp"
+              accept={ACCEPTED_TYPES.join(",")}
               className="hidden"
               onChange={handleFileUpload}
             />
@@ -168,13 +206,12 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
               ) : (
                 <Upload className="h-4 w-4" />
               )}
-              {isUploading ? "Enviando..." : "Adicionar foto"}
+              {isUploading ? "Enviando..." : "Adicionar mídia"}
             </Button>
           </div>
         </RoleGuard>
       </div>
 
-      {/* Grid */}
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -192,17 +229,17 @@ export function ImagensTab({ obraId, canEdit }: ImagensTabProps) {
           <div className="h-14 w-14 rounded-full bg-muted/60 flex items-center justify-center mb-3">
             <ImageIcon className="h-6 w-6 text-muted-foreground" />
           </div>
-          <p className="text-sm font-medium text-muted-foreground">Nenhuma imagem ainda</p>
+          <p className="text-sm font-medium text-muted-foreground">Nenhuma mídia ainda</p>
           {canEdit && (
-            <p className="text-xs text-muted-foreground/60 mt-1">Clique para adicionar fotos da obra</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Clique para adicionar fotos ou vídeos da obra</p>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {images.map((img) => (
-            <ImageCard
+            <MediaCard
               key={img.id}
-              image={{ ...img, downloadUrl: downloadUrls.data?.[img.id] }}
+              item={{ ...img, downloadUrl: downloadUrls.data?.[img.id] }}
               canRemove={canEdit}
             />
           ))}

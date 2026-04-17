@@ -54,6 +54,11 @@ export const obrasService = {
       .post<ObraImageResponse>(`/obras/${obraId}/images`, data)
       .then((r) => r.data),
 
+  addImagesBatch: (obraId: string, files: CreateAttachmentRequest[]) =>
+    api
+      .post<ObraImageResponse[]>(`/obras/${obraId}/images/batch`, { files })
+      .then((r) => r.data),
+
   registrarRecebimento: (obraId: string, data: RecebimentoRequest) =>
     api.post<ObraResponse>(`/obras/${obraId}/recebimentos`, data).then((r) => r.data),
 

@@ -17,5 +17,6 @@ export interface ObraImageResponse {
   id: string;
   file_name: string;
   file_path: string;
+  content_type?: string;
   created_at?: string;
 }
