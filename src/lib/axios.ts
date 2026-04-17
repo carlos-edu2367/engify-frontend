@@ -17,7 +17,9 @@ function processQueue(error: unknown, token: string | null = null) {
   failedQueue = [];
 }
 
-// Aguarda o bootstrap terminar antes de prosseguir
+// Aguarda o bootstrap terminar antes de prosseguir.
+// Cobre tanto isBootstrapping=true quanto o frame inicial onde ambas as flags
+// são false (antes do useEffect do ProtectedRoute disparar restoreSession).
 function waitForBootstrap(): Promise<void> {
   return new Promise((resolve) => {
     if (useAuthStore.getState().hasBootstrapped) {
@@ -80,9 +82,11 @@ api.interceptors.response.use(
     }
 
     if (status === 401 && !originalRequest._retry) {
-      // FIX 3: Se o bootstrap ainda está em andamento, aguarda ele terminar
-      // e retenta com o token que ele definiu — evita refresh paralelo.
-      if (useAuthStore.getState().isBootstrapping) {
+      // Se o bootstrap ainda está em andamento OU ainda não começou (frame
+      // inicial antes do useEffect do ProtectedRoute), aguarda terminar e
+      // retenta com o token que ele definiu — evita refresh paralelo.
+      const { isBootstrapping, hasBootstrapped } = useAuthStore.getState();
+      if (isBootstrapping || !hasBootstrapped) {
         await waitForBootstrap();
         const newToken = useAuthStore.getState().accessToken;
         if (newToken) {

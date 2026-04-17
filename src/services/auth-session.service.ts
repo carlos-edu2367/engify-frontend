@@ -1,6 +1,8 @@
-import { authService } from "@/services/auth.service";
+import axios from "axios";
 import { useAuthStore } from "@/store/auth.store";
 import type { MeResponse } from "@/types/auth.types";
+
+const BASE = import.meta.env.VITE_API_BASE_URL as string;
 
 function mapUser(me: MeResponse) {
   return {
@@ -12,19 +14,22 @@ function mapUser(me: MeResponse) {
   };
 }
 
-function getStatusCode(error: unknown): number | null {
-  if (
-    error &&
-    typeof error === "object" &&
-    "response" in error &&
-    error.response &&
-    typeof error.response === "object" &&
-    "status" in error.response &&
-    typeof (error.response as { status?: unknown }).status === "number"
-  ) {
-    return (error.response as { status: number }).status;
-  }
-  return null;
+// Usa raw axios para isolar o bootstrap completamente do interceptor —
+// evita Authorization: Bearer null, loops e deadlocks.
+async function rawMe(token: string): Promise<MeResponse> {
+  const { data } = await axios.get<MeResponse>(`${BASE}/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return data;
+}
+
+async function rawRefresh(): Promise<string> {
+  const { data } = await axios.post<{ access_token: string }>(
+    `${BASE}/auth/refresh`,
+    {},
+    { withCredentials: true }
+  );
+  return data.access_token;
 }
 
 let restoreSessionPromise: Promise<void> | null = null;
@@ -39,25 +44,23 @@ export function restoreSession() {
     store.startBootstrap();
 
     try {
-      // Primeiro tenta validar o access_token persistido.
+      // 1. Tenta validar o accessToken persistido (caso normal após Fix 1).
       const currentToken = useAuthStore.getState().accessToken;
       if (currentToken) {
         try {
-          const me = await authService.me();
+          const me = await rawMe(currentToken);
           useAuthStore.getState().setAuth(currentToken, mapUser(me));
           return;
-        } catch (error) {
-          if (getStatusCode(error) !== 401) {
-            throw error;
-          }
+        } catch {
+          // Token expirado ou inválido — continua para refresh.
         }
       }
 
-      // Sem token valido, tenta renovar usando refresh_token em cookie HttpOnly.
-      const { access_token } = await authService.refresh();
-      useAuthStore.getState().setAccessToken(access_token);
-      const me = await authService.me();
-      useAuthStore.getState().setAuth(access_token, mapUser(me));
+      // 2. Sem token válido, tenta renovar via cookie HttpOnly.
+      const newToken = await rawRefresh();
+      useAuthStore.getState().setAccessToken(newToken);
+      const me = await rawMe(newToken);
+      useAuthStore.getState().setAuth(newToken, mapUser(me));
     } catch {
       useAuthStore.getState().clearAuth();
     } finally {
