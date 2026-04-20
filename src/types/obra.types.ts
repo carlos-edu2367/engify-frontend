@@ -87,6 +87,7 @@ export interface PublicImageView {
   id: string;
   file_name: string;
   download_url: string;
+  content_type?: string;
 }
 
 export interface PublicObraResponse {

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { muralService } from "@/services/mural.service";
 import { toast } from "sonner";
 import type { CreateMuralPostRequest } from "@/types/mural.types";
@@ -26,6 +26,7 @@ export function useMural(obraId: string) {
     mutationFn: (postId: string) => muralService.delete(obraId, postId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["obras", obraId, "mural"] });
+      queryClient.invalidateQueries({ queryKey: ["obras", obraId, "mural", "attachments"] });
       toast.success("Post removido.");
     },
     onError: () => toast.error("Erro ao remover post."),
@@ -44,5 +45,24 @@ export function useMural(obraId: string) {
     deletePost: deleteMutation.mutate,
     isDeleting: deleteMutation.isPending,
     refresh: () => queryClient.invalidateQueries({ queryKey: ["obras", obraId, "mural"] }),
+  };
+}
+
+export function useMuralAttachments(obraId: string, enabled = true) {
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["obras", obraId, "mural", "attachments"],
+    queryFn: () => muralService.listAttachments(obraId),
+    enabled: !!obraId && enabled,
+    staleTime: 60 * 1000,
+  });
+
+  return {
+    attachments: query.data ?? [],
+    isLoading: query.isLoading,
+    isFetching: query.isFetching,
+    refresh: () =>
+      queryClient.invalidateQueries({ queryKey: ["obras", obraId, "mural", "attachments"] }),
   };
 }

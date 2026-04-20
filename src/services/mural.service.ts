@@ -13,6 +13,11 @@ export const muralService = {
       .get<PaginatedResponse<MuralPostResponse>>(`/obras/${obraId}/mural`, { params })
       .then((r) => r.data),
 
+  listAttachments: (obraId: string) =>
+    api
+      .get<MuralAttachmentResponse[]>(`/obras/${obraId}/mural/attachments`)
+      .then((r) => r.data),
+
   create: (obraId: string, data: CreateMuralPostRequest) =>
     api
       .post<MuralPostResponse>(`/obras/${obraId}/mural`, data)

@@ -1,11 +1,16 @@
 import { useAuthStore } from "@/store/auth.store";
-import { useMural } from "@/hooks/useMural";
+import { useMural, useMuralAttachments } from "@/hooks/useMural";
 import { PostComposer } from "./PostComposer";
 import { PostList } from "./PostList";
 import { storageService } from "@/services/storage.service";
 import { muralService } from "@/services/mural.service";
 import { toast } from "sonner";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Files } from "lucide-react";
+import { useState } from "react";
+import { MuralAttachmentsSheet } from "./MuralAttachmentsSheet";
 
 interface MuralTabProps {
   obraId: string;
@@ -13,6 +18,7 @@ interface MuralTabProps {
 
 export function MuralTab({ obraId }: MuralTabProps) {
   const user = useAuthStore((s) => s.user);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const {
     posts,
     isLoading,
@@ -25,6 +31,11 @@ export function MuralTab({ obraId }: MuralTabProps) {
     isDeleting,
     refresh,
   } = useMural(obraId);
+  const {
+    attachments,
+    isLoading: isLoadingAttachments,
+    refresh: refreshAttachments,
+  } = useMuralAttachments(obraId);
 
   async function handlePublish(content: string, mentions: string[], files: File[]) {
     try {
@@ -42,6 +53,7 @@ export function MuralTab({ obraId }: MuralTabProps) {
 
         await Promise.all(uploadPromises);
         refresh();
+        refreshAttachments();
       }
 
       toast.success("Publicado no mural!");
@@ -54,10 +66,25 @@ export function MuralTab({ obraId }: MuralTabProps) {
   return (
     <div className="mx-auto max-w-2xl animate-in space-y-8 fade-in duration-700 pb-36 md:pb-0">
       <div className="flex flex-col gap-1 px-1">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground/90">Mural da Equipe</h2>
-        <p className="text-sm font-medium text-muted-foreground/80">
-          Compartilhe atualizacoes, fotos ou documentos sobre a obra.
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground/90">Mural da Equipe</h2>
+            <p className="text-sm font-medium text-muted-foreground/80">
+              Compartilhe atualizacoes, fotos ou documentos sobre a obra.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            className="w-full gap-2 sm:w-auto"
+            onClick={() => setAttachmentsOpen(true)}
+          >
+            <Files className="h-4 w-4" />
+            Documentos do mural
+            <Badge variant="secondary" className="ml-1">
+              {isLoadingAttachments ? "..." : attachments.length}
+            </Badge>
+          </Button>
+        </div>
       </div>
 
       <div className="hidden md:block">
@@ -88,6 +115,13 @@ export function MuralTab({ obraId }: MuralTabProps) {
           />
         </div>
       </div>
+
+      <MuralAttachmentsSheet
+        open={attachmentsOpen}
+        onOpenChange={setAttachmentsOpen}
+        attachments={attachments}
+        isLoading={isLoadingAttachments}
+      />
     </div>
   );
 }
