@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Paperclip, Send, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,18 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const hasMessage = content.trim().length > 0;
+  const canPublish = hasMessage && !isPublishing;
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "0px";
+    const nextHeight = Math.min(textarea.scrollHeight, mobileDocked ? 220 : 320);
+    textarea.style.height = `${nextHeight}px`;
+  }, [content, mobileDocked]);
 
   const filteredUsers = mentionSearch
     ? users.filter((u) =>
@@ -97,7 +109,7 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
   };
 
   const handlePublishClick = async () => {
-    if (!content.trim() && files.length === 0) return;
+    if (!hasMessage) return;
     
     // Extrai IDs das menções buscando pelo slug @Nome_Sobrenome no conteúdo
     const mentions = users
@@ -109,11 +121,19 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
     setFiles([]);
   };
 
+  const handleTextareaFocus = () => {
+    if (!mobileDocked) return;
+
+    window.setTimeout(() => {
+      textareaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }, 250);
+  };
+
   return (
     <div
       className={cn(
         "relative rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-all focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5",
-        mobileDocked && "rounded-b-none border-b-0 px-3 pt-3",
+        mobileDocked && "rounded-[20px] px-3 pb-3 pt-3",
         className
       )}
     >
@@ -123,10 +143,13 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
         value={content}
         onChange={handleTextChange}
         onKeyDown={handleKeyDown}
+        onFocus={handleTextareaFocus}
         maxLength={2000}
         className={cn(
-          "w-full resize-none border-none bg-transparent p-0 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/50",
-          mobileDocked ? "min-h-[84px]" : "min-h-[100px]"
+          "w-full resize-none overflow-y-auto border-none bg-transparent p-0 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/50",
+          mobileDocked
+            ? "min-h-[96px] max-h-[220px] text-[15px] leading-6"
+            : "min-h-[100px] max-h-[320px]"
         )}
       />
       {content.length > 1800 && (
@@ -166,8 +189,13 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col gap-2 border-t border-border/40 pt-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-1">
+      <div
+        className={cn(
+          "flex flex-col gap-2 border-t border-border/40 pt-3 sm:flex-row sm:items-center sm:justify-between",
+          mobileDocked && "gap-3"
+        )}
+      >
+        <div className="flex items-center gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -180,18 +208,27 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
             variant="ghost"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            className="h-9 gap-2 rounded-xl text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary"
+            className="h-10 gap-2 rounded-xl text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary sm:h-9"
           >
             <Paperclip className="h-4 w-4" />
             <span className="text-xs font-semibold">Anexar</span>
           </Button>
+
+          {files.length > 0 && !hasMessage && (
+            <span className="text-[11px] font-medium text-amber-600">
+              Escreva uma mensagem para enviar anexos.
+            </span>
+          )}
         </div>
 
         <Button
           size="sm"
           onClick={handlePublishClick}
-          disabled={isPublishing || (!content.trim() && files.length === 0)}
-          className="h-10 w-full gap-2 rounded-xl bg-primary px-5 shadow-sm transition-all active:scale-95 hover:bg-primary/90 sm:h-9 sm:w-auto"
+          disabled={!canPublish}
+          className={cn(
+            "h-10 w-full gap-2 rounded-xl bg-primary px-5 shadow-sm transition-all active:scale-95 hover:bg-primary/90 sm:h-9 sm:w-auto",
+            mobileDocked && "sticky bottom-0"
+          )}
         >
           {isPublishing ? (
             <span className="flex items-center gap-2">

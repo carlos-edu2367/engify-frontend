@@ -38,6 +38,11 @@ export function MuralTab({ obraId }: MuralTabProps) {
   } = useMuralAttachments(obraId);
 
   async function handlePublish(content: string, mentions: string[], files: File[]) {
+    if (!content.trim()) {
+      toast.error("Escreva uma mensagem para publicar no mural.");
+      return;
+    }
+
     try {
       const post = await createPost({ content, mentions });
 
