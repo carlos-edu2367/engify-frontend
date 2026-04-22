@@ -191,8 +191,10 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
 
       <div
         className={cn(
-          "flex flex-col gap-2 border-t border-border/40 pt-3 sm:flex-row sm:items-center sm:justify-between",
-          mobileDocked && "gap-3"
+          "border-t border-border/40 pt-3",
+          mobileDocked
+            ? "space-y-2"
+            : "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
         )}
       >
         <div className="flex items-center gap-2">
@@ -214,34 +216,65 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
             <span className="text-xs font-semibold">Anexar</span>
           </Button>
 
-          {files.length > 0 && !hasMessage && (
+          {!mobileDocked && files.length > 0 && !hasMessage && (
             <span className="text-[11px] font-medium text-amber-600">
               Escreva uma mensagem para enviar anexos.
             </span>
           )}
         </div>
 
-        <Button
-          size="sm"
-          onClick={handlePublishClick}
-          disabled={!canPublish}
-          className={cn(
-            "h-10 w-full gap-2 rounded-xl bg-primary px-5 shadow-sm transition-all active:scale-95 hover:bg-primary/90 sm:h-9 sm:w-auto",
-            mobileDocked && "sticky bottom-0"
-          )}
-        >
-          {isPublishing ? (
-            <span className="flex items-center gap-2">
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
-              Publicando...
-            </span>
-          ) : (
-            <>
-              <Send className="h-3.5 w-3.5" />
-              <span className="font-semibold">Publicar</span>
-            </>
-          )}
-        </Button>
+        {mobileDocked ? (
+          <>
+            {files.length > 0 && !hasMessage && (
+              <span className="block text-[11px] font-medium text-amber-600">
+                Escreva uma mensagem para enviar anexos.
+              </span>
+            )}
+
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
+              <span className="text-[11px] font-medium text-muted-foreground/80">
+                {hasMessage ? "Mensagem pronta para envio" : "Digite uma mensagem para liberar o envio"}
+              </span>
+              <Button
+                size="sm"
+                onClick={handlePublishClick}
+                disabled={!canPublish}
+                className="h-11 w-full gap-2 rounded-xl bg-primary px-4 shadow-sm transition-all active:scale-95 hover:bg-primary/90"
+              >
+                {isPublishing ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                    Enviando...
+                  </span>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    <span className="font-semibold">Enviar</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            onClick={handlePublishClick}
+            disabled={!canPublish}
+            className="h-10 w-full gap-2 rounded-xl bg-primary px-5 shadow-sm transition-all active:scale-95 hover:bg-primary/90 sm:h-9 sm:w-auto"
+          >
+            {isPublishing ? (
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                Publicando...
+              </span>
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5" />
+                <span className="font-semibold">Publicar</span>
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Mentions Dropdown */}
