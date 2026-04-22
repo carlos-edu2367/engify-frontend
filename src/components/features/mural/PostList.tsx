@@ -50,7 +50,7 @@ export function PostList({
     return (
       <div className="space-y-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 rounded-2xl" />
+          <Skeleton key={i} className="h-40 rounded-[24px]" />
         ))}
       </div>
     );
@@ -58,7 +58,7 @@ export function PostList({
 
   if (posts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-500">
+      <div className="flex flex-col items-center justify-center rounded-[28px] border border-dashed border-border/60 bg-muted/20 px-6 py-20 text-center animate-in fade-in zoom-in duration-500">
         <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary/5 text-primary/30 shadow-inner">
           <Send className="h-10 w-10 rotate-12" />
         </div>

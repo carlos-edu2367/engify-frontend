@@ -166,7 +166,7 @@ export function ObraDetailPage() {
 
   return (
     <PageTransition>
-      <div className="space-y-6 pb-24 md:pb-0">
+      <div className="space-y-6">
         <div className="flex items-start gap-3 sm:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/obras")} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
@@ -264,6 +264,43 @@ export function ObraDetailPage() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+        </div>
+
+        <div className="flex gap-2 md:hidden">
+          <RoleGuard roles={["admin", "engenheiro"]}>
+            <Button variant="outline" className="h-11 flex-1" onClick={openEdit}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar obra
+            </Button>
+          </RoleGuard>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <RoleGuard roles={["admin", "engenheiro"]}>
+                <DropdownMenuItem onClick={() => setStatusOpen(true)}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Atualizar status
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyClientLink}>
+                  <LinkIcon className="mr-2 h-4 w-4" />
+                  Copiar link do cliente
+                </DropdownMenuItem>
+              </RoleGuard>
+
+              <RoleGuard roles={["admin"]}>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir obra
+                </DropdownMenuItem>
+              </RoleGuard>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {obra.description && (
@@ -527,45 +564,6 @@ export function ObraDetailPage() {
           </form>
         </DialogContent>
       </Dialog>
-
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-2xl gap-2">
-          <RoleGuard roles={["admin", "engenheiro"]}>
-            <Button variant="outline" className="h-11 flex-1" onClick={openEdit}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
-          </RoleGuard>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-11 w-11 shrink-0">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <RoleGuard roles={["admin", "engenheiro"]}>
-                <DropdownMenuItem onClick={() => setStatusOpen(true)}>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Atualizar status
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyClientLink}>
-                  <LinkIcon className="mr-2 h-4 w-4" />
-                  Copiar link do cliente
-                </DropdownMenuItem>
-              </RoleGuard>
-
-              <RoleGuard roles={["admin"]}>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive focus:bg-destructive/10" onClick={() => setDeleteOpen(true)}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Excluir obra
-                </DropdownMenuItem>
-              </RoleGuard>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
     </PageTransition>
   );
 }

@@ -10,10 +10,9 @@ interface PostComposerProps {
   onPublish: (content: string, mentions: string[], files: File[]) => Promise<void>;
   isPublishing: boolean;
   className?: string;
-  mobileDocked?: boolean;
 }
 
-export function PostComposer({ onPublish, isPublishing, className, mobileDocked = false }: PostComposerProps) {
+export function PostComposer({ onPublish, isPublishing, className }: PostComposerProps) {
   const { data: users = [] } = useUsers();
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -32,9 +31,9 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
     if (!textarea) return;
 
     textarea.style.height = "0px";
-    const nextHeight = Math.min(textarea.scrollHeight, mobileDocked ? 220 : 320);
+    const nextHeight = Math.min(textarea.scrollHeight, 320);
     textarea.style.height = `${nextHeight}px`;
-  }, [content, mobileDocked]);
+  }, [content]);
 
   const filteredUsers = mentionSearch
     ? users.filter((u) =>
@@ -122,50 +121,87 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
   };
 
   const handleTextareaFocus = () => {
-    if (!mobileDocked) return;
-
     window.setTimeout(() => {
-      textareaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      textareaRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
     }, 250);
   };
 
   return (
     <div
       className={cn(
-        "relative rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-all focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5",
-        mobileDocked && "rounded-[20px] px-3 pb-3 pt-3",
+        "relative overflow-visible rounded-[28px] border border-border/60 bg-card/95 p-4 shadow-sm transition-all focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5 sm:p-5",
         className
       )}
     >
-      <Textarea
-        ref={textareaRef}
-        placeholder="O que está acontecendo na obra? Use @ para mencionar alguém..."
-        value={content}
-        onChange={handleTextChange}
-        onKeyDown={handleKeyDown}
-        onFocus={handleTextareaFocus}
-        maxLength={2000}
-        className={cn(
-          "w-full resize-none overflow-y-auto border-none bg-transparent p-0 text-sm focus-visible:ring-0 placeholder:text-muted-foreground/50",
-          mobileDocked
-            ? "min-h-[96px] max-h-[220px] text-[15px] leading-6"
-            : "min-h-[100px] max-h-[320px]"
-        )}
-      />
-      {content.length > 1800 && (
-        <p className={`text-right text-[10px] font-medium ${content.length >= 2000 ? "text-destructive" : "text-muted-foreground/60"}`}>
-          {content.length}/2000
-        </p>
-      )}
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">Nova mensagem</p>
+          <p className="text-xs text-muted-foreground">
+            Use <span className="font-semibold text-foreground/80">@</span> para mencionar pessoas e anexe imagens ou PDFs.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Mural
+        </span>
+      </div>
 
-      {/* Files Preview */}
+      <div className="rounded-[22px] border border-border/50 bg-background/80 px-4 py-3 shadow-inner">
+        <Textarea
+          ref={textareaRef}
+          placeholder="O que está acontecendo na obra? Use @ para mencionar alguém..."
+          value={content}
+          onChange={handleTextChange}
+          onKeyDown={handleKeyDown}
+          onFocus={handleTextareaFocus}
+          maxLength={2000}
+          className="min-h-[112px] max-h-[320px] w-full resize-none overflow-y-auto border-none bg-transparent p-0 text-[15px] leading-6 focus-visible:ring-0 placeholder:text-muted-foreground/50 sm:min-h-[128px]"
+        />
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-border/40 pt-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              onChange={handleFileAdd}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              className="h-10 gap-2 rounded-xl px-3 text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary"
+            >
+              <Paperclip className="h-4 w-4" />
+              <span className="text-xs font-semibold">Anexar</span>
+            </Button>
+
+            <span className="truncate text-[11px] font-medium text-muted-foreground/80">
+              {files.length > 0
+                ? `${files.length} anexo${files.length > 1 ? "s" : ""} pronto${files.length > 1 ? "s" : ""}`
+                : "Mensagem de ate 2000 caracteres"}
+            </span>
+          </div>
+
+          <span
+            className={cn(
+              "shrink-0 text-[11px] font-medium",
+              content.length >= 2000 ? "text-destructive" : "text-muted-foreground/60"
+            )}
+          >
+            {content.length}/2000
+          </span>
+        </div>
+      </div>
+
       <AnimatePresence>
         {files.length > 0 && (
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex flex-wrap gap-2 py-3"
+            className="flex flex-wrap gap-2 py-4"
           >
             {files.map((file, i) => (
               <motion.div
@@ -189,103 +225,49 @@ export function PostComposer({ onPublish, isPublishing, className, mobileDocked 
         )}
       </AnimatePresence>
 
-      <div
-        className={cn(
-          "border-t border-border/40 pt-3",
-          mobileDocked
-            ? "space-y-2"
-            : "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/jpeg,image/png,image/webp,application/pdf"
-            className="hidden"
-            onChange={handleFileAdd}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-10 gap-2 rounded-xl text-muted-foreground transition-all hover:bg-primary/5 hover:text-primary sm:h-9"
-          >
-            <Paperclip className="h-4 w-4" />
-            <span className="text-xs font-semibold">Anexar</span>
-          </Button>
-
-          {!mobileDocked && files.length > 0 && !hasMessage && (
-            <span className="text-[11px] font-medium text-amber-600">
+      <div className="flex flex-col gap-3 border-t border-border/40 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          {files.length > 0 && !hasMessage ? (
+            <span className="block text-[11px] font-medium text-amber-600">
               Escreva uma mensagem para enviar anexos.
             </span>
+          ) : (
+            <span className="block text-[11px] font-medium text-muted-foreground/80">
+              {hasMessage ? "Mensagem pronta para envio" : "Digite a atualização que deseja compartilhar"}
+            </span>
           )}
+          <p className="text-xs text-muted-foreground/70">
+            Menções e anexos serão mantidos ao publicar.
+          </p>
         </div>
 
-        {mobileDocked ? (
-          <>
-            {files.length > 0 && !hasMessage && (
-              <span className="block text-[11px] font-medium text-amber-600">
-                Escreva uma mensagem para enviar anexos.
-              </span>
-            )}
-
-            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
-              <span className="text-[11px] font-medium text-muted-foreground/80">
-                {hasMessage ? "Mensagem pronta para envio" : "Digite uma mensagem para liberar o envio"}
-              </span>
-              <Button
-                size="sm"
-                onClick={handlePublishClick}
-                disabled={!canPublish}
-                className="h-11 w-full gap-2 rounded-xl bg-primary px-4 shadow-sm transition-all active:scale-95 hover:bg-primary/90"
-              >
-                {isPublishing ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                    Enviando...
-                  </span>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    <span className="font-semibold">Enviar</span>
-                  </>
-                )}
-              </Button>
-            </div>
-          </>
-        ) : (
-          <Button
-            size="sm"
-            onClick={handlePublishClick}
-            disabled={!canPublish}
-            className="h-10 w-full gap-2 rounded-xl bg-primary px-5 shadow-sm transition-all active:scale-95 hover:bg-primary/90 sm:h-9 sm:w-auto"
-          >
-            {isPublishing ? (
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-background border-t-transparent" />
-                Publicando...
-              </span>
-            ) : (
-              <>
-                <Send className="h-3.5 w-3.5" />
-                <span className="font-semibold">Publicar</span>
-              </>
-            )}
-          </Button>
-        )}
+        <Button
+          type="button"
+          onClick={handlePublishClick}
+          disabled={!canPublish}
+          className="h-12 w-full gap-2 rounded-2xl bg-primary px-5 text-sm font-semibold shadow-sm transition-all active:scale-[0.99] hover:bg-primary/90 sm:w-auto sm:min-w-[148px]"
+        >
+          {isPublishing ? (
+            <span className="flex items-center gap-2">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-background border-t-transparent" />
+              Enviando...
+            </span>
+          ) : (
+            <>
+              <Send className="h-4 w-4" />
+              <span>Enviar mensagem</span>
+            </>
+          )}
+        </Button>
       </div>
 
-      {/* Mentions Dropdown */}
       <AnimatePresence>
         {mentionSearch !== null && filteredUsers.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 5, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 5, scale: 0.95 }}
-            className="absolute z-50 mt-1 max-h-60 w-64 overflow-y-auto rounded-xl border border-border/60 bg-popover p-1 shadow-xl backdrop-blur-sm"
-            style={{ bottom: "100%", left: 16 }}
+            className="absolute inset-x-4 top-[4.75rem] z-50 max-h-60 overflow-y-auto rounded-2xl border border-border/60 bg-popover p-1 shadow-xl backdrop-blur-sm sm:left-5 sm:right-auto sm:w-72"
           >
             {filteredUsers.map((user, i) => (
               <button
