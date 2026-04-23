@@ -23,6 +23,17 @@ export function useCreateMovimentacao() {
   });
 }
 
+export function useDeleteMovimentacao() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeiroService.deleteMovimentacao(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["obras"] });
+    },
+  });
+}
+
 export function usePagamentos(params: { limit?: number } = {}) {
   return useQuery({
     queryKey: ["financeiro", "pagamentos", params],

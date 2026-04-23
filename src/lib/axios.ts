@@ -43,6 +43,16 @@ export const api = axios.create({
 
 // Injeta access_token em toda request
 api.interceptors.request.use((config) => {
+  const requestUrl =
+    typeof config.url === "string" ? config.url : "";
+  const isAuthRequest =
+    requestUrl.startsWith("/auth/") ||
+    requestUrl.includes("/auth/");
+
+  if (isAuthRequest) {
+    return config;
+  }
+
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

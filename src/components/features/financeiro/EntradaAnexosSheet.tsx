@@ -23,10 +23,12 @@ import {
   useCreateMovimentacaoAttachment,
   useDeleteMovimentacaoAttachment,
 } from "@/hooks/useFinanceiro";
+import { useDeleteRecebimento } from "@/hooks/useObras";
 import { storageService } from "@/services/storage.service";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
 import type { MovimentacaoAttachmentResponse } from "@/types/financeiro.types";
 import type { ObraEntradaResponse } from "@/types/obra.types";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 
 // ─── Lightbox ──────────────────────────────────────────────────────────────────
 function Lightbox({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
@@ -159,15 +161,18 @@ function AttachmentItem({ att, movId }: { att: MovimentacaoAttachmentResponse; m
 interface EntradaAnexosSheetProps {
   entrada: ObraEntradaResponse | null;
   onClose: () => void;
+  onDeleted?: (entradaId: string) => void;
 }
 
-export function EntradaAnexosSheet({ entrada, onClose }: EntradaAnexosSheetProps) {
+export function EntradaAnexosSheet({ entrada, onClose, onDeleted }: EntradaAnexosSheetProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const movId = entrada?.id ?? null;
   const { data: attachments = [], isLoading: attLoading } = useMovimentacaoAttachments(movId);
   const createAttachment = useCreateMovimentacaoAttachment(movId ?? "");
+  const deleteRecebimento = useDeleteRecebimento(entrada?.obra_id);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     if (!entrada) return;
@@ -214,6 +219,15 @@ export function EntradaAnexosSheet({ entrada, onClose }: EntradaAnexosSheetProps
                     Recebimento
                   </Badge>
                 </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9 shrink-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmDelete(true)}
+                  title="Excluir recebimento"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </SheetHeader>
 
@@ -315,6 +329,27 @@ export function EntradaAnexosSheet({ entrada, onClose }: EntradaAnexosSheetProps
           </>
         )}
       </SheetContent>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Excluir recebimento"
+        description="Esta acao remove o recebimento permanentemente e o total recebido da obra sera recalculado."
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={() => {
+          if (!entrada) return;
+          deleteRecebimento.mutate(entrada.id, {
+            onSuccess: () => {
+              toast.success("Recebimento removido.");
+              setConfirmDelete(false);
+              onDeleted?.(entrada.id);
+              onClose();
+            },
+            onError: (err) => toast.error(getApiErrorMessage(err)),
+          });
+        }}
+        loading={deleteRecebimento.isPending}
+      />
     </Sheet>
   );
 }

@@ -28,6 +28,9 @@ export const financeiroService = {
   createMovimentacao: (data: CreateMovimentacaoRequest) =>
     api.post<MovimentacaoResponse>("/financeiro/movimentacoes", data).then((r) => r.data),
 
+  deleteMovimentacao: (id: string) =>
+    api.delete<{ message: string }>(`/financeiro/movimentacoes/${id}`).then((r) => r.data),
+
   listPagamentos: (params: ListPagamentosParams = {}) => {
     const cleanParams = Object.fromEntries(
       Object.entries(params).filter(([_, v]) => v !== "all" && v !== "")

@@ -1,8 +1,9 @@
 import { useState } from "react";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt, CheckCheck } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt, CheckCheck, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -230,6 +231,7 @@ export function FinanceiroPage() {
   const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
   const [payAllPreview, setPayAllPreview] = useState<PayAllPreview | null>(null);
   const [selectedMov, setSelectedMov] = useState<MovimentacaoResponse | null>(null);
+  const [deleteMovId, setDeleteMovId] = useState<string | null>(null);
   const [movFormObraId, setMovFormObraId] = useState<string>("");
 
   // Filtros de Movimentações
@@ -316,6 +318,31 @@ export function FinanceiroPage() {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success(`${result.quantidade} pagamentos marcados como pagos — ${formatCurrency(result.valor_total.toString())}`);
       setPayAllPreview(null);
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const deleteMovMutation = useMutation({
+    mutationFn: async (mov: MovimentacaoResponse) => {
+      if (mov.type === "entrada" && mov.obra_id) {
+        try {
+          return await obrasService.deleteRecebimento(mov.obra_id, mov.id);
+        } catch (err) {
+          if (!axios.isAxiosError(err) || err.response?.status !== 400) {
+            throw err;
+          }
+        }
+      }
+      return financeiroService.deleteMovimentacao(mov.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["obras"] });
+      if (selectedMov?.id === deleteMovId) {
+        setSelectedMov(null);
+      }
+      setDeleteMovId(null);
+      toast.success("Movimentacao removida.");
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -535,6 +562,18 @@ export function FinanceiroPage() {
                         <p className={m.type === "entrada" ? "font-bold text-emerald-600 dark:text-emerald-400" : "font-bold text-destructive"}>
                           {m.type === "entrada" ? "+" : "−"}{formatCurrency(m.valor)}
                         </p>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteMovId(m.id);
+                          }}
+                          title="Excluir movimentacao"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                         <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
                       </div>
                     </CardContent>
@@ -793,6 +832,23 @@ export function FinanceiroPage() {
       <MovimentacaoDetailSheet
         mov={selectedMov}
         onClose={() => setSelectedMov(null)}
+        onDeleted={() => setSelectedMov(null)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteMovId}
+        onOpenChange={(o) => !o && setDeleteMovId(null)}
+        title="Excluir movimentacao"
+        description="Esta acao remove a movimentacao permanentemente. Se ela for um recebimento da obra, o total recebido sera recalculado pelo backend."
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={() => {
+          const mov = movs.find((item) => item.id === deleteMovId);
+          if (mov) {
+            deleteMovMutation.mutate(mov);
+          }
+        }}
+        loading={deleteMovMutation.isPending}
       />
 
       {/* Confirmar pagamento */}

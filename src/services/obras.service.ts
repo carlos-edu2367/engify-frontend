@@ -62,6 +62,11 @@ export const obrasService = {
   registrarRecebimento: (obraId: string, data: RecebimentoRequest) =>
     api.post<ObraResponse>(`/obras/${obraId}/recebimentos`, data).then((r) => r.data),
 
+  deleteRecebimento: (obraId: string, recebimentoId: string) =>
+    api
+      .delete<{ message: string }>(`/obras/${obraId}/recebimentos/${recebimentoId}`)
+      .then((r) => r.data),
+
   listEntradas: (obraId: string, params: { page?: number; limit?: number } = {}) =>
     api
       .get<PaginatedResponse<ObraEntradaResponse>>(`/obras/${obraId}/entradas`, { params })

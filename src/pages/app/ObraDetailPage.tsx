@@ -514,6 +514,7 @@ export function ObraDetailPage() {
       <EntradaAnexosSheet
         entrada={selectedEntrada}
         onClose={() => setSelectedEntrada(null)}
+        onDeleted={() => setSelectedEntrada(null)}
       />
 
       <Dialog open={recebimentoOpen} onOpenChange={setRecebimentoOpen}>

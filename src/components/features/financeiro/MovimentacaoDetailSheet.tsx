@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import {
   useMovimentacaoAttachments,
   useCreateMovimentacaoAttachment,
@@ -190,12 +192,15 @@ function AttachmentItem({
 interface MovimentacaoDetailSheetProps {
   mov: MovimentacaoResponse | null;
   onClose: () => void;
+  onDeleted?: (movId: string) => void;
 }
 
-export function MovimentacaoDetailSheet({ mov, onClose }: MovimentacaoDetailSheetProps) {
+export function MovimentacaoDetailSheet({ mov, onClose, onDeleted }: MovimentacaoDetailSheetProps) {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const movId = mov?.id ?? null;
 
@@ -280,6 +285,15 @@ export function MovimentacaoDetailSheet({ mov, onClose }: MovimentacaoDetailShee
                     )}
                   </div>
                 </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-9 w-9 shrink-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setConfirmDelete(true)}
+                  title="Excluir movimentacao"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </SheetHeader>
 
@@ -490,6 +504,41 @@ export function MovimentacaoDetailSheet({ mov, onClose }: MovimentacaoDetailShee
           </>
         )}
       </SheetContent>
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Excluir movimentacao"
+        description="Esta acao remove a movimentacao permanentemente."
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={() => {
+          if (!mov) return;
+          setIsDeleting(true);
+          const deleteRequest =
+            mov.type === "entrada" && mov.obra_id
+              ? obrasService
+                  .deleteRecebimento(mov.obra_id, mov.id)
+                  .catch((err) => {
+                    if (!axios.isAxiosError(err) || err.response?.status !== 400) {
+                      throw err;
+                    }
+                    return financeiroService.deleteMovimentacao(mov.id);
+                  })
+              : financeiroService.deleteMovimentacao(mov.id);
+
+          Promise.resolve(deleteRequest).then(() => {
+            toast.success("Movimentacao removida.");
+            setConfirmDelete(false);
+            onDeleted?.(mov.id);
+            onClose();
+          }).catch((err) => {
+            toast.error(getApiErrorMessage(err));
+          }).finally(() => {
+            setIsDeleting(false);
+          });
+        }}
+        loading={isDeleting}
+      />
     </Sheet>
   );
 }

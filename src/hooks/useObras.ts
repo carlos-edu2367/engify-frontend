@@ -59,6 +59,20 @@ export function useRegistrarRecebimento(obraId: string | undefined) {
     onSuccess: (updated) => {
       queryClient.setQueryData(["obras", obraId], updated);
       queryClient.invalidateQueries({ queryKey: ["obras", obraId, "entradas"] });
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+    },
+  });
+}
+
+export function useDeleteRecebimento(obraId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (recebimentoId: string) => obrasService.deleteRecebimento(obraId!, recebimentoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["obras"] });
+      queryClient.invalidateQueries({ queryKey: ["obras", obraId] });
+      queryClient.invalidateQueries({ queryKey: ["obras", obraId, "entradas"] });
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
     },
   });
 }
