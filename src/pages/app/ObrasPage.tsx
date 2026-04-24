@@ -21,6 +21,7 @@ import { RoleGuard } from "@/components/shared/RoleGuard";
 import { CategoriasTab } from "@/components/features/categorias/CategoriasTab";
 import { CategoriaObraSelect } from "@/components/features/categorias/CategoriaObraSelect";
 import { obrasService } from "@/services/obras.service";
+import { itemsService } from "@/services/items.service";
 import { usersService } from "@/services/users.service";
 import { useAllCategoriasObras, useObrasByCategoria } from "@/hooks/useCategoriasObras";
 import { obraSchema, type ObraFormValues } from "@/lib/schemas/obra.schemas";
@@ -44,6 +45,23 @@ const statusLabels: Record<ObraStatus, string> = {
 };
 
 const NO_CATEGORIA = "__all__";
+const INITIAL_PLANNING_ITEMS = [
+  "Agendamento",
+  "Elétrica",
+  "Hidraulica",
+  "Financeiro",
+  "Pintura",
+] as const;
+
+class InitialPlanningError extends Error {
+  obraId: string;
+
+  constructor(message: string, obraId: string) {
+    super(message);
+    this.name = "InitialPlanningError";
+    this.obraId = obraId;
+  }
+}
 
 export function ObrasPage() {
   const navigate = useNavigate();
@@ -54,6 +72,7 @@ export function ObrasPage() {
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [categoriaFilter, setCategoriaFilter] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [createInitialPlanning, setCreateInitialPlanning] = useState(false);
 
   // ── Queries ────────────────────────────────────────────────────────────────
   // Lista normal (sem filtro de categoria)
@@ -91,22 +110,57 @@ export function ObrasPage() {
 
   // ── Criar obra ─────────────────────────────────────────────────────────────
   const createMutation = useMutation({
-    mutationFn: (values: ObraFormValues) =>
-      obrasService.create({
+    mutationFn: async (values: ObraFormValues) => {
+      const obra = await obrasService.create({
         ...values,
         data_entrega: values.data_entrega
           ? formatISO(parseISO(values.data_entrega))
           : undefined,
         categoria_id: values.categoria_id ?? null,
-      }),
-    onSuccess: () => {
+      });
+
+      if (!createInitialPlanning) {
+        return { obra, planningCreated: false };
+      }
+
+      try {
+        await Promise.all(
+          INITIAL_PLANNING_ITEMS.map((title) =>
+            itemsService.create(obra.id, {
+              title,
+              responsavel_id: obra.responsavel_id,
+            })
+          )
+        );
+      } catch (error) {
+        throw new InitialPlanningError(getApiErrorMessage(error), obra.id);
+      }
+
+      return { obra, planningCreated: true };
+    },
+    onSuccess: ({ obra, planningCreated }) => {
       queryClient.invalidateQueries({ queryKey: ["obras"] });
       queryClient.invalidateQueries({ queryKey: ["obras", "by-categoria"] });
-      toast.success("Obra criada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["obras", obra.id, "items"] });
+      toast.success(
+        planningCreated
+          ? "Obra criada com planejamento inicial."
+          : "Obra criada com sucesso!"
+      );
       setCreateOpen(false);
+      setCreateInitialPlanning(false);
       reset();
     },
-    onError: (err) => toast.error(getApiErrorMessage(err)),
+    onError: (err) => {
+      if (err instanceof InitialPlanningError) {
+        queryClient.invalidateQueries({ queryKey: ["obras"] });
+        queryClient.invalidateQueries({ queryKey: ["obras", "by-categoria"] });
+        queryClient.invalidateQueries({ queryKey: ["obras", err.obraId, "items"] });
+        toast.error(`Obra criada, mas houve erro ao montar o planejamento inicial: ${err.message}`);
+        return;
+      }
+      toast.error(getApiErrorMessage(err));
+    },
   });
 
   const {
@@ -131,6 +185,14 @@ export function ObrasPage() {
     } else {
       setCategoriaFilter(v);
       setFilter("all"); // reset status filter quando categoria selecionada
+    }
+  }
+
+  function handleCreateOpenChange(open: boolean) {
+    setCreateOpen(open);
+    if (!open) {
+      setCreateInitialPlanning(false);
+      reset();
     }
   }
 
@@ -353,7 +415,7 @@ export function ObrasPage() {
       </div>
 
       {/* Dialog — Criar obra */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={handleCreateOpenChange}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nova Obra</DialogTitle>
@@ -412,8 +474,25 @@ export function ObrasPage() {
                 <Input type="date" {...register("data_entrega")} />
               </div>
             </div>
+            <label className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-border"
+                checked={createInitialPlanning}
+                onChange={(e) => setCreateInitialPlanning(e.target.checked)}
+              />
+              <span className="space-y-1">
+                <span className="block text-sm font-medium">
+                  Criar planejamento inicial?
+                </span>
+                <span className="block text-xs text-muted-foreground">
+                  Adiciona automaticamente Agendamento, Elétrica, Hidraulica,
+                  Financeiro e Pintura para o mesmo responsável da obra.
+                </span>
+              </span>
+            </label>
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setCreateOpen(false)}>
+              <Button variant="outline" type="button" onClick={() => handleCreateOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
