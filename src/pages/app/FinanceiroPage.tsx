@@ -125,7 +125,7 @@ function GroupedPaymentCard({
 
   return (
     <Card className={`${borderClass} shadow-sm`}>
-      <CardContent className="py-4 space-y-0">
+      <CardContent className="py-3 space-y-0">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -140,42 +140,35 @@ function GroupedPaymentCard({
               </Badge>
               {dueStatus && <DueBadge status={dueStatus} />}
             </div>
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <p className="text-xs text-muted-foreground">
-                Pagamentos pendentes agendados para este diarista
-              </p>
-              {group.obra_id && (
-                <button
-                  onClick={() => navigate(`/obras/${group.obra_id}`)}
-                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
-                >
-                  <Building2 className="h-3 w-3" />
-                  Ver Obra
-                </button>
-              )}
+            <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+              {group.data_agendada && <span>Vencimento: {formatDate(group.data_agendada)}</span>}
+              <span>{formatCurrency(group.total_valor.toString())} no total</span>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <p className="font-bold">{formatCurrency(group.total_valor.toString())}</p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10 hidden sm:flex"
-              onClick={() => onPayAll(group)}
-              title="Pagar tudo deste diarista"
-            >
-              <CheckCheck className="h-3.5 w-3.5 mr-1" />
-              Pagar todos
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setExpanded(!expanded)}>
+            <Button size="sm" variant="outline" onClick={() => setExpanded(!expanded)} className="gap-1.5">
               {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {expanded ? "Ocultar" : "Detalhes"}
             </Button>
           </div>
         </div>
 
         {expanded && (
           <div className="mt-4 space-y-2 border-t pt-4">
-            <div className="flex sm:hidden justify-end mb-2">
+            <div className="flex items-center justify-between gap-3 flex-wrap rounded-md border border-border/50 bg-muted/20 p-3">
+              <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                <span>{group.items.length} pagamento{group.items.length !== 1 ? "s" : ""} neste lote</span>
+                {group.obra_id && (
+                  <button
+                    onClick={() => navigate(`/obras/${group.obra_id}`)}
+                    className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <Building2 className="h-3 w-3" />
+                    Ver Obra
+                  </button>
+                )}
+              </div>
               <Button
                 size="sm"
                 variant="outline"
@@ -186,6 +179,9 @@ function GroupedPaymentCard({
                 Pagar todos
               </Button>
             </div>
+            {group.pix_payload && (
+              <PixQrCodeBlock payload={group.pix_payload} originalCode={group.pix_key} compact />
+            )}
             {group.items.map((p) => (
               <div key={p.id} className="rounded-md border border-border/50 bg-muted/20 p-3">
                 <div className="flex items-center justify-between gap-4">
@@ -209,11 +205,6 @@ function GroupedPaymentCard({
                     </Button>
                   </div>
                 </div>
-                {p.status === "aguardando" && p.pix_copy_and_past && (
-                  <div className="mt-3">
-                    <PixQrCodeBlock payload={p.pix_copy_and_past} originalCode={p.payment_cod} compact />
-                  </div>
-                )}
               </div>
             ))}
           </div>
@@ -223,9 +214,108 @@ function GroupedPaymentCard({
   );
 }
 
+function SinglePaymentCard({
+  payment,
+  onPay,
+}: {
+  payment: PagamentoResponse;
+  onPay: (id: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const navigate = useNavigate();
+
+  const dueStatus = getDueStatus(payment.data_agendada, payment.status);
+  const borderClass = dueStatus === "overdue"
+    ? "border-red-500/40"
+    : dueStatus === "today"
+    ? "border-amber-500/40"
+    : payment.status === "aguardando" && payment.payment_cod
+    ? "border-emerald-500/30"
+    : "";
+
+  return (
+    <Card className={`shadow-sm ${borderClass}`}>
+      <CardContent className="py-3 space-y-0">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium">{payment.title}</p>
+              {payment.classe === "diarista" && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary/70">
+                  Diarista
+                </Badge>
+              )}
+              {dueStatus && <DueBadge status={dueStatus} />}
+              {payment.status === "pago" && <Badge variant="success">Pago</Badge>}
+            </div>
+            <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+              {payment.data_agendada && <span>Vencimento: {formatDate(payment.data_agendada)}</span>}
+              {payment.details && <span className="truncate max-w-[320px]">{payment.details}</span>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <p className="font-bold">{formatCurrency(payment.valor)}</p>
+            {payment.status === "aguardando" && (
+              <Button size="sm" onClick={() => onPay(payment.id)}>
+                Pagar
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={() => setExpanded(!expanded)} className="gap-1.5">
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {expanded ? "Ocultar" : "Detalhes"}
+            </Button>
+          </div>
+        </div>
+
+        {expanded && (
+          <div className="mt-4 space-y-3 border-t pt-4">
+            <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+              <span>Classe: {classeLabels[payment.classe]}</span>
+              {payment.obra_id && (
+                <button
+                  onClick={() => navigate(`/obras/${payment.obra_id}`)}
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  <Building2 className="h-3 w-3" />
+                  Ver Obra
+                </button>
+              )}
+            </div>
+
+            {payment.details && (
+              <div className="rounded-md border border-border/50 bg-muted/20 p-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Detalhes</p>
+                <p className="mt-1 text-sm">{payment.details}</p>
+              </div>
+            )}
+
+            {payment.payment_cod && (
+              <button
+                onClick={() =>
+                  navigator.clipboard.writeText(payment.payment_cod!).then(() => {
+                    toast.success("Código de pagamento copiado!");
+                  })
+                }
+                className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                title="Copiar código original"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span className="font-mono truncate max-w-[320px]">{payment.payment_cod}</span>
+              </button>
+            )}
+
+            {payment.status === "aguardando" && payment.pix_copy_and_past && (
+              <PixQrCodeBlock payload={payment.pix_copy_and_past} originalCode={payment.payment_cod} compact />
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function FinanceiroPage() {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const [createMovOpen, setCreateMovOpen] = useState(false);
   const [createPagOpen, setCreatePagOpen] = useState(false);
   const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
@@ -633,88 +723,7 @@ export function FinanceiroPage() {
                     );
                   }
 
-                  const p = r.item;
-                  const singleDueStatus = getDueStatus(p.data_agendada, p.status);
-                  const singleBorder = singleDueStatus === "overdue"
-                    ? "border-red-500/40"
-                    : singleDueStatus === "today"
-                    ? "border-amber-500/40"
-                    : p.status === "aguardando" && p.payment_cod
-                    ? "border-emerald-500/30"
-                    : "";
-                  return (
-                    <Card
-                      key={p.id}
-                      className={`shadow-sm ${singleBorder}`}
-                    >
-                      <CardContent className="py-4 space-y-0">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-medium">{p.title}</p>
-                              {p.classe === "diarista" && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-primary/30 text-primary/70">
-                                  Diarista
-                                </Badge>
-                              )}
-                            </div>
-                            {p.details && (
-                              <p className="text-xs text-muted-foreground truncate mt-0.5">{p.details}</p>
-                            )}
-                            <div className="flex items-center gap-3 flex-wrap mt-0.5">
-                              {p.data_agendada && (
-                                <p className="text-xs text-muted-foreground">
-                                  Vencimento: {formatDate(p.data_agendada)}
-                                </p>
-                              )}
-                              {singleDueStatus && <DueBadge status={singleDueStatus} />}
-                              {p.obra_id && (
-                                <button
-                                  onClick={() => navigate(`/obras/${p.obra_id}`)}
-                                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
-                                >
-                                  <Building2 className="h-3 w-3" />
-                                  Ver Obra
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <p className="font-bold">{formatCurrency(p.valor)}</p>
-                            {p.status === "aguardando" ? (
-                              <Button size="sm" onClick={() => setConfirmPayId(p.id)}>
-                                Pagar
-                              </Button>
-                            ) : (
-                              <Badge variant="success">Pago</Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {p.payment_cod && (
-                          <div className="mt-2">
-                            <button
-                              onClick={() =>
-                                navigator.clipboard.writeText(p.payment_cod!).then(() => {
-                                  toast.success("CÃ³digo de pagamento copiado!");
-                                })
-                              }
-                              className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
-                              title="Copiar cÃ³digo original"
-                            >
-                              <Copy className="h-3.5 w-3.5" />
-                              <span className="font-mono truncate max-w-[260px]">{p.payment_cod}</span>
-                            </button>
-                          </div>
-                        )}
-                        {p.status === "aguardando" && p.pix_copy_and_past && (
-                          <div className="mt-2">
-                            <PixQrCodeBlock payload={p.pix_copy_and_past} originalCode={p.payment_cod} />
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
+                  return <SinglePaymentCard key={r.item.id} payment={r.item} onPay={setConfirmPayId} />;
                 })}
               </div>
             )}
