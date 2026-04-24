@@ -187,16 +187,25 @@ function GroupedPaymentCard({
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{p.details || "Diária"}</p>
-                    {p.data_agendada && (
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {p.data_agendada && (
                         <p className="text-xs text-muted-foreground">
                           Vencimento: {formatDate(p.data_agendada)}
                         </p>
-                        {getDueStatus(p.data_agendada, p.status) && (
-                          <DueBadge status={getDueStatus(p.data_agendada, p.status)!} />
-                        )}
-                      </div>
-                    )}
+                      )}
+                      {getDueStatus(p.data_agendada, p.status) && (
+                        <DueBadge status={getDueStatus(p.data_agendada, p.status)!} />
+                      )}
+                      {p.obra_id && (
+                        <button
+                          onClick={() => navigate(`/obras/${p.obra_id}`)}
+                          className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                        >
+                          <Building2 className="h-3 w-3" />
+                          Ver Obra
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <p className="text-sm font-bold">{formatCurrency(p.valor)}</p>
