@@ -45,11 +45,13 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const requestUrl =
     typeof config.url === "string" ? config.url : "";
-  const isAuthRequest =
-    requestUrl.startsWith("/auth/") ||
-    requestUrl.includes("/auth/");
+  const isAnonymousAuthRequest =
+    requestUrl.includes("/auth/login") ||
+    requestUrl.includes("/auth/register") ||
+    requestUrl.includes("/auth/refresh") ||
+    requestUrl.includes("/auth/recovery");
 
-  if (isAuthRequest) {
+  if (isAnonymousAuthRequest) {
     return config;
   }
 

@@ -25,6 +25,11 @@ interface AuthState {
   logout: () => void;
 }
 
+type PersistedAuthState = Partial<Pick<AuthState, "user">> & {
+  accessToken?: unknown;
+  isAuthenticated?: unknown;
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -38,7 +43,7 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken: token, user, isAuthenticated: true }),
 
       setAccessToken: (token) =>
-        set({ accessToken: token, isAuthenticated: true }),
+        set({ accessToken: token }),
 
       setUser: (user) => set({ user }),
 
@@ -62,10 +67,15 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "engify-auth",
       storage: createJSONStorage(() => localStorage),
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as PersistedAuthState;
+        return {
+          user: state.user ?? null,
+        };
+      },
       partialize: (state) => ({
         user: state.user,
-        isAuthenticated: state.isAuthenticated,
-        accessToken: state.accessToken,
       }),
     }
   )

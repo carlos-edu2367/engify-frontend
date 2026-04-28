@@ -28,7 +28,7 @@ export const authService = {
     authApi.post<{ access_token: string; token_type: string }>("/auth/refresh").then((r) => r.data),
 
   logout: () =>
-    authApi.post<{ message: string }>("/auth/logout").then((r) => r.data),
+    api.post<{ message: string }>("/auth/logout").then((r) => r.data),
 
   me: () =>
     api.get<MeResponse>("/auth/me").then((r) => r.data),
