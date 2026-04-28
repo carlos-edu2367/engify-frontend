@@ -112,3 +112,22 @@ export interface BaixaLoteResponse {
   valor_total: number;
   movimentacao_id: string;
 }
+
+export type CommissionReportJobStatus = "pending" | "processing" | "completed" | "failed";
+
+export interface CreateCommissionReportRequest {
+  categoria_id: string;
+  mes: number;
+  ano: number;
+  porcentagem_comissao: string;
+}
+
+export interface CreateCommissionReportResponse {
+  job_id: string;
+}
+
+export interface CommissionReportJobStatusResponse {
+  status: CommissionReportJobStatus;
+  file_url?: string | null;
+  error_message?: string | null;
+}

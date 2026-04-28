@@ -32,6 +32,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
+import { RelatoriosFinanceirosTab } from "@/components/features/financeiro/RelatoriosFinanceirosTab";
 import { buildPixPayload } from "@/lib/pix";
 import { teamsService } from "@/services/teams.service";
 import type { DiaristResponse } from "@/types/team.types";
@@ -566,6 +567,7 @@ export function FinanceiroPage() {
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
           </TabsList>
 
           {/* Movimentações */}
@@ -736,6 +738,10 @@ export function FinanceiroPage() {
                 })}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="relatorios" className="mt-4">
+            <RelatoriosFinanceirosTab />
           </TabsContent>
         </Tabs>
       </div>

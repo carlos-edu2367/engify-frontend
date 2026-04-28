@@ -11,6 +11,9 @@ import type {
   CreateMovimentacaoAttachmentRequest,
   BaixaLoteRequest,
   BaixaLoteResponse,
+  CreateCommissionReportRequest,
+  CreateCommissionReportResponse,
+  CommissionReportJobStatusResponse,
 } from "@/types/financeiro.types";
 import type { PaginatedResponse } from "@/types/api.types";
 
@@ -67,4 +70,14 @@ export const financeiroService = {
 
   baixaLotePagamentos: (data: BaixaLoteRequest) =>
     api.post<BaixaLoteResponse>("/financeiro/pagamentos/baixa-lote", data).then((r) => r.data),
+
+  createCommissionReport: (data: CreateCommissionReportRequest) =>
+    api
+      .post<CreateCommissionReportResponse>("/financeiro/relatorios/comissao-obras", data)
+      .then((r) => r.data),
+
+  getReportJobStatus: (jobId: string) =>
+    api
+      .get<CommissionReportJobStatusResponse>(`/financeiro/relatorios/jobs/${jobId}`)
+      .then((r) => r.data),
 };
