@@ -31,15 +31,17 @@ import { useAuthStore } from "@/store/auth.store";
 
 type FilterStatus = ObraStatus | "all";
 
-const statusVariants: Record<ObraStatus, "info" | "warning" | "success"> = {
+const statusVariants: Record<ObraStatus, "info" | "warning" | "success" | "secondary"> = {
   planejamento: "info",
   em_andamento: "warning",
-  finalizado: "success",
+  financeiro: "success",
+  finalizado: "secondary",
 };
 
 const statusLabels: Record<ObraStatus, string> = {
   planejamento: "Planejamento",
   em_andamento: "Em Andamento",
+  financeiro: "Financeiro",
   finalizado: "Finalizado",
 };
 
@@ -53,6 +55,7 @@ export function ObrasPage() {
 
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [categoriaFilter, setCategoriaFilter] = useState<string | null>(null);
+  const [omitFinalizadas, setOmitFinalizadas] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
 
   // ── Queries ────────────────────────────────────────────────────────────────
@@ -81,12 +84,18 @@ export function ObrasPage() {
     (categoriasData?.items ?? []).map((c) => [c.id, c])
   );
 
-  const obras = categoriaFilter
+  const allObras = categoriaFilter
     ? (obrasCatData?.items ?? [])
     : (obrasData?.items ?? []);
-  const total = categoriaFilter
-    ? (obrasCatData?.total ?? 0)
-    : (obrasData?.total ?? 0);
+
+  const obras = allObras.filter((obra) => {
+    if (!omitFinalizadas) return true;
+    // Omitir se estiver no filtro "Todas" e for finalizado
+    if (filter === "all" && obra.status === "finalizado") return false;
+    return true;
+  });
+
+  const total = obras.length;
   const isLoading = categoriaFilter ? obrasCatLoading : obrasLoading;
 
   // ── Criar obra ─────────────────────────────────────────────────────────────
@@ -122,6 +131,7 @@ export function ObrasPage() {
     { value: "all", label: "Todas" },
     { value: "planejamento", label: "Planejamento" },
     { value: "em_andamento", label: "Em Andamento" },
+    { value: "financeiro", label: "Financeiro" },
     { value: "finalizado", label: "Finalizado" },
   ];
 
@@ -189,48 +199,68 @@ export function ObrasPage() {
               </div>
 
               {/* Filtro por categoria */}
-              <div className="w-full sm:w-52">
-                <Select
-                  value={categoriaFilter ?? NO_CATEGORIA}
-                  onValueChange={handleCategoriaFilter}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue>
-                      {categoriaFilter && categoriasMap[categoriaFilter] ? (
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                            style={{
-                              backgroundColor:
-                                categoriasMap[categoriaFilter]?.cor ?? "#64748b",
-                            }}
-                          />
-                          <span className="truncate">
-                            {categoriasMap[categoriaFilter]?.title}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">Categoria</span>
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_CATEGORIA}>
-                      <span className="text-muted-foreground">Todas as categorias</span>
-                    </SelectItem>
-                    {(categoriasData?.items ?? []).map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: cat.cor ?? "#64748b" }}
-                          />
-                          {cat.title}
-                        </div>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+                <div className="w-full sm:w-52">
+                  <Select
+                    value={categoriaFilter ?? NO_CATEGORIA}
+                    onValueChange={handleCategoriaFilter}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue>
+                        {categoriaFilter && categoriasMap[categoriaFilter] ? (
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{
+                                backgroundColor:
+                                  categoriasMap[categoriaFilter]?.cor ?? "#64748b",
+                              }}
+                            />
+                            <span className="truncate">
+                              {categoriasMap[categoriaFilter]?.title}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Categoria</span>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_CATEGORIA}>
+                        <span className="text-muted-foreground">Todas as categorias</span>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {(categoriasData?.items ?? []).map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: cat.cor ?? "#64748b" }}
+                            />
+                            {cat.title}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {!categoriaFilter && (
+                  <div className="flex items-center gap-2 px-1">
+                    <input
+                      type="checkbox"
+                      id="omit-finalizadas"
+                      checked={omitFinalizadas}
+                      onChange={(e) => setOmitFinalizadas(e.target.checked)}
+                      className="h-4 w-4 rounded border-input bg-background text-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    />
+                    <label
+                      htmlFor="omit-finalizadas"
+                      className="text-sm font-medium text-muted-foreground cursor-pointer select-none"
+                    >
+                      Omitir finalizadas
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
 

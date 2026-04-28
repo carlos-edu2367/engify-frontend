@@ -21,13 +21,15 @@ import { getApiErrorMessage } from "@/lib/utils";
 const statusLabels: Record<string, string> = {
   planejamento: "Planejamento",
   em_andamento: "Em Andamento",
+  financeiro: "Financeiro",
   finalizado: "Finalizado",
 };
 
-const statusVariants: Record<string, "info" | "warning" | "success"> = {
+const statusVariants: Record<string, "info" | "warning" | "success" | "secondary"> = {
   planejamento: "info",
   em_andamento: "warning",
-  finalizado: "success",
+  financeiro: "success",
+  finalizado: "secondary",
 };
 
 interface ItemDrawerProps {

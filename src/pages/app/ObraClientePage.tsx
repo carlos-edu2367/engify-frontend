@@ -14,13 +14,15 @@ import type { ObraStatus, PublicImageView } from "@/types/obra.types";
 const STATUS_LABELS: Record<ObraStatus, string> = {
   planejamento: "Planejamento",
   em_andamento: "Em Andamento",
+  financeiro: "Financeiro",
   finalizado: "Finalizado",
 };
 
-const STATUS_VARIANTS: Record<ObraStatus, "info" | "warning" | "success"> = {
+const STATUS_VARIANTS: Record<ObraStatus, "info" | "warning" | "success" | "secondary"> = {
   planejamento: "info",
   em_andamento: "warning",
-  finalizado: "success",
+  financeiro: "success",
+  finalizado: "secondary",
 };
 
 function ProgressBar({ value }: { value: number }) {

@@ -1,6 +1,6 @@
 import type { ObraImageResponse } from "./attachment.types";
 
-export type ObraStatus = "planejamento" | "em_andamento" | "finalizado";
+export type ObraStatus = "planejamento" | "em_andamento" | "financeiro" | "finalizado";
 
 export interface ObraResponse {
   id: string;
@@ -54,7 +54,7 @@ export interface UpdateObraStatusRequest {
 export interface ObraClienteItemResponse {
   id: string;
   title: string;
-  status: "planejamento" | "em_andamento" | "finalizado";
+  status: "planejamento" | "em_andamento" | "financeiro" | "finalizado";
 }
 
 export interface ObraClienteResponse {

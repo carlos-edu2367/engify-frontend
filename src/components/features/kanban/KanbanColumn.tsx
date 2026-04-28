@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const columnConfig: Record<ItemStatus, { label: string; color: string }> = {
-  planejamento: { label: "Planejamento", color: "bg-slate-500" },
-  em_andamento: { label: "Em Andamento", color: "bg-blue-500" },
-  finalizado: { label: "Finalizado", color: "bg-emerald-500" },
+  planejamento: { label: "Planejamento", color: "bg-indigo-500" },
+  em_andamento: { label: "Em Andamento", color: "bg-amber-500" },
+  financeiro: { label: "Financeiro", color: "bg-emerald-500" },
+  finalizado: { label: "Finalizado", color: "bg-slate-500" },
 };
 
 interface KanbanColumnProps {

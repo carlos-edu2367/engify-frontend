@@ -1,4 +1,4 @@
-export type ItemStatus = "planejamento" | "em_andamento" | "finalizado";
+export type ItemStatus = "planejamento" | "em_andamento" | "financeiro" | "finalizado";
 
 export interface ItemResponse {
   id: string;

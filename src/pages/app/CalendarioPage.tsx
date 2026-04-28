@@ -24,15 +24,17 @@ import { cn, formatDate } from "@/lib/utils";
 import { obrasService } from "@/services/obras.service";
 import type { ObraResponse, ObraStatus } from "@/types/obra.types";
 
-const statusVariants: Record<ObraStatus, "info" | "warning" | "success"> = {
+const statusVariants: Record<ObraStatus, "info" | "warning" | "success" | "secondary"> = {
   planejamento: "info",
   em_andamento: "warning",
-  finalizado: "success",
+  financeiro: "success",
+  finalizado: "secondary",
 };
 
 const statusLabels: Record<ObraStatus, string> = {
   planejamento: "Planejamento",
   em_andamento: "Em andamento",
+  financeiro: "Financeiro",
   finalizado: "Finalizado",
 };
 
@@ -268,7 +270,9 @@ export function CalendarioPage() {
                                 statusVariants[obra.status] === "warning" &&
                                   "border-amber-200 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-900/10",
                                 statusVariants[obra.status] === "success" &&
-                                  "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-900/10"
+                                  "border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-900/10",
+                                statusVariants[obra.status] === "secondary" &&
+                                  "border-slate-200 bg-slate-50/40 dark:border-slate-700/50 dark:bg-slate-800/10"
                               )}
                               title={`${obra.title} • ${statusLabels[obra.status]}`}
                             >

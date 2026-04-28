@@ -13,15 +13,17 @@ import { useAuthStore } from "@/store/auth.store";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { ObraStatus } from "@/types/obra.types";
 
-const statusVariants: Record<ObraStatus, "info" | "warning" | "success"> = {
+const statusVariants: Record<ObraStatus, "info" | "warning" | "success" | "secondary"> = {
   planejamento: "info",
   em_andamento: "warning",
-  finalizado: "success",
+  financeiro: "success",
+  finalizado: "secondary",
 };
 
 const statusLabels: Record<ObraStatus, string> = {
   planejamento: "Planejamento",
   em_andamento: "Em Andamento",
+  financeiro: "Financeiro",
   finalizado: "Finalizado",
 };
 

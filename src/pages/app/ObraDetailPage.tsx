@@ -38,13 +38,15 @@ import { useAuthStore } from "@/store/auth.store";
 const statusLabels: Record<ObraStatus, string> = {
   planejamento: "Planejamento",
   em_andamento: "Em Andamento",
+  financeiro: "Financeiro",
   finalizado: "Finalizado",
 };
 
-const statusVariants: Record<ObraStatus, "info" | "warning" | "success"> = {
+const statusVariants: Record<ObraStatus, "info" | "warning" | "success" | "secondary"> = {
   planejamento: "info",
   em_andamento: "warning",
-  finalizado: "success",
+  financeiro: "success",
+  finalizado: "secondary",
 };
 
 export function ObraDetailPage() {
@@ -243,7 +245,7 @@ export function ObraDetailPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <RoleGuard roles={["admin", "engenheiro"]}>
+                <RoleGuard roles={["admin", "engenheiro", "financeiro"]}>
                   <DropdownMenuItem onClick={() => setStatusOpen(true)}>
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Atualizar status
@@ -281,7 +283,7 @@ export function ObraDetailPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <RoleGuard roles={["admin", "engenheiro"]}>
+              <RoleGuard roles={["admin", "engenheiro", "financeiro"]}>
                 <DropdownMenuItem onClick={() => setStatusOpen(true)}>
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Atualizar status
@@ -493,7 +495,14 @@ export function ObraDetailPage() {
               <SelectContent>
                 <SelectItem value="planejamento">Planejamento</SelectItem>
                 <SelectItem value="em_andamento">Em Andamento</SelectItem>
-                <SelectItem value="finalizado">Finalizado</SelectItem>
+                <SelectItem value="financeiro">Financeiro</SelectItem>
+                <SelectItem
+                  value="finalizado"
+                  disabled={obra.status === "financeiro" && user?.role === "engenheiro"}
+                  title={obra.status === "financeiro" && user?.role === "engenheiro" ? "Apenas Admin ou Financeiro podem finalizar" : ""}
+                >
+                  Finalizado
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>

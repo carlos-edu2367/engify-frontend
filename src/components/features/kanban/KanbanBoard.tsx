@@ -38,10 +38,11 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { itemSchema, type ItemFormValues } from "@/lib/schemas/obra.schemas";
 import { cn, getApiErrorMessage } from "@/lib/utils";
 
-const STATUSES: ItemStatus[] = ["planejamento", "em_andamento", "finalizado"];
+const STATUSES: ItemStatus[] = ["planejamento", "em_andamento", "financeiro", "finalizado"];
 const STATUS_LABELS: Record<ItemStatus, string> = {
   planejamento: "Planejamento",
   em_andamento: "Em andamento",
+  financeiro: "Financeiro",
   finalizado: "Finalizado",
 };
 
@@ -49,6 +50,7 @@ function computeObraStatus(items: ItemResponse[]): ObraStatus {
   if (items.length === 0) return "planejamento";
   if (items.every((i) => i.status === "finalizado")) return "finalizado";
   if (items.some((i) => i.status === "em_andamento")) return "em_andamento";
+  if (items.some((i) => i.status === "financeiro")) return "financeiro";
   return "planejamento";
 }
 
@@ -56,6 +58,7 @@ function groupItemsByStatus(items: ItemResponse[]) {
   const grouped: Record<ItemStatus, ItemResponse[]> = {
     planejamento: [],
     em_andamento: [],
+    financeiro: [],
     finalizado: [],
   };
 
@@ -97,6 +100,7 @@ export function KanbanBoard({ obraId, items, canEdit, usersMap = {} }: KanbanBoa
   const mobileColumnsRef = useRef<Record<ItemStatus, HTMLDivElement | null>>({
     planejamento: null,
     em_andamento: null,
+    financeiro: null,
     finalizado: null,
   });
 

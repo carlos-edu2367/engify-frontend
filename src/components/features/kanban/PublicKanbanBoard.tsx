@@ -19,12 +19,13 @@ import type { PublicItemView, PublicItemAttachmentView, ObraStatus } from "@/typ
 
 // ── Constantes ─────────────────────────────────────────────────────────────────
 
-const STATUSES: ObraStatus[] = ["planejamento", "em_andamento", "finalizado"];
+const STATUSES: ObraStatus[] = ["planejamento", "em_andamento", "financeiro", "finalizado"];
 
 const COLUMN_CONFIG: Record<ObraStatus, { label: string; dot: string }> = {
-  planejamento: { label: "Planejamento", dot: "bg-slate-500" },
-  em_andamento: { label: "Em Andamento", dot: "bg-blue-500" },
-  finalizado:   { label: "Finalizado",   dot: "bg-emerald-500" },
+  planejamento: { label: "Planejamento", dot: "bg-indigo-500" },
+  em_andamento: { label: "Em Andamento", dot: "bg-amber-500" },
+  financeiro:   { label: "Financeiro",   dot: "bg-emerald-500" },
+  finalizado:   { label: "Finalizado",   dot: "bg-slate-500" },
 };
 
 // ── Lightbox simples ───────────────────────────────────────────────────────────
@@ -229,6 +230,7 @@ export function PublicKanbanBoard({ items }: PublicKanbanBoardProps) {
   const grouped: Record<ObraStatus, PublicItemView[]> = {
     planejamento: [],
     em_andamento: [],
+    financeiro: [],
     finalizado: [],
   };
   for (const item of items) {
