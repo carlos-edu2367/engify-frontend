@@ -15,6 +15,29 @@ function emvField(id: string, value: string) {
   return `${id}${value.length.toString().padStart(2, "0")}${value}`;
 }
 
+function normalizePixKey(value: string) {
+  const trimmed = value.trim();
+  const digitsOnly = trimmed.replace(/\D/g, "");
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  if (digitsOnly.length === 11 || digitsOnly.length === 14) {
+    return digitsOnly;
+  }
+
+  if (/^\+?[\d\s().-]+$/.test(trimmed) && digitsOnly.length >= 12 && digitsOnly.length <= 13) {
+    return `+${digitsOnly}`;
+  }
+
+  return trimmed;
+}
+
 function crc16Ccitt(payload: string) {
   let crc = 0xffff;
 
@@ -46,22 +69,20 @@ export function buildPixPayload({
   txid = "***",
   description,
 }: BuildPixPayloadParams) {
-  const cleanKey = pixKey.trim();
+  const cleanKey = normalizePixKey(pixKey);
   const merchantName = sanitizePixField(recipientName, 25) || "RECEBEDOR";
   const merchantCity = sanitizePixField(city, 15) || "SAO PAULO";
   const formattedAmount = amount.toFixed(2);
 
   const gui = emvField("00", "BR.GOV.BCB.PIX");
   const keyField = emvField("01", cleanKey);
-  const descriptionField = description
-    ? emvField("02", sanitizePixField(description, 72))
-    : "";
+  const cleanDescription = description ? sanitizePixField(description, 72) : "";
+  const descriptionField = cleanDescription ? emvField("02", cleanDescription) : "";
   const merchantAccount = emvField("26", `${gui}${keyField}${descriptionField}`);
   const additionalData = emvField("62", emvField("05", sanitizePixField(txid, 25) || "***"));
 
   const payloadWithoutCrc = [
     emvField("00", "01"),
-    emvField("01", "12"),
     merchantAccount,
     emvField("52", "0000"),
     emvField("53", "986"),
