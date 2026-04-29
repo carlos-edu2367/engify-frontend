@@ -63,5 +63,16 @@ export function getApiErrorMessage(error: unknown): string {
       return String((data as { detail: unknown }).detail);
     }
   }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+
   return "Ocorreu um erro inesperado. Tente novamente.";
 }
+
+

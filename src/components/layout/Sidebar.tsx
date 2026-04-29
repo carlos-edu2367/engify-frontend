@@ -6,6 +6,7 @@ import {
   Calendar,
   Wallet,
   Users,
+  UserCog,
   Settings,
   Building2,
 } from "lucide-react";
@@ -42,6 +43,12 @@ const navItems = [
     label: "Financeiro",
     icon: Wallet,
     roles: ["admin", "financeiro"],
+  },
+  {
+    to: "/rh",
+    label: "RH",
+    icon: UserCog,
+    roles: ["admin", "financeiro", "funcionario"],
   },
   {
     to: "/membros",

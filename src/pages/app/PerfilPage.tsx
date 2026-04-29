@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { rhService } from "@/services/rh.service";
 import { usersService } from "@/services/users.service";
 import { useAuthStore } from "@/store/auth.store";
-import { getInitials, getApiErrorMessage } from "@/lib/utils";
+import { formatCurrency, getInitials, getApiErrorMessage } from "@/lib/utils";
 
 const perfilSchema = z.object({
   nome: z.string().min(3, "Nome deve ter ao menos 3 caracteres"),
@@ -22,6 +25,11 @@ type PerfilFormValues = z.infer<typeof perfilSchema>;
 
 export function PerfilPage() {
   const { user, setUser } = useAuthStore();
+  const holeritesQuery = useQuery({
+    queryKey: ["meus-holerites"],
+    queryFn: () => rhService.listMyHolerites(1, 12),
+    enabled: user?.role === "funcionario",
+  });
 
   const mutation = useMutation({
     mutationFn: (v: PerfilFormValues) => usersService.updateMe(v),
@@ -84,6 +92,48 @@ export function PerfilPage() {
             </form>
           </CardContent>
         </Card>
+
+        {user?.role === "funcionario" && (
+          <Card>
+            <CardHeader>
+              <div>
+                <p className="text-lg font-semibold">Meus holerites</p>
+                <p className="text-sm text-muted-foreground">Consulta somente leitura das competencias processadas.</p>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {holeritesQuery.isLoading ? (
+                <>
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                </>
+              ) : (holeritesQuery.data?.items.length ?? 0) === 0 ? (
+                <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                  Nenhum holerite disponivel ate o momento.
+                </div>
+              ) : (
+                holeritesQuery.data?.items.map((item) => (
+                  <div key={item.id} className="rounded-md border p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium">
+                          {String(item.mes_referencia).padStart(2, "0")}/{item.ano_referencia}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Base {formatCurrency(item.salario_base)} · Extras {formatCurrency(item.horas_extras)}
+                        </p>
+                      </div>
+                      <Badge variant={item.status === "fechado" ? "success" : "warning"}>
+                        {item.status === "fechado" ? "Fechado" : "Rascunho"}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-sm font-medium">Liquido {formatCurrency(item.valor_liquido)}</p>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </PageTransition>
   );

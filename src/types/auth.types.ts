@@ -1,4 +1,4 @@
-export type Role = "admin" | "engenheiro" | "financeiro" | "cliente" | "super_admin";
+export type Role = "admin" | "engenheiro" | "financeiro" | "cliente" | "super_admin" | "funcionario";
 
 export interface MeResponse {
   id: string;

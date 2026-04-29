@@ -19,6 +19,7 @@ import { ObraClientePage } from "@/pages/app/ObraClientePage";
 import { DiariasPage } from "@/pages/app/DiariasPage";
 import { FinanceiroPage } from "@/pages/app/FinanceiroPage";
 import { MembrosPage } from "@/pages/app/MembrosPage";
+import { RhPage } from "@/pages/app/RhPage";
 import { ConfiguracoesPage } from "@/pages/app/ConfiguracoesPage";
 import { PerfilPage } from "@/pages/app/PerfilPage";
 import { CalendarioPage } from "@/pages/app/CalendarioPage";
@@ -66,6 +67,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={["admin", "financeiro"]}>
             <FinanceiroPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/rh",
+        element: (
+          <ProtectedRoute roles={["admin", "financeiro", "funcionario"]}>
+            <RhPage />
           </ProtectedRoute>
         ),
       },
