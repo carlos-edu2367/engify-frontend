@@ -20,7 +20,7 @@ import type {
   RhMeResumo,
   RhRegistroPonto,
 } from "@/types/rh.types";
-import { BadgeCheck, FileClock, FileSearch, MapPin, Shield, Wallet, XCircle } from "lucide-react";
+import { AlertTriangle, BadgeCheck, FileClock, FileSearch, MapPin, Shield, Wallet, XCircle } from "lucide-react";
 import type { ScheduleRow } from "./rh-utils";
 import { formatDateTime, timelineSubtitle, timelineTitle } from "./rh-utils";
 import { useQuery } from "@tanstack/react-query";
@@ -650,4 +650,16 @@ export function statusBadgeVariant(status: string): "secondary" | "success" | "w
     return "destructive";
   }
   return "secondary";
+}
+export function DevelopmentWarning() {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-200">
+      <div className="flex items-center gap-3">
+        <AlertTriangle className="h-5 w-5 shrink-0" />
+        <p className="text-sm font-medium">
+          Funcionalidade em desenvolvimento: as alterações realizadas aqui podem sofrer mudanças até a versão final.
+        </p>
+      </div>
+    </div>
+  );
 }
