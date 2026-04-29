@@ -20,7 +20,7 @@ import type {
   RhMeResumo,
   RhRegistroPonto,
 } from "@/types/rh.types";
-import { BadgeCheck, FileClock, FileSearch, MapPin, Shield, User, Wallet, XCircle } from "lucide-react";
+import { BadgeCheck, FileClock, FileSearch, MapPin, Shield, Wallet, XCircle } from "lucide-react";
 import type { ScheduleRow } from "./rh-utils";
 import { formatDateTime, timelineSubtitle, timelineTitle } from "./rh-utils";
 import { useQuery } from "@tanstack/react-query";
