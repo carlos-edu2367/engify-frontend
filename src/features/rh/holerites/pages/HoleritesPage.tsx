@@ -11,6 +11,7 @@ import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable"
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
+import { employeeDisplay } from "../../shared/utils/display";
 import { formatCompetence, formatRhCurrency } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { useCompetenceState } from "../../shared/hooks/useCompetenceState";
@@ -28,7 +29,10 @@ export function HoleritesPage() {
 
   const columns: Array<RhColumn<RhHolerite>> = [
     { key: "competencia", header: "Competencia", render: (item) => formatCompetence(item.mes_referencia, item.ano_referencia) },
-    { key: "funcionario", header: "Funcionario", render: (item) => item.funcionario_id },
+    { key: "funcionario", header: "Funcionario", render: (item) => {
+      const display = employeeDisplay(item);
+      return <div><p className="font-medium">{display.title}</p><p className="text-xs text-muted-foreground">{display.subtitle}</p></div>;
+    } },
     { key: "bruto", header: "Salario base", render: (item) => formatRhCurrency(item.salario_base) },
     { key: "liquido", header: "Liquido", render: (item) => formatRhCurrency(item.valor_liquido) },
     { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status} /> },

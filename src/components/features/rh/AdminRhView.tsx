@@ -734,7 +734,7 @@ export function AdminRhView() {
                             {funcionario.cargo} - {funcionario.cpf_mascarado}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            Admissao em {formatDate(funcionario.data_admissao)} - {formatCurrency(funcionario.salario_base)}
+                            Admissao em {formatDate(funcionario.data_admissao)} - {funcionario.salario_base ? formatCurrency(funcionario.salario_base) : "Salario restrito"}
                           </p>
                         </div>
                         <div className="flex flex-wrap gap-2">

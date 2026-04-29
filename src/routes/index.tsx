@@ -62,6 +62,8 @@ const rhAdminRouteElements = [
   { path: "/app/rh/configuracoes/encargos", element: rhAdminRoutes.configuracoesEncargos },
   { path: "/rh/configuracoes/regras", element: rhAdminRoutes.configuracoesRegras },
   { path: "/app/rh/configuracoes/regras", element: rhAdminRoutes.configuracoesRegras },
+  { path: "/rh/configuracoes/regras/:id", element: rhAdminRoutes.configuracoesRegraDetail },
+  { path: "/app/rh/configuracoes/regras/:id", element: rhAdminRoutes.configuracoesRegraDetail },
   { path: "/rh/configuracoes/tabelas-progressivas", element: rhAdminRoutes.configuracoesTabelasProgressivas },
   { path: "/app/rh/configuracoes/tabelas-progressivas", element: rhAdminRoutes.configuracoesTabelasProgressivas },
   { path: "/rh/auditoria", element: rhAdminRoutes.auditoria },

@@ -21,6 +21,15 @@ export function useAjustesPonto(filters: RhAjusteFilters) {
   });
 }
 
+export function usePontoDiaDetalhe(funcionarioId?: string | null, data?: string | null) {
+  return useQuery({
+    queryKey: [...rhQueryKeys.all, "ponto", "dia", funcionarioId ?? null, data ?? null],
+    queryFn: () => rhService.getPontoDiaDetalhe(funcionarioId!, data!),
+    enabled: !!funcionarioId && !!data,
+    retry: 1,
+  });
+}
+
 export function useAjustePontoActions() {
   const queryClient = useQueryClient();
 

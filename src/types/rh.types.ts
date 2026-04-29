@@ -46,9 +46,13 @@ export interface RhFuncionarioListItem {
   nome: string;
   cpf_mascarado: string;
   cargo: string;
-  salario_base: string;
+  salario_base?: string | null;
+  can_view_salary?: boolean;
   data_admissao: string;
   user_id: string | null;
+  usuario_nome?: string | null;
+  usuario_email?: string | null;
+  updated_at?: string | null;
   is_active: boolean;
 }
 
@@ -94,7 +98,13 @@ export type RhStatusHolerite = "rascunho" | "fechado" | "cancelado";
 export type RhTipoPonto = "entrada" | "saida";
 export type RhStatusPonto = "validado" | "negado" | "inconsistente" | "ajustado";
 
-export interface RhFerias {
+export interface RhEmployeeDisplayFields {
+  funcionario_nome?: string | null;
+  funcionario_cpf_mascarado?: string | null;
+  funcionario_cargo?: string | null;
+}
+
+export interface RhFerias extends RhEmployeeDisplayFields {
   id: string;
   funcionario_id: string;
   data_inicio: string;
@@ -103,7 +113,7 @@ export interface RhFerias {
   motivo_rejeicao?: string | null;
 }
 
-export interface RhAjustePonto {
+export interface RhAjustePonto extends RhEmployeeDisplayFields {
   id: string;
   funcionario_id: string;
   data_referencia: string;
@@ -122,10 +132,11 @@ export interface RhTipoAtestado {
   descricao?: string | null;
 }
 
-export interface RhAtestado {
+export interface RhAtestado extends RhEmployeeDisplayFields {
   id: string;
   funcionario_id: string;
   tipo_atestado_id: string;
+  tipo_atestado_nome?: string | null;
   data_inicio: string;
   data_fim: string;
   status: RhStatusAtestado;
@@ -147,7 +158,7 @@ export interface RhTipoAtestadoUpdateRequest {
   descricao?: string | null;
 }
 
-export interface RhHolerite {
+export interface RhHolerite extends RhEmployeeDisplayFields {
   id: string;
   funcionario_id: string;
   mes_referencia: number;
@@ -158,8 +169,15 @@ export interface RhHolerite {
   acrescimos_manuais: string;
   descontos_manuais: string;
   valor_liquido: string;
+  valor_bruto?: string | null;
+  total_proventos?: string | null;
+  total_descontos?: string | null;
+  total_informativos?: string | null;
+  calculation_version?: number | string | null;
+  calculated_at?: string | null;
   status: RhStatusHolerite;
   pagamento_agendado_id?: string | null;
+  pagamento_agendado_titulo?: string | null;
 }
 
 export interface RhGerarFolhaRequest {
@@ -180,13 +198,15 @@ export interface RhHoleriteAjustesRequest {
   motivo: string;
 }
 
-export interface RhRegistroPonto {
+export interface RhRegistroPonto extends RhEmployeeDisplayFields {
   id: string;
   funcionario_id: string;
   tipo: RhTipoPonto;
   timestamp: string;
   status: RhStatusPonto;
   local_ponto_id?: string | null;
+  local_ponto_nome?: string | null;
+  fora_local_autorizado?: boolean | null;
 }
 
 export interface RhRegistrarPontoRequest {
@@ -237,9 +257,9 @@ export interface RhMeResumo {
 export interface RhAuditLog {
   id: string;
   entity_type: string;
-  entity_id?: string | null;
+  entity_label?: string | null;
   action: string;
-  actor_user_id?: string | null;
+  actor_nome?: string | null;
   actor_role: string;
   reason?: string | null;
   before?: Record<string, unknown> | null;
@@ -274,6 +294,23 @@ export interface RhAtestadoCreateRequest {
 
 export interface RhAtestadoDeliverRequest {
   file_path: string;
+}
+
+export interface RhAtestadoUploadUrlRequest {
+  file_name: string;
+  content_type: string;
+  size_bytes?: number | null;
+}
+
+export interface RhAtestadoUploadUrlResponse {
+  upload_url: string;
+  storage_key?: string | null;
+  headers?: Record<string, string>;
+  expires_in: number;
+}
+
+export interface RhAtestadoConfirmUploadRequest {
+  storage_key?: string | null;
 }
 
 export interface RhAtestadoDownloadUrlResponse {
@@ -314,8 +351,8 @@ export interface RhAtestadoFilters extends RhPaginationFilters, RhDateRangeFilte
 
 export interface RhAuditFilters extends RhPaginationFilters, RhDateRangeFilters {
   entity_type?: string;
-  entity_id?: string;
-  actor_user_id?: string;
+  entity_search?: string;
+  actor_search?: string;
   action?: string;
 }
 
@@ -333,3 +370,106 @@ export type RhAtestadosResponse = PaginatedResponse<RhAtestado>;
 export type RhHoleritesResponse = PaginatedResponse<RhHolerite>;
 export type RhRegistrosPontoResponse = PaginatedResponse<RhRegistroPonto>;
 export type RhAuditLogsResponse = PaginatedResponse<RhAuditLog>;
+
+export type RhHoleriteItemNatureza = "provento" | "desconto" | "informativo";
+export type RhHoleriteItemOrigem = "sistema" | "regra" | "manual" | "legado";
+
+export interface RhHoleriteItem {
+  id: string;
+  holerite_id: string;
+  descricao: string;
+  natureza: RhHoleriteItemNatureza;
+  origem: RhHoleriteItemOrigem;
+  valor: string;
+  regra_nome?: string | null;
+  regra_codigo?: string | null;
+  regra_versao?: number | string | null;
+  base_calculo?: string | null;
+  calculation_summary?: string | null;
+}
+
+export interface RhHoleriteSnapshot {
+  item_id: string;
+  titulo?: string | null;
+  calculo?: Record<string, unknown> | null;
+  linhas?: Array<{ label: string; value: string }>;
+}
+
+export type RhHoleriteItensResponse = PaginatedResponse<RhHoleriteItem> | RhHoleriteItem[];
+
+export type RhFolhaJobStatus = "queued" | "running" | "completed" | "failed" | "canceled" | "partial";
+
+export interface RhFolhaJob {
+  id: string;
+  mes: number;
+  ano: number;
+  status: RhFolhaJobStatus;
+  progress_percent?: number | null;
+  processed_count?: number | null;
+  total_count?: number | null;
+  failed_count?: number | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  mensagem?: string | null;
+}
+
+export type RhFolhaJobsResponse = PaginatedResponse<RhFolhaJob>;
+
+export interface RhPontoDiaDetalhe extends RhEmployeeDisplayFields {
+  funcionario_id: string;
+  data: string;
+  status: string;
+  registros: RhRegistroPonto[];
+  local_autorizado_nome?: string | null;
+  fora_local_autorizado?: boolean | null;
+  ajustes_relacionados?: RhAjustePonto[];
+  impacto_estimado?: {
+    horas_extras?: string | null;
+    faltas?: string | null;
+    competencia?: string | null;
+  } | null;
+}
+
+export interface RhRegraEncargo {
+  id: string;
+  nome: string;
+  codigo: string;
+  status: "rascunho" | "ativo" | "inativo" | "arquivado";
+  natureza: string;
+  tipo_calculo: string;
+  base_calculo?: string | null;
+  versao?: number | string | null;
+  vigencia_inicio?: string | null;
+  vigencia_fim?: string | null;
+}
+
+export type RhRegrasEncargosResponse = PaginatedResponse<RhRegraEncargo>;
+
+export interface RhTabelaProgressiva {
+  id: string;
+  nome: string;
+  codigo: string;
+  status: "rascunho" | "ativo" | "inativo";
+  vigencia_inicio?: string | null;
+  vigencia_fim?: string | null;
+  faixas?: RhFaixaEncargo[];
+}
+
+export interface RhFaixaEncargo {
+  id?: string;
+  inicio: string;
+  fim?: string | null;
+  aliquota: string;
+  deducao?: string | null;
+}
+
+export type RhTabelasProgressivasResponse = PaginatedResponse<RhTabelaProgressiva>;
+
+export interface RhBeneficio {
+  id: string;
+  nome: string;
+  status?: string | null;
+  descricao?: string | null;
+}
+
+export type RhBeneficiosResponse = PaginatedResponse<RhBeneficio>;

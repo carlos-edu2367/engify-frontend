@@ -7,15 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { RhRegistroPonto, RhStatusPonto } from "@/types/rh.types";
+import type { RhFuncionarioListItem, RhRegistroPonto, RhStatusPonto } from "@/types/rh.types";
+import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSelect";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
+import { employeeDisplay } from "../../shared/utils/display";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
-import { usePontos } from "../hooks/usePontoOperacional";
+import { usePontoDiaDetalhe, usePontos } from "../hooks/usePontoOperacional";
 
 const statusOptions: Array<{ value: RhStatusPonto | "all"; label: string }> = [
   { value: "all", label: "Todos os status" },
@@ -36,39 +38,51 @@ function dateEnd(value?: string | null) {
 export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: RhStatusPonto; title?: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selected, setSelected] = useState<RhRegistroPonto | null>(null);
+  const [employee, setEmployee] = useState<RhFuncionarioListItem | null>(null);
   const page = Number(searchParams.get("page") ?? "1");
   const status = (forcedStatus ?? searchParams.get("status") ?? "all") as RhStatusPonto | "all";
-  const funcionarioId = searchParams.get("funcionario_id") ?? "";
   const start = searchParams.get("start") ?? "";
   const end = searchParams.get("end") ?? "";
 
   const filters = {
     page,
     limit: 20,
-    funcionario_id: funcionarioId || undefined,
+    funcionario_id: employee?.id,
     status: status === "all" ? undefined : status,
     start: dateStart(start),
     end: dateEnd(end),
   };
   const pontosQuery = usePontos(filters);
+  const selectedDate = selected?.timestamp ? selected.timestamp.slice(0, 10) : null;
+  const detalheQuery = usePontoDiaDetalhe(selected?.funcionario_id, selectedDate);
+  const detalhe = detalheQuery.data;
   const rows = pontosQuery.data?.items ?? [];
   const totalInconsistentes = rows.filter((item) => item.status === "inconsistente").length;
   const totalNegados = rows.filter((item) => item.status === "negado").length;
 
   const updateParam = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams);
-    if (value) {
-      next.set(key, value);
-    } else {
-      next.delete(key);
-    }
+    if (value) next.set(key, value);
+    else next.delete(key);
     next.set("page", "1");
     setSearchParams(next);
   };
 
   const columns = useMemo<Array<RhColumn<RhRegistroPonto>>>(
     () => [
-      { key: "funcionario", header: "Funcionario", render: (item) => item.funcionario_id },
+      {
+        key: "funcionario",
+        header: "Funcionario",
+        render: (item) => {
+          const display = employeeDisplay(item);
+          return (
+            <div>
+              <p className="font-medium">{display.title}</p>
+              <p className="text-xs text-muted-foreground">{display.subtitle}</p>
+            </div>
+          );
+        },
+      },
       { key: "data", header: "Data", render: (item) => formatRhDate(item.timestamp) },
       { key: "tipo", header: "Tipo", render: (item) => (item.tipo === "entrada" ? "Entrada" : "Saida") },
       {
@@ -77,15 +91,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
         render: (item) => new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.timestamp)),
       },
       { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status} /> },
-      {
-        key: "actions",
-        header: "Detalhe",
-        render: (item) => (
-          <Button variant="outline" size="sm" onClick={() => setSelected(item)}>
-            Abrir
-          </Button>
-        ),
-      },
+      { key: "actions", header: "Detalhe", render: (item) => <Button variant="outline" size="sm" onClick={() => setSelected(item)}>Abrir</Button> },
     ],
     []
   );
@@ -98,20 +104,16 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
           description="Registros de ponto por periodo, status e funcionario."
           actions={
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" asChild>
-                <Link to={rhPaths.pontoInconsistencias}>Inconsistencias</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to={rhPaths.pontoAjustes}>Ajustes</Link>
-              </Button>
+              <Button variant="outline" asChild><Link to={rhPaths.pontoInconsistencias}>Inconsistencias</Link></Button>
+              <Button variant="outline" asChild><Link to={rhPaths.pontoAjustes}>Ajustes</Link></Button>
             </div>
           }
         />
 
         <div className="grid gap-3 md:grid-cols-3">
           <RhMetricCard title="Registros na pagina" value={rows.length} icon={<Clock3 className="size-5" />} />
-          <RhMetricCard title="Inconsistencias" value={totalInconsistentes} icon={<AlertTriangle className="size-5" />} />
-          <RhMetricCard title="Pontos negados" value={totalNegados} icon={<ListFilter className="size-5" />} />
+          <RhMetricCard title="Inconsistencias na pagina" value={totalInconsistentes} icon={<AlertTriangle className="size-5" />} />
+          <RhMetricCard title="Pontos negados na pagina" value={totalNegados} icon={<ListFilter className="size-5" />} />
         </div>
 
         <Card>
@@ -121,20 +123,12 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-3 md:grid-cols-4">
-              <Input value={funcionarioId} onChange={(event) => updateParam("funcionario_id", event.target.value)} placeholder="ID do funcionario" />
+              <EmployeeSearchSelect value={employee} onChange={(next) => { setEmployee(next); updateParam("funcionario_id", next?.id ?? ""); }} />
               <Input type="date" value={start} onChange={(event) => updateParam("start", event.target.value)} />
               <Input type="date" value={end} onChange={(event) => updateParam("end", event.target.value)} />
               <Select value={status} onValueChange={(value) => updateParam("status", value)} disabled={!!forcedStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
@@ -162,15 +156,26 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
             </SheetHeader>
             {selected ? (
               <div className="mt-6 space-y-4 text-sm">
-                <Detail label="Funcionario" value={selected.funcionario_id} />
+                <Detail label="Funcionario" value={employeeDisplay(detalhe ?? selected).title} />
                 <Detail label="Data" value={formatRhDate(selected.timestamp)} />
                 <Detail label="Horario" value={new Date(selected.timestamp).toLocaleTimeString("pt-BR")} />
                 <Detail label="Tipo" value={selected.tipo === "entrada" ? "Entrada" : "Saida"} />
                 <Detail label="Status" value={<RhStatusBadge status={selected.status} />} />
-                <Detail label="Local autorizado" value={selected.local_ponto_id ?? "Nao informado"} />
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-amber-900 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-200">
-                  TODO(RH): o backend ainda nao expõe endpoint de detalhe do dia com geofence, linha do tempo e auditoria por registro. Esta tela usa a listagem real existente.
+                <Detail label="Local autorizado" value={detalhe?.local_autorizado_nome ?? selected.local_ponto_nome ?? (selected.fora_local_autorizado ? "Fora de local autorizado" : "Nao informado")} />
+                <div className="rounded-md border p-3">
+                  <p className="text-xs uppercase text-muted-foreground">Linha do tempo do dia</p>
+                  <div className="mt-3 space-y-2">
+                    {(detalhe?.registros ?? [selected]).map((registro) => (
+                      <div key={registro.id} className="flex items-center justify-between rounded-md bg-muted/40 p-2">
+                        <span>{registro.tipo === "entrada" ? "Entrada" : "Saida"}</span>
+                        <span>{new Date(registro.timestamp).toLocaleTimeString("pt-BR")}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+                <Detail label="Ajustes relacionados" value={`${detalhe?.ajustes_relacionados?.length ?? 0}`} />
+                <Detail label="Impacto estimado" value={detalhe?.impacto_estimado ? `HE ${detalhe.impacto_estimado.horas_extras ?? "0"} · Faltas ${detalhe.impacto_estimado.faltas ?? "0"}` : "Nao calculado"} />
+                {detalheQuery.isError ? <p className="rounded-md border p-3 text-sm text-muted-foreground">Detalhe operacional indisponivel neste ambiente; exibindo dados da listagem.</p> : null}
               </div>
             ) : null}
           </SheetContent>

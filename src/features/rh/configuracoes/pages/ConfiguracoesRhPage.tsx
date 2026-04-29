@@ -10,10 +10,10 @@ import { TiposAtestadoSection } from "./TiposAtestadoSection";
 type ConfigSection = "overview" | "beneficios" | "encargos" | "regras" | "tabelas-progressivas";
 
 const sections: Array<{ key: ConfigSection; title: string; path: string; description: string }> = [
-  { key: "beneficios", title: "Beneficios", path: rhPaths.configuracoesBeneficios, description: "TODO: backend ainda nao expoe beneficios aplicaveis." },
-  { key: "encargos", title: "Encargos", path: rhPaths.configuracoesEncargos, description: "TODO: backend ainda nao expoe encargos configuraveis." },
-  { key: "regras", title: "Regras", path: rhPaths.configuracoesRegras, description: "TODO: backend ainda nao expoe CRUD de regras e versionamento." },
-  { key: "tabelas-progressivas", title: "Tabelas progressivas", path: rhPaths.configuracoesTabelasProgressivas, description: "TODO: backend ainda nao expoe tabelas progressivas." },
+  { key: "beneficios", title: "Beneficios", path: rhPaths.configuracoesBeneficios, description: "Beneficios administrativos e aplicabilidade quando disponivel." },
+  { key: "encargos", title: "Encargos", path: rhPaths.configuracoesEncargos, description: "Regras de encargos, status e vigencias." },
+  { key: "regras", title: "Regras", path: rhPaths.configuracoesRegras, description: "CRUD e versionamento de regras expostos pelo backend." },
+  { key: "tabelas-progressivas", title: "Tabelas progressivas", path: rhPaths.configuracoesTabelasProgressivas, description: "Faixas progressivas usadas por regras de calculo." },
 ];
 
 export function ConfiguracoesRhPage({ section = "overview" }: { section?: ConfigSection }) {
@@ -60,7 +60,7 @@ export function ConfiguracoesRhPage({ section = "overview" }: { section?: Config
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Esta rota ja esta pronta na navegacao para manter a arquitetura alvo. A implementacao editavel depende dos endpoints reais de {current?.title.toLowerCase()}.
+                Abra a secao pela navegacao acima para consultar os contratos administrativos disponiveis.
               </p>
             </CardContent>
           </Card>

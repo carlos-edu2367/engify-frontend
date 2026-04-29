@@ -37,6 +37,18 @@ const HoleriteDetailPage = lazy(() =>
 const ConfiguracoesRhPage = lazy(() =>
   import("./configuracoes/pages/ConfiguracoesRhPage").then((module) => ({ default: module.ConfiguracoesRhPage }))
 );
+const BeneficiosPage = lazy(() =>
+  import("./beneficios/pages/BeneficiosPage").then((module) => ({ default: module.BeneficiosPage }))
+);
+const RegrasEncargosPage = lazy(() =>
+  import("./encargos/pages/RegrasEncargosPage").then((module) => ({ default: module.RegrasEncargosPage }))
+);
+const RegraEncargoDetailPage = lazy(() =>
+  import("./encargos/pages/RegraEncargoDetailPage").then((module) => ({ default: module.RegraEncargoDetailPage }))
+);
+const TabelasProgressivasPage = lazy(() =>
+  import("./tabelas-progressivas/pages/TabelasProgressivasPage").then((module) => ({ default: module.TabelasProgressivasPage }))
+);
 const RhAuditoriaPage = lazy(() =>
   import("./auditoria/pages/RhAuditoriaPage").then((module) => ({ default: module.RhAuditoriaPage }))
 );
@@ -148,22 +160,27 @@ export const rhAdminRoutes = {
   ),
   configuracoesBeneficios: (
     <LazyRhPage>
-      <ConfiguracoesRhPage section="beneficios" />
+      <BeneficiosPage />
     </LazyRhPage>
   ),
   configuracoesEncargos: (
     <LazyRhPage>
-      <ConfiguracoesRhPage section="encargos" />
+      <RegrasEncargosPage />
     </LazyRhPage>
   ),
   configuracoesRegras: (
     <LazyRhPage>
-      <ConfiguracoesRhPage section="regras" />
+      <RegrasEncargosPage />
+    </LazyRhPage>
+  ),
+  configuracoesRegraDetail: (
+    <LazyRhPage>
+      <RegraEncargoDetailPage />
     </LazyRhPage>
   ),
   configuracoesTabelasProgressivas: (
     <LazyRhPage>
-      <ConfiguracoesRhPage section="tabelas-progressivas" />
+      <TabelasProgressivasPage />
     </LazyRhPage>
   ),
   auditoria: (

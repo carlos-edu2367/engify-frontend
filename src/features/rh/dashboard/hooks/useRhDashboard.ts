@@ -29,7 +29,6 @@ async function getDashboardSummary(month: number, year: number) {
       throw error;
     }
 
-    // TODO(RH Fase 2): remover fallback quando o endpoint consolidado /rh/dashboard estiver garantido em todos os ambientes.
     const [
       funcionarios,
       ajustes,
@@ -39,7 +38,6 @@ async function getDashboardSummary(month: number, year: number) {
       atestadosVencidos,
       folhaRascunho,
       folhaFechada,
-      folhaAmostra,
     ] =
       await Promise.all([
         rhService.list(1, 1, undefined, true),
@@ -50,7 +48,6 @@ async function getDashboardSummary(month: number, year: number) {
         rhService.listAtestados({ page: 1, limit: 1, status: "vencido" }),
         rhService.listFolha({ page: 1, limit: 1, mes: month, ano: year, status: "rascunho" }),
         rhService.listFolha({ page: 1, limit: 1, mes: month, ano: year, status: "fechado" }),
-        rhService.listFolha({ page: 1, limit: 20, mes: month, ano: year }),
       ]);
 
     const summary = emptySummary(month, year);
@@ -62,9 +59,7 @@ async function getDashboardSummary(month: number, year: number) {
     summary.atestados_vencidos = atestadosVencidos.total;
     summary.holerites_rascunho = folhaRascunho.total;
     summary.holerites_fechados = folhaFechada.total;
-    summary.total_liquido_competencia = folhaAmostra.items
-      .reduce((total, item) => total + Number(item.valor_liquido || 0), 0)
-      .toString();
+    summary.total_liquido_competencia = "0";
     return summary;
   }
 }

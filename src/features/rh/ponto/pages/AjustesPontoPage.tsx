@@ -2,16 +2,18 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { RhAjustePonto, RhStatusAjuste } from "@/types/rh.types";
+import type { RhAjustePonto, RhFuncionarioListItem, RhStatusAjuste } from "@/types/rh.types";
+import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSelect";
+import { RhImpactChecklist } from "../../shared/components/RhImpactChecklist";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
+import { employeeDisplay } from "../../shared/utils/display";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { useAjustePontoActions, useAjustesPonto } from "../hooks/usePontoOperacional";
 
@@ -25,13 +27,13 @@ const statusOptions: Array<{ value: RhStatusAjuste | "all"; label: string }> = [
 export function AjustesPontoPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<RhStatusAjuste | "all">("pendente");
-  const [funcionarioId, setFuncionarioId] = useState("");
+  const [employee, setEmployee] = useState<RhFuncionarioListItem | null>(null);
   const [reasonItem, setReasonItem] = useState<RhAjustePonto | null>(null);
   const [motivo, setMotivo] = useState("");
   const filters = {
     page,
     limit: 20,
-    funcionario_id: funcionarioId || undefined,
+    funcionario_id: employee?.id,
     status: status === "all" ? undefined : status,
   };
   const ajustesQuery = useAjustesPonto(filters);
@@ -40,7 +42,10 @@ export function AjustesPontoPage() {
 
   const columns = useMemo<Array<RhColumn<RhAjustePonto>>>(
     () => [
-      { key: "funcionario", header: "Funcionario", render: (item) => item.funcionario_id },
+      { key: "funcionario", header: "Funcionario", render: (item) => {
+        const display = employeeDisplay(item);
+        return <div><p className="font-medium">{display.title}</p><p className="text-xs text-muted-foreground">{display.subtitle}</p></div>;
+      } },
       { key: "data", header: "Data", render: (item) => formatRhDate(item.data_referencia) },
       { key: "entrada", header: "Entrada solicitada", render: (item) => item.hora_entrada_solicitada ? new Date(item.hora_entrada_solicitada).toLocaleTimeString("pt-BR") : "-" },
       { key: "saida", header: "Saida solicitada", render: (item) => item.hora_saida_solicitada ? new Date(item.hora_saida_solicitada).toLocaleTimeString("pt-BR") : "-" },
@@ -50,8 +55,8 @@ export function AjustesPontoPage() {
         header: "Acoes",
         render: (item) => (
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" disabled={item.status !== "pendente" || actions.approve.isPending} onClick={() => actions.approve.mutate(item.id)}>
-              Aprovar
+            <Button size="sm" variant="outline" disabled={item.status !== "pendente" || actions.approve.isPending} onClick={() => setReasonItem(item)}>
+              Decidir
             </Button>
             <Button size="sm" variant="destructive" disabled={item.status !== "pendente"} onClick={() => setReasonItem(item)}>
               Rejeitar
@@ -79,7 +84,7 @@ export function AjustesPontoPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-              <Input value={funcionarioId} onChange={(event) => { setFuncionarioId(event.target.value); setPage(1); }} placeholder="ID do funcionario" />
+              <EmployeeSearchSelect value={employee} onChange={(next) => { setEmployee(next); setPage(1); }} />
               <Select value={status} onValueChange={(value) => { setStatus(value as RhStatusAjuste | "all"); setPage(1); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -105,9 +110,16 @@ export function AjustesPontoPage() {
         <Dialog open={!!reasonItem} onOpenChange={(open) => !open && setReasonItem(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Rejeitar ajuste</DialogTitle>
-              <DialogDescription>Informe o motivo que sera exibido no historico da solicitacao.</DialogDescription>
+              <DialogTitle>Decidir ajuste</DialogTitle>
+              <DialogDescription>Revise o impacto antes de aprovar ou rejeitar. Motivo e obrigatorio para a decisao auditavel.</DialogDescription>
             </DialogHeader>
+            <RhImpactChecklist
+              items={[
+                { id: "competencia", label: "Competencia impactada revisada", description: "Ajuste pode alterar horas extras ou faltas.", checked: true },
+                { id: "funcionario", label: employeeDisplay(reasonItem ?? undefined).title, description: employeeDisplay(reasonItem ?? undefined).subtitle, checked: true },
+              ]}
+              onToggle={() => undefined}
+            />
             <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} placeholder="Motivo da rejeicao" />
             <DialogFooter>
               <Button variant="outline" onClick={() => setReasonItem(null)} disabled={actions.reject.isPending}>Cancelar</Button>
@@ -117,6 +129,12 @@ export function AjustesPontoPage() {
                 onClick={() => reasonItem && actions.reject.mutate({ id: reasonItem.id, motivo }, { onSuccess: () => { setReasonItem(null); setMotivo(""); } })}
               >
                 {actions.reject.isPending ? "Rejeitando..." : "Rejeitar"}
+              </Button>
+              <Button
+                disabled={!motivo.trim() || actions.approve.isPending}
+                onClick={() => reasonItem && actions.approve.mutate(reasonItem.id, { onSuccess: () => { setReasonItem(null); setMotivo(""); } })}
+              >
+                {actions.approve.isPending ? "Aprovando..." : "Aprovar"}
               </Button>
             </DialogFooter>
           </DialogContent>

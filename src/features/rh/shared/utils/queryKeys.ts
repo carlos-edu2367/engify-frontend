@@ -30,12 +30,20 @@ export const rhQueryKeys = {
   },
   folha: {
     list: (filters: RhFolhaFilters) => [...rhQueryKeys.all, "folha", "list", filters] as const,
+    jobs: (filters: Record<string, unknown>) => [...rhQueryKeys.all, "folha", "jobs", filters] as const,
   },
   holerites: {
     detail: (id: string | null) => [...rhQueryKeys.all, "holerites", "detail", id] as const,
+    itens: (id: string | null) => [...rhQueryKeys.all, "holerites", "itens", id] as const,
+    snapshot: (id: string | null, itemId: string | null) => [...rhQueryKeys.all, "holerites", "snapshot", id, itemId] as const,
     list: (filters: Record<string, unknown>) => [...rhQueryKeys.all, "holerites", "list", filters] as const,
   },
   auditoria: {
     list: (filters?: RhAuditFilters) => [...rhQueryKeys.all, "auditoria", "list", filters ?? {}] as const,
+  },
+  encargos: {
+    regras: (filters?: Record<string, unknown>) => [...rhQueryKeys.all, "encargos", "regras", filters ?? {}] as const,
+    tabelas: (filters?: Record<string, unknown>) => [...rhQueryKeys.all, "encargos", "tabelas", filters ?? {}] as const,
+    beneficios: (filters?: Record<string, unknown>) => [...rhQueryKeys.all, "encargos", "beneficios", filters ?? {}] as const,
   },
 };

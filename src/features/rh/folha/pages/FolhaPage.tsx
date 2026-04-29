@@ -7,16 +7,20 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { RhHolerite, RhStatusHolerite } from "@/types/rh.types";
+import type { RhFuncionarioListItem, RhHolerite, RhStatusHolerite } from "@/types/rh.types";
+import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSelect";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
+import { RhAsyncJobProgress } from "../../shared/components/RhAsyncJobProgress";
+import { RhImpactChecklist, type RhImpactChecklistItem } from "../../shared/components/RhImpactChecklist";
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { formatCompetence, formatRhCurrency } from "../../shared/utils/formatters";
+import { employeeDisplay } from "../../shared/utils/display";
 import { rhPaths } from "../../shared/utils/paths";
 import { useCompetenceState } from "../../shared/hooks/useCompetenceState";
-import { useFolha, useFolhaActions } from "../hooks/useFolha";
+import { useFolha, useFolhaActions, useFolhaJobs } from "../hooks/useFolha";
 
 const statusOptions: Array<{ value: RhStatusHolerite | "all"; label: string }> = [
   { value: "all", label: "Todos" },
@@ -34,12 +38,18 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
   const [year, setYear] = useState(initialYear);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<RhStatusHolerite | "all">("all");
-  const [funcionarioId, setFuncionarioId] = useState("");
+  const [employee, setEmployee] = useState<RhFuncionarioListItem | null>(null);
   const [manualItem, setManualItem] = useState<RhHolerite | null>(null);
   const [closeOpen, setCloseOpen] = useState(fechamento);
   const [manualForm, setManualForm] = useState({ acrescimos_manuais: "", descontos_manuais: "", motivo: "" });
-  const filters = { page, limit: 20, mes: month, ano: year, funcionario_id: funcionarioId || undefined, status: status === "all" ? undefined : status };
+  const [checklist, setChecklist] = useState<RhImpactChecklistItem[]>([
+    { id: "rascunhos", label: "Rascunhos revisados", description: "Valores visiveis foram conferidos antes do fechamento.", checked: false },
+    { id: "impacto", label: "Impacto operacional entendido", description: "Fechamento congela holerites e pode gerar pagamentos.", checked: false },
+    { id: "competencia", label: "Competencia correta", description: "Mes e ano selecionados representam a folha que sera fechada.", checked: false },
+  ]);
+  const filters = { page, limit: 20, mes: month, ano: year, funcionario_id: employee?.id, status: status === "all" ? undefined : status };
   const folhaQuery = useFolha(filters);
+  const jobsQuery = useFolhaJobs();
   const actions = useFolhaActions();
   const rows = folhaQuery.data?.items ?? [];
   const totalLiquido = rows.reduce((sum, item) => sum + Number(item.valor_liquido || 0), 0);
@@ -82,6 +92,25 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
     []
   );
 
+  const enrichedColumns = useMemo<Array<RhColumn<RhHolerite>>>(
+    () => columns.map((column) => column.key === "funcionario"
+      ? {
+          key: "funcionario",
+          header: "Funcionario",
+          render: (item) => {
+            const display = employeeDisplay(item);
+            return (
+              <div>
+                <p className="font-medium">{display.title}</p>
+                <p className="text-xs text-muted-foreground">{display.subtitle}</p>
+              </div>
+            );
+          },
+        }
+      : column),
+    [columns]
+  );
+
   return (
     <PermissionGate permission="rh.folha.view" showDeniedState>
       <div className="flex flex-col gap-6">
@@ -90,7 +119,7 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
           description={`Competencia ${formatCompetence(month, year)} com rascunhos, divergencias e fechamento seguro.`}
           actions={
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => actions.generate.mutate({ mes: month, ano: year, funcionario_id: funcionarioId || undefined })} disabled={actions.generate.isPending}>
+              <Button variant="outline" onClick={() => actions.generate.mutate({ mes: month, ano: year, funcionario_id: employee?.id })} disabled={actions.generate.isPending}>
                 <Calculator className="size-4" />
                 {actions.generate.isPending ? "Gerando..." : "Gerar rascunho"}
               </Button>
@@ -108,6 +137,20 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
         </div>
         <Card>
           <CardHeader>
+            <CardTitle>Jobs recentes</CardTitle>
+            <CardDescription>Processamentos assincronos sao acompanhados com polling leve e param ao concluir.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RhAsyncJobProgress
+              jobs={jobsQuery.data?.items ?? []}
+              loading={jobsQuery.isLoading}
+              onCancel={(job) => actions.cancelJob.mutate(job.id)}
+              onRetry={(job) => actions.retryJob.mutate(job.id)}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Competencia</CardTitle>
             <CardDescription>O fechamento gera pagamentos operacionais no financeiro pelo endpoint real `/rh/folha/fechar`.</CardDescription>
           </CardHeader>
@@ -115,7 +158,9 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
             <div className="grid gap-3 md:grid-cols-5">
               <Input type="number" min={1} max={12} value={month} onChange={(event) => { setMonth(Number(event.target.value)); setPage(1); }} />
               <Input type="number" min={2020} max={2100} value={year} onChange={(event) => { setYear(Number(event.target.value)); setPage(1); }} />
-              <Input className="md:col-span-2" value={funcionarioId} onChange={(event) => { setFuncionarioId(event.target.value); setPage(1); }} placeholder="ID do funcionario" />
+              <div className="md:col-span-2">
+                <EmployeeSearchSelect value={employee} onChange={(next) => { setEmployee(next); setPage(1); }} />
+              </div>
               <Select value={status} onValueChange={(value) => { setStatus(value as RhStatusHolerite | "all"); setPage(1); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
@@ -123,7 +168,7 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
             </div>
             <RhDataTable
               items={rows}
-              columns={columns}
+              columns={enrichedColumns}
               getRowKey={(item) => item.id}
               loading={folhaQuery.isLoading}
               error={folhaQuery.isError}
@@ -166,13 +211,18 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
             </DialogHeader>
             <div className="space-y-3 rounded-md border p-3 text-sm">
               <p>Competencia: {formatCompetence(month, year)}</p>
-              <p>Holerites na pagina: {rows.length}</p>
-              <p>Total liquido visivel: {formatRhCurrency(totalLiquido)}</p>
-              <p className="text-muted-foreground">O backend garante idempotencia pela chave enviada no service.</p>
+              <p>Competencia: {formatCompetence(month, year)}</p>
+              <p>Holerites visiveis na pagina: {rows.length}</p>
+              <p>Liquido visivel nesta pagina: {formatRhCurrency(totalLiquido)}</p>
+              <p className="text-muted-foreground">A acao usa idempotencia no service e IDs permanecem internos.</p>
             </div>
+            <RhImpactChecklist
+              items={checklist}
+              onToggle={(id, checked) => setChecklist((current) => current.map((item) => item.id === id ? { ...item, checked } : item))}
+            />
             <DialogFooter>
               <Button variant="outline" onClick={() => setCloseOpen(false)}>Voltar</Button>
-              <Button disabled={actions.close.isPending} onClick={() => actions.close.mutate({ mes: month, ano: year, funcionario_ids: funcionarioId ? [funcionarioId] : undefined }, { onSuccess: () => setCloseOpen(false) })}>
+              <Button disabled={actions.close.isPending || checklist.some((item) => !item.checked)} onClick={() => actions.close.mutate({ mes: month, ano: year, funcionario_ids: employee ? [employee.id] : undefined }, { onSuccess: () => setCloseOpen(false) })}>
                 {actions.close.isPending ? "Fechando..." : "Confirmar fechamento"}
               </Button>
             </DialogFooter>

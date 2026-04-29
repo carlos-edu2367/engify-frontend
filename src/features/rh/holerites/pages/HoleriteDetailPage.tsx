@@ -1,4 +1,5 @@
 import { useParams } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
 import { FileText, Wallet } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,13 +8,25 @@ import { RhErrorState } from "../../shared/components/RhErrorState";
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
+import { HoleriteBreakdown } from "../../shared/components/HoleriteBreakdown";
+import { employeeDisplay } from "../../shared/utils/display";
 import { formatCompetence, formatRhCurrency } from "../../shared/utils/formatters";
-import { useHoleriteDetail } from "../../folha/hooks/useFolha";
+import { rhService } from "@/services/rh.service";
+import type { RhHoleriteSnapshot } from "@/types/rh.types";
+import { useHoleriteDetail, useHoleriteItens } from "../../folha/hooks/useFolha";
+import { useState } from "react";
 
 export function HoleriteDetailPage() {
   const { id } = useParams();
   const query = useHoleriteDetail(id);
+  const itensQuery = useHoleriteItens(id);
+  const [snapshots, setSnapshots] = useState<Record<string, RhHoleriteSnapshot | undefined>>({});
+  const snapshotMutation = useMutation({
+    mutationFn: ({ itemId }: { itemId: string }) => rhService.getHoleriteItemSnapshot(id!, itemId),
+    onSuccess: (snapshot, variables) => setSnapshots((current) => ({ ...current, [variables.itemId]: snapshot })),
+  });
   const item = query.data;
+  const display = employeeDisplay(item);
 
   return (
     <PermissionGate permission="rh.folha.view" showDeniedState>
@@ -46,20 +59,29 @@ export function HoleriteDetailPage() {
                 <CardDescription>Valores congelados quando o holerite esta fechado.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 md:grid-cols-2">
-                <Detail label="Funcionario" value={item.funcionario_id} />
+                <Detail label="Funcionario" value={`${display.title} · ${display.subtitle}`} />
                 <Detail label="Salario base" value={formatRhCurrency(item.salario_base)} />
                 <Detail label="Horas extras" value={formatRhCurrency(item.horas_extras)} />
                 <Detail label="Descontos por falta" value={formatRhCurrency(item.descontos_falta)} />
                 <Detail label="Acrescimos manuais" value={formatRhCurrency(item.acrescimos_manuais)} />
                 <Detail label="Descontos manuais" value={formatRhCurrency(item.descontos_manuais)} />
-                <Detail label="Pagamento agendado" value={item.pagamento_agendado_id ?? "Nao vinculado"} />
+                <Detail label="Pagamento agendado" value={item.pagamento_agendado_titulo ?? "Nao vinculado"} />
+                <Detail label="Versao de calculo" value={String(item.calculation_version ?? "Nao informada")} />
               </CardContent>
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Snapshot e origem</CardTitle>
-                <CardDescription>TODO(RH): o backend atual ainda nao retorna itens detalhados, regra/versao ou snapshot JSON do calculo. Esta pagina usa o contrato real de holerite disponivel.</CardDescription>
+                <CardTitle>Itens e calculo</CardTitle>
+                <CardDescription>Proventos, descontos e informativos com origem, regra, versao e base de calculo.</CardDescription>
               </CardHeader>
+              <CardContent>
+                <HoleriteBreakdown
+                  items={itensQuery.data ?? []}
+                  snapshots={snapshots}
+                  loading={itensQuery.isLoading}
+                  onLoadSnapshot={(holeriteItem) => snapshotMutation.mutate({ itemId: holeriteItem.id })}
+                />
+              </CardContent>
             </Card>
           </>
         ) : null}

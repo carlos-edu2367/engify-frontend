@@ -128,7 +128,7 @@ export function FuncionarioDetailPage() {
                   <p className="text-sm text-muted-foreground">Salario base</p>
                   <p className="mt-1 text-2xl font-semibold">
                     <SensitiveValue
-                      value={formatRhCurrency(funcionario.salario_base)}
+                      value={funcionario.salario_base ? formatRhCurrency(funcionario.salario_base) : "Salario restrito"}
                       masked="R$ ******"
                       canReveal={can("rh.holerites.view_sensitive")}
                     />

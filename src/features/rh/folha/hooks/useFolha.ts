@@ -21,6 +21,33 @@ export function useHoleriteDetail(id?: string | null) {
   });
 }
 
+export function useHoleriteItens(id?: string | null) {
+  return useQuery({
+    queryKey: rhQueryKeys.holerites.itens(id ?? null),
+    queryFn: async () => {
+      const response = await rhService.listHoleriteItens(id!);
+      return Array.isArray(response) ? response : response.items;
+    },
+    enabled: !!id,
+    staleTime: 30_000,
+    retry: 1,
+  });
+}
+
+export function useFolhaJobs() {
+  return useQuery({
+    queryKey: rhQueryKeys.folha.jobs({ page: 1, limit: 20 }),
+    queryFn: () => rhService.listFolhaJobs(1, 20),
+    refetchInterval: (query) => {
+      const jobs = query.state.data?.items ?? [];
+      const hasActiveJob = jobs.some((job) => ["queued", "running", "partial"].includes(job.status));
+      return hasActiveJob ? 10_000 : false;
+    },
+    staleTime: 10_000,
+    retry: 1,
+  });
+}
+
 export function useFolhaActions() {
   const queryClient = useQueryClient();
 
@@ -52,6 +79,22 @@ export function useFolhaActions() {
       onSuccess: () => {
         invalidateFolha();
         toast.success("Ajustes manuais salvos.");
+      },
+      onError: (error) => toast.error(getApiErrorMessage(error)),
+    }),
+    cancelJob: useMutation({
+      mutationFn: (id: string) => rhService.cancelFolhaJob(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "folha", "jobs"] });
+        toast.success("Job de folha cancelado.");
+      },
+      onError: (error) => toast.error(getApiErrorMessage(error)),
+    }),
+    retryJob: useMutation({
+      mutationFn: (id: string) => rhService.retryFolhaJob(id),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "folha", "jobs"] });
+        toast.success("Retry solicitado.");
       },
       onError: (error) => toast.error(getApiErrorMessage(error)),
     }),

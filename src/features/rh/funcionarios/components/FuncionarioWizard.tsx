@@ -13,9 +13,11 @@ import { funcionarioSchema } from "@/lib/schemas/rh.schemas";
 import { buildDefaultSchedule, extractTurnos, type ScheduleRow } from "@/components/features/rh/rh-utils";
 import { RhScheduleEditor } from "../../shared/components/RhScheduleEditor";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
+import { UserSearchSelect } from "../../shared/components/UserSearchSelect";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
 import { formatRhCurrency } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
+import type { UserResponse } from "@/types/user.types";
 
 type WizardValues = {
   nome: string;
@@ -73,6 +75,7 @@ export function FuncionarioWizard() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [values, setValues] = useState<WizardValues>(initialValues);
+  const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
   const [schedule, setSchedule] = useState<ScheduleRow[]>(buildDefaultSchedule);
   const [error, setError] = useState<string | null>(null);
 
@@ -91,7 +94,7 @@ export function FuncionarioWizard() {
         cargo: values.cargo.trim(),
         salario_base: values.salario_base,
         data_admissao: values.data_admissao,
-        user_id: values.user_id.trim() || null,
+        user_id: selectedUser?.user_id ?? null,
         horario_trabalho: { turnos },
       });
     },
@@ -155,8 +158,11 @@ export function FuncionarioWizard() {
             <Field label="CPF">
               <Input value={values.cpf} onChange={(event) => updateValue("cpf", event.target.value)} />
             </Field>
-            <Field label="Usuario vinculado" description="Opcional. Use o ID do usuario enquanto a busca remota nao e extraida para esta nova tela.">
-              <Input value={values.user_id} onChange={(event) => updateValue("user_id", event.target.value)} placeholder="UUID do usuario" />
+            <Field label="Usuario vinculado" description="Opcional. Busque por nome ou email; o identificador fica interno.">
+              <UserSearchSelect value={selectedUser} onChange={(user) => {
+                setSelectedUser(user);
+                updateValue("user_id", user?.user_id ?? "");
+              }} />
             </Field>
           </div>
         ) : null}
@@ -207,7 +213,7 @@ export function FuncionarioWizard() {
               <div>
                 <p className="font-medium">Beneficios aplicaveis</p>
                 <p className="text-sm text-muted-foreground">
-                  TODO(RH Fase 6): conectar esta etapa aos endpoints de beneficios/regras quando o backend expuser a aplicabilidade por funcionario.
+                  Beneficios serao exibidos automaticamente quando houver contrato de aplicabilidade por funcionario.
                 </p>
               </div>
             </div>
@@ -216,7 +222,7 @@ export function FuncionarioWizard() {
 
         {step === 5 ? (
           <div className="grid gap-4 lg:grid-cols-2">
-            <ReviewCard title="Dados pessoais" items={[["Nome", values.nome], ["CPF", values.cpf], ["Usuario", values.user_id || "Sem vinculo"]]} />
+            <ReviewCard title="Dados pessoais" items={[["Nome", values.nome], ["CPF", values.cpf], ["Usuario", selectedUser ? `${selectedUser.nome} (${selectedUser.email})` : "Sem vinculo"]]} />
             <ReviewCard title="Contrato" items={[["Cargo", values.cargo], ["Admissao", values.data_admissao], ["Status", "Ativo"]]} />
             <ReviewCard title="Salario" items={[["Salario base", formatRhCurrency(values.salario_base || 0)]]} />
             <ReviewCard title="Jornada" items={[["Dias ativos", `${turnos.length}`]]} />

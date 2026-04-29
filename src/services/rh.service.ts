@@ -4,9 +4,12 @@ import type {
   RhAjustePontoCreateRequest,
   RhAjustesResponse,
   RhAtestadoCreateRequest,
+  RhAtestadoConfirmUploadRequest,
   RhAtestadoDeliverRequest,
   RhAtestadoDownloadUrlResponse,
   RhAtestadoFilters,
+  RhAtestadoUploadUrlRequest,
+  RhAtestadoUploadUrlResponse,
   RhAtestadosResponse,
   RhAuditFilters,
   RhAuditLogsResponse,
@@ -21,8 +24,12 @@ import type {
   RhFuncionarioUpdateRequest,
   RhFuncionariosResponse,
   RhGerarFolhaRequest,
+  RhBeneficiosResponse,
+  RhFolhaJobsResponse,
+  RhHoleriteItensResponse,
   RhHolerite,
   RhHoleriteAjustesRequest,
+  RhHoleriteSnapshot,
   RhHoleritesResponse,
   RhHorarioTrabalho,
   RhHorarioTrabalhoUpdateRequest,
@@ -32,12 +39,15 @@ import type {
   RhLocaisPontoResponse,
   RhMeResumo,
   RhPontoFilters,
+  RhPontoDiaDetalhe,
+  RhRegrasEncargosResponse,
   RhRegistrarPontoRequest,
   RhRegistroPonto,
   RhRegistrosPontoResponse,
   RhTipoAtestado,
   RhTipoAtestadoCreateRequest,
   RhTipoAtestadoUpdateRequest,
+  RhTabelasProgressivasResponse,
   RhTiposAtestadoResponse,
 } from "@/types/rh.types";
 
@@ -56,7 +66,7 @@ function normalizePagination<T extends { page?: number; limit?: number }>(filter
 }
 
 export const rhService = {
-  list: (page = 1, limit = 100, search?: string, isActive?: boolean) =>
+  list: (page = 1, limit = 30, search?: string, isActive?: boolean) =>
     api
       .get<RhFuncionariosResponse>("/rh/funcionarios", {
         params: {
@@ -110,8 +120,8 @@ export const rhService = {
         params: {
           ...normalizePagination(filters),
           ...(filters?.entity_type ? { entity_type: filters.entity_type } : {}),
-          ...(filters?.entity_id ? { entity_id: filters.entity_id } : {}),
-          ...(filters?.actor_user_id ? { actor_user_id: filters.actor_user_id } : {}),
+          ...(filters?.entity_search ? { entity_search: filters.entity_search } : {}),
+          ...(filters?.actor_search ? { actor_search: filters.actor_search } : {}),
           ...(filters?.action ? { action: filters.action } : {}),
           ...(filters?.start ? { start: filters.start } : {}),
           ...(filters?.end ? { end: filters.end } : {}),
@@ -198,6 +208,12 @@ export const rhService = {
   deliverAtestado: (id: string, data: RhAtestadoDeliverRequest) =>
     api.post(`/rh/atestados/${id}/entregar`, data).then((r) => r.data),
 
+  requestAtestadoUploadUrl: (id: string, data: RhAtestadoUploadUrlRequest) =>
+    api.post<RhAtestadoUploadUrlResponse>(`/rh/atestados/${id}/upload-url`, data).then((r) => r.data),
+
+  confirmAtestadoUpload: (id: string, data: RhAtestadoConfirmUploadRequest) =>
+    api.post(`/rh/atestados/${id}/confirmar-upload`, data).then((r) => r.data),
+
   rejectAtestado: (id: string, motivo: string) =>
     api.post(`/rh/atestados/${id}/rejeitar`, { motivo }).then((r) => r.data),
 
@@ -206,6 +222,18 @@ export const rhService = {
 
   generateFolha: (data: RhGerarFolhaRequest) =>
     api.post<RhHolerite[]>("/rh/folha/gerar", data).then((r) => r.data),
+
+  listFolhaJobs: (page = 1, limit = 20) =>
+    api.get<RhFolhaJobsResponse>("/rh/folha/jobs", { params: { page, limit } }).then((r) => r.data),
+
+  getFolhaJob: (jobId: string) =>
+    api.get(`/rh/folha/jobs/${jobId}`).then((r) => r.data),
+
+  cancelFolhaJob: (jobId: string) =>
+    api.post(`/rh/folha/jobs/${jobId}/cancelar`).then((r) => r.data),
+
+  retryFolhaJob: (jobId: string) =>
+    api.post(`/rh/folha/jobs/${jobId}/retry-falhas`).then((r) => r.data),
 
   listFolha: (filters: RhFolhaFilters) =>
     api
@@ -223,6 +251,12 @@ export const rhService = {
   getHolerite: (id: string) =>
     api.get<RhHolerite>(`/rh/holerites/${id}`).then((r) => r.data),
 
+  listHoleriteItens: (id: string) =>
+    api.get<RhHoleriteItensResponse>(`/rh/holerites/${id}/itens`).then((r) => r.data),
+
+  getHoleriteItemSnapshot: (id: string, itemId: string) =>
+    api.get<RhHoleriteSnapshot>(`/rh/holerites/${id}/itens/${itemId}/snapshot`).then((r) => r.data),
+
   updateHoleriteAjustes: (id: string, data: RhHoleriteAjustesRequest) =>
     api.patch<RhHolerite>(`/rh/holerites/${id}/ajustes-manuais`, data).then((r) => r.data),
 
@@ -238,6 +272,9 @@ export const rhService = {
 
   getMyHolerite: (id: string) =>
     api.get<RhHolerite>(`/rh/me/holerites/${id}`).then((r) => r.data),
+
+  listMyHoleriteItens: (id: string) =>
+    api.get<RhHoleriteItensResponse>(`/rh/me/holerites/${id}/itens`).then((r) => r.data),
 
   getMyResumo: () =>
     api.get<RhMeResumo>("/rh/me/resumo").then((r) => r.data),
@@ -255,6 +292,9 @@ export const rhService = {
       })
       .then((r) => r.data),
 
+  getPontoDiaDetalhe: (funcionarioId: string, data: string) =>
+    api.get<RhPontoDiaDetalhe>(`/rh/ponto/dias/${funcionarioId}/${data}`).then((r) => r.data),
+
   listMyPontos: (filters?: Omit<RhPontoFilters, "funcionario_id">) =>
     api
       .get<RhRegistrosPontoResponse>("/rh/me/ponto", {
@@ -271,6 +311,47 @@ export const rhService = {
     api
       .post<RhRegistroPonto>("/rh/ponto", data, {
         headers: { "Idempotency-Key": buildIdempotencyKey("rh-ponto") },
+      })
+      .then((r) => r.data),
+
+  listRegrasEncargos: (filters?: { page?: number; limit?: number; search?: string; status?: string }) =>
+    api
+      .get<RhRegrasEncargosResponse>("/rh/encargos/regras", {
+        params: {
+          ...normalizePagination(filters),
+          ...(filters?.search ? { search: filters.search } : {}),
+          ...(filters?.status ? { status: filters.status } : {}),
+        },
+      })
+      .then((r) => r.data),
+
+  getRegraEncargo: (id: string) =>
+    api.get(`/rh/encargos/regras/${id}`).then((r) => r.data),
+
+  activateRegraEncargo: (id: string, motivo: string) =>
+    api.post(`/rh/encargos/regras/${id}/ativar`, { motivo }).then((r) => r.data),
+
+  inactivateRegraEncargo: (id: string, motivo: string) =>
+    api.post(`/rh/encargos/regras/${id}/inativar`, { motivo }).then((r) => r.data),
+
+  listTabelasProgressivas: (filters?: { page?: number; limit?: number; search?: string; status?: string }) =>
+    api
+      .get<RhTabelasProgressivasResponse>("/rh/encargos/tabelas-progressivas", {
+        params: {
+          ...normalizePagination(filters),
+          ...(filters?.search ? { search: filters.search } : {}),
+          ...(filters?.status ? { status: filters.status } : {}),
+        },
+      })
+      .then((r) => r.data),
+
+  listBeneficios: (filters?: { page?: number; limit?: number; search?: string }) =>
+    api
+      .get<RhBeneficiosResponse>("/rh/beneficios", {
+        params: {
+          ...normalizePagination(filters),
+          ...(filters?.search ? { search: filters.search } : {}),
+        },
       })
       .then((r) => r.data),
 };

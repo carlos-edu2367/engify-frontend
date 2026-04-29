@@ -53,12 +53,7 @@ export function FuncionariosPage() {
       { key: "cargo", header: "Cargo", render: (item) => item.cargo },
       { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.is_active ? "ativo" : "inativo"} /> },
       { key: "jornada", header: "Jornada", render: () => "Ver detalhe" },
-      { key: "usuario", header: "Vinculo", render: (item) => (item.user_id ? "Usuario vinculado" : "Sem vinculo") },
-      {
-        key: "updated",
-        header: "Ultima alteracao",
-        render: () => "Nao enviada pela API",
-      },
+      { key: "usuario", header: "Usuario", render: (item) => item.usuario_nome ?? (item.user_id ? "Usuario vinculado" : "Sem vinculo") },
       {
         key: "actions",
         header: "Acoes",
@@ -96,9 +91,7 @@ export function FuncionariosPage() {
               <Users className="size-5" />
               Lista de funcionarios
             </CardTitle>
-            <CardDescription>
-              TODO(RH Fase 3): substituir "Ultima alteracao" quando o backend retornar `updated_at` na listagem.
-            </CardDescription>
+            <CardDescription>Busca paginada com CPF mascarado e dados sensiveis preservados por padrao.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

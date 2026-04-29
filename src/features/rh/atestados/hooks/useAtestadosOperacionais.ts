@@ -40,7 +40,19 @@ export function useAtestadoActions() {
 
   return {
     deliver: useMutation({
-      mutationFn: ({ id, file_path }: { id: string; file_path: string }) => rhService.deliverAtestado(id, { file_path }),
+      mutationFn: async ({ id, file }: { id: string; file: File }) => {
+        const upload = await rhService.requestAtestadoUploadUrl(id, {
+          file_name: file.name,
+          content_type: file.type || "application/octet-stream",
+          size_bytes: file.size,
+        });
+        await fetch(upload.upload_url, {
+          method: "PUT",
+          headers: upload.headers ?? { "Content-Type": file.type || "application/octet-stream" },
+          body: file,
+        });
+        return rhService.confirmAtestadoUpload(id, { storage_key: upload.storage_key });
+      },
       onSuccess: () => {
         invalidateAtestados();
         toast.success("Atestado marcado como entregue.");

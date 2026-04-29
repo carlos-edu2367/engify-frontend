@@ -2,16 +2,18 @@ import { useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { RhFerias, RhStatusFerias } from "@/types/rh.types";
+import type { RhFerias, RhFuncionarioListItem, RhStatusFerias } from "@/types/rh.types";
+import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSelect";
+import { RhImpactChecklist } from "../../shared/components/RhImpactChecklist";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
+import { employeeDisplay } from "../../shared/utils/display";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { useFerias, useFeriasActions } from "../hooks/useFeriasOperacionais";
 
@@ -30,17 +32,20 @@ type ReasonAction = { kind: "reject" | "cancel"; item: RhFerias };
 export function FeriasPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<RhStatusFerias | "all">("solicitado");
-  const [funcionarioId, setFuncionarioId] = useState("");
+  const [employee, setEmployee] = useState<RhFuncionarioListItem | null>(null);
   const [reasonAction, setReasonAction] = useState<ReasonAction | null>(null);
   const [motivo, setMotivo] = useState("");
-  const filters = { page, limit: 20, funcionario_id: funcionarioId || undefined, status: status === "all" ? undefined : status };
+  const filters = { page, limit: 20, funcionario_id: employee?.id, status: status === "all" ? undefined : status };
   const feriasQuery = useFerias(filters);
   const actions = useFeriasActions();
   const rows = feriasQuery.data?.items ?? [];
 
   const columns = useMemo<Array<RhColumn<RhFerias>>>(
     () => [
-      { key: "funcionario", header: "Funcionario", render: (item) => item.funcionario_id },
+      { key: "funcionario", header: "Funcionario", render: (item) => {
+        const display = employeeDisplay(item);
+        return <div><p className="font-medium">{display.title}</p><p className="text-xs text-muted-foreground">{display.subtitle}</p></div>;
+      } },
       { key: "inicio", header: "Inicio", render: (item) => formatRhDate(item.data_inicio) },
       { key: "fim", header: "Fim", render: (item) => formatRhDate(item.data_fim) },
       { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status} /> },
@@ -96,7 +101,7 @@ export function FeriasPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-              <Input value={funcionarioId} onChange={(event) => { setFuncionarioId(event.target.value); setPage(1); }} placeholder="ID do funcionario" />
+              <EmployeeSearchSelect value={employee} onChange={(next) => { setEmployee(next); setPage(1); }} />
               <Select value={status} onValueChange={(value) => { setStatus(value as RhStatusFerias | "all"); setPage(1); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
@@ -123,6 +128,13 @@ export function FeriasPage() {
               <DialogTitle>{reasonAction?.kind === "cancel" ? "Cancelar ferias" : "Rejeitar ferias"}</DialogTitle>
               <DialogDescription>O motivo fica registrado para auditoria e para o solicitante.</DialogDescription>
             </DialogHeader>
+            <RhImpactChecklist
+              items={[
+                { id: "folha", label: "Impacto em folha revisado", description: "Cancelamento ou rejeicao pode alterar faltas, abonos e competencia.", checked: true },
+                { id: "funcionario", label: employeeDisplay(reasonAction?.item).title, description: employeeDisplay(reasonAction?.item).subtitle, checked: true },
+              ]}
+              onToggle={() => undefined}
+            />
             <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} placeholder="Motivo" />
             <DialogFooter>
               <Button variant="outline" onClick={() => setReasonAction(null)}>Voltar</Button>
