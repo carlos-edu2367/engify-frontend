@@ -18,51 +18,52 @@ const navItems = [
     to: "/dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
-    roles: ["admin", "engenheiro", "financeiro", "cliente"],
+    roles: ["admin", "engenheiro", "financeiro", "cliente", "super_admin", "funcionario"],
   },
   {
     to: "/obras",
     label: "Obras",
     icon: HardHat,
-    roles: ["admin", "engenheiro", "financeiro"],
+    roles: ["admin", "engenheiro", "financeiro", "super_admin"],
   },
   {
     to: "/calendario",
     label: "Calendário",
     icon: Calendar,
-    roles: ["admin", "engenheiro", "financeiro", "cliente"],
+    roles: ["admin", "engenheiro", "financeiro", "cliente", "super_admin", "funcionario"],
   },
   {
     to: "/diarias",
     label: "Diárias",
     icon: CalendarDays,
-    roles: ["admin", "engenheiro", "financeiro"],
+    roles: ["admin", "engenheiro", "financeiro", "super_admin"],
   },
   {
     to: "/financeiro",
     label: "Financeiro",
     icon: Wallet,
-    roles: ["admin", "financeiro"],
+    roles: ["admin", "financeiro", "super_admin"],
   },
   {
     to: "/rh",
     label: "RH",
     icon: UserCog,
-    roles: ["admin", "financeiro", "funcionario"],
+    roles: ["admin", "financeiro", "funcionario", "super_admin"],
   },
   {
     to: "/membros",
     label: "Membros",
     icon: Users,
-    roles: ["admin"],
+    roles: ["admin", "super_admin"],
   },
   {
     to: "/configuracoes",
     label: "Configurações",
     icon: Settings,
-    roles: ["admin"],
+    roles: ["admin", "super_admin"],
   },
 ] as const;
+
 
 interface SidebarProps {
   className?: string;
