@@ -23,6 +23,50 @@ import { RhPage } from "@/pages/app/RhPage";
 import { ConfiguracoesPage } from "@/pages/app/ConfiguracoesPage";
 import { PerfilPage } from "@/pages/app/PerfilPage";
 import { CalendarioPage } from "@/pages/app/CalendarioPage";
+import { rhAdminRoutes } from "@/features/rh";
+
+const rhAdminRouteElements = [
+  { path: "/rh/operacional", element: rhAdminRoutes.legacy },
+  { path: "/app/rh/operacional", element: rhAdminRoutes.legacy },
+  { path: "/rh/funcionarios", element: rhAdminRoutes.funcionarios },
+  { path: "/app/rh/funcionarios", element: rhAdminRoutes.funcionarios },
+  { path: "/rh/funcionarios/novo", element: rhAdminRoutes.novoFuncionario },
+  { path: "/app/rh/funcionarios/novo", element: rhAdminRoutes.novoFuncionario },
+  { path: "/rh/funcionarios/:id", element: rhAdminRoutes.funcionarioDetail },
+  { path: "/app/rh/funcionarios/:id", element: rhAdminRoutes.funcionarioDetail },
+  { path: "/rh/ponto", element: rhAdminRoutes.ponto },
+  { path: "/app/rh/ponto", element: rhAdminRoutes.ponto },
+  { path: "/rh/ponto/inconsistencias", element: rhAdminRoutes.pontoInconsistencias },
+  { path: "/app/rh/ponto/inconsistencias", element: rhAdminRoutes.pontoInconsistencias },
+  { path: "/rh/ponto/ajustes", element: rhAdminRoutes.pontoAjustes },
+  { path: "/app/rh/ponto/ajustes", element: rhAdminRoutes.pontoAjustes },
+  { path: "/rh/ferias", element: rhAdminRoutes.ferias },
+  { path: "/app/rh/ferias", element: rhAdminRoutes.ferias },
+  { path: "/rh/atestados", element: rhAdminRoutes.atestados },
+  { path: "/app/rh/atestados", element: rhAdminRoutes.atestados },
+  { path: "/rh/folha", element: rhAdminRoutes.folha },
+  { path: "/app/rh/folha", element: rhAdminRoutes.folha },
+  { path: "/rh/folha/:ano/:mes", element: rhAdminRoutes.folhaCompetencia },
+  { path: "/app/rh/folha/:ano/:mes", element: rhAdminRoutes.folhaCompetencia },
+  { path: "/rh/folha/:ano/:mes/fechamento", element: rhAdminRoutes.folhaFechamento },
+  { path: "/app/rh/folha/:ano/:mes/fechamento", element: rhAdminRoutes.folhaFechamento },
+  { path: "/rh/holerites", element: rhAdminRoutes.holerites },
+  { path: "/app/rh/holerites", element: rhAdminRoutes.holerites },
+  { path: "/rh/holerites/:id", element: rhAdminRoutes.holeriteDetail },
+  { path: "/app/rh/holerites/:id", element: rhAdminRoutes.holeriteDetail },
+  { path: "/rh/configuracoes", element: rhAdminRoutes.configuracoes },
+  { path: "/app/rh/configuracoes", element: rhAdminRoutes.configuracoes },
+  { path: "/rh/configuracoes/beneficios", element: rhAdminRoutes.configuracoesBeneficios },
+  { path: "/app/rh/configuracoes/beneficios", element: rhAdminRoutes.configuracoesBeneficios },
+  { path: "/rh/configuracoes/encargos", element: rhAdminRoutes.configuracoesEncargos },
+  { path: "/app/rh/configuracoes/encargos", element: rhAdminRoutes.configuracoesEncargos },
+  { path: "/rh/configuracoes/regras", element: rhAdminRoutes.configuracoesRegras },
+  { path: "/app/rh/configuracoes/regras", element: rhAdminRoutes.configuracoesRegras },
+  { path: "/rh/configuracoes/tabelas-progressivas", element: rhAdminRoutes.configuracoesTabelasProgressivas },
+  { path: "/app/rh/configuracoes/tabelas-progressivas", element: rhAdminRoutes.configuracoesTabelasProgressivas },
+  { path: "/rh/auditoria", element: rhAdminRoutes.auditoria },
+  { path: "/app/rh/auditoria", element: rhAdminRoutes.auditoria },
+] as const;
 
 export const router = createBrowserRouter([
   // Grupo público
@@ -78,6 +122,22 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+      {
+        path: "/app/rh",
+        element: (
+          <ProtectedRoute roles={["admin", "financeiro", "funcionario", "super_admin"]}>
+            <RhPage />
+          </ProtectedRoute>
+        ),
+      },
+      ...rhAdminRouteElements.map((route) => ({
+        path: route.path,
+        element: (
+          <ProtectedRoute roles={["admin", "financeiro", "super_admin"]}>
+            {route.element}
+          </ProtectedRoute>
+        ),
+      })),
       {
         path: "/membros",
         element: (
