@@ -38,18 +38,26 @@ const weekDays = [
   { dia_semana: 6, label: "Domingo" },
 ] as const;
 
+const defaultWeekdaySchedule = {
+  hora_entrada: "08:00",
+  hora_saida: "18:00",
+  intervalo_inicio: "12:00",
+  intervalo_fim: "14:00",
+};
+
 export function buildDefaultSchedule(): ScheduleRow[] {
   return weekDays.map((day, index) => ({
     ...day,
     enabled: index < 5,
-    hora_entrada: "08:00",
-    hora_saida: "17:00",
-    intervalo_inicio: "",
-    intervalo_fim: "",
+    ...defaultWeekdaySchedule,
   }));
 }
 
 export function buildScheduleFromTurnos(turnos: RhTurnoHorario[] | undefined): ScheduleRow[] {
+  if (!turnos?.length) {
+    return buildDefaultSchedule();
+  }
+
   const map = new Map((turnos ?? []).map((turno) => [turno.dia_semana, turno]));
   return weekDays.map((day) => {
     const turno = map.get(day.dia_semana);
@@ -57,10 +65,10 @@ export function buildScheduleFromTurnos(turnos: RhTurnoHorario[] | undefined): S
     return {
       ...day,
       enabled: !!turno,
-      hora_entrada: turno?.hora_entrada?.slice(0, 5) ?? "08:00",
-      hora_saida: turno?.hora_saida?.slice(0, 5) ?? "17:00",
-      intervalo_inicio: intervalo?.hora_inicio?.slice(0, 5) ?? "",
-      intervalo_fim: intervalo?.hora_fim?.slice(0, 5) ?? "",
+      hora_entrada: turno?.hora_entrada?.slice(0, 5) ?? defaultWeekdaySchedule.hora_entrada,
+      hora_saida: turno?.hora_saida?.slice(0, 5) ?? defaultWeekdaySchedule.hora_saida,
+      intervalo_inicio: intervalo?.hora_inicio?.slice(0, 5) ?? defaultWeekdaySchedule.intervalo_inicio,
+      intervalo_fim: intervalo?.hora_fim?.slice(0, 5) ?? defaultWeekdaySchedule.intervalo_fim,
     };
   });
 }

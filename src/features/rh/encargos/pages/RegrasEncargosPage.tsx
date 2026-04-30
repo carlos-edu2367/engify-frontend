@@ -1,21 +1,25 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Gavel } from "lucide-react";
+import { Gavel, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { rhService } from "@/services/rh.service";
 import type { RhRegraEncargo } from "@/types/rh.types";
+import { getApiErrorMessage } from "@/lib/utils";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
+import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
+import { RegraEncargoDialog } from "../components/RegraEncargoDialog";
 
 const columns: Array<RhColumn<RhRegraEncargo>> = [
   { key: "nome", header: "Regra", render: (item) => <div><p className="font-medium">{item.nome}</p><p className="text-xs text-muted-foreground">{item.codigo}</p></div> },
@@ -27,9 +31,12 @@ const columns: Array<RhColumn<RhRegraEncargo>> = [
 ];
 
 export function RegrasEncargosPage() {
+  const { can } = useRhPermission();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
   const filters = { page, limit: 20, search: debouncedSearch || undefined, status: status === "all" ? undefined : status };
   const query = useQuery({
@@ -37,15 +44,34 @@ export function RegrasEncargosPage() {
     queryFn: () => rhService.listRegrasEncargos(filters),
     retry: 1,
   });
+  const createMutation = useMutation({
+    mutationFn: rhService.createRegraEncargo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "encargos", "regras"] });
+      toast.success("Regra criada.");
+      setDialogOpen(false);
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+  const canCreate = can("rh.regras.create");
 
   return (
     <PermissionGate permission="rh.regras.view" showDeniedState>
       <div className="flex flex-col gap-6">
-        <RhPageHeader title="Regras de encargos" description="Versionamento e ativacao de regras legais com motivo auditavel." />
+        <RhPageHeader
+          title="Regras de encargos"
+          description="Configure regras de calculo, vigencia e aplicacao em folha."
+          actions={canCreate ? (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="size-4" />
+              Nova regra
+            </Button>
+          ) : null}
+        />
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Gavel className="size-5" /> Regras</CardTitle>
-            <CardDescription>Listagem paginada dos contratos de encargos expostos pelo backend.</CardDescription>
+            <CardDescription>Acompanhe regras, vigencias e status usados nos calculos da folha.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-3 md:grid-cols-[1fr_220px]">
@@ -67,7 +93,7 @@ export function RegrasEncargosPage() {
               loading={query.isLoading}
               error={query.isError}
               emptyTitle="Nenhuma regra encontrada"
-              emptyDescription="Quando o backend retornar regras, elas aparecem aqui."
+              emptyDescription="Cadastre regras para organizar calculos e vigencias da folha."
               page={query.data?.page ?? page}
               hasNext={query.data?.has_next}
               onPageChange={setPage}
@@ -75,6 +101,12 @@ export function RegrasEncargosPage() {
             />
           </CardContent>
         </Card>
+        <RegraEncargoDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          loading={createMutation.isPending}
+          onSubmit={(data) => createMutation.mutate(data)}
+        />
       </div>
     </PermissionGate>
   );

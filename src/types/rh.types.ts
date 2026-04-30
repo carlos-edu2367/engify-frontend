@@ -52,6 +52,11 @@ export interface RhFuncionarioListItem {
   user_id: string | null;
   usuario_nome?: string | null;
   usuario_email?: string | null;
+  usuario_vinculado?: {
+    nome: string;
+    email: string;
+    avatar_url?: string | null;
+  } | null;
   updated_at?: string | null;
   is_active: boolean;
 }
@@ -207,6 +212,10 @@ export interface RhRegistroPonto extends RhEmployeeDisplayFields {
   local_ponto_id?: string | null;
   local_ponto_nome?: string | null;
   fora_local_autorizado?: boolean | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  gps_accuracy_meters?: number | null;
+  distancia_local_metros?: number | null;
 }
 
 export interface RhRegistrarPontoRequest {
@@ -421,7 +430,9 @@ export interface RhPontoDiaDetalhe extends RhEmployeeDisplayFields {
   status: string;
   registros: RhRegistroPonto[];
   local_autorizado_nome?: string | null;
+  locais_autorizados?: RhLocalPonto[];
   fora_local_autorizado?: boolean | null;
+  distancia_local_metros?: number | null;
   ajustes_relacionados?: RhAjustePonto[];
   impacto_estimado?: {
     horas_extras?: string | null;
@@ -445,6 +456,18 @@ export interface RhRegraEncargo {
 
 export type RhRegrasEncargosResponse = PaginatedResponse<RhRegraEncargo>;
 
+export interface RhRegraEncargoCreateRequest {
+  nome: string;
+  codigo: string;
+  natureza: string;
+  tipo_calculo: string;
+  base_calculo?: string | null;
+  percentual?: string | null;
+  prioridade?: number | null;
+  vigencia_inicio?: string | null;
+  vigencia_fim?: string | null;
+}
+
 export interface RhTabelaProgressiva {
   id: string;
   nome: string;
@@ -465,11 +488,27 @@ export interface RhFaixaEncargo {
 
 export type RhTabelasProgressivasResponse = PaginatedResponse<RhTabelaProgressiva>;
 
+export interface RhTabelaProgressivaCreateRequest {
+  nome: string;
+  codigo: string;
+  vigencia_inicio?: string | null;
+  vigencia_fim?: string | null;
+  faixas: RhFaixaEncargo[];
+}
+
 export interface RhBeneficio {
   id: string;
   nome: string;
   status?: string | null;
   descricao?: string | null;
 }
+
+export interface RhBeneficioCreateRequest {
+  nome: string;
+  descricao?: string | null;
+  status?: string | null;
+}
+
+export type RhBeneficioUpdateRequest = Partial<RhBeneficioCreateRequest>;
 
 export type RhBeneficiosResponse = PaginatedResponse<RhBeneficio>;

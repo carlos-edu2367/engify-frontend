@@ -569,7 +569,7 @@ export function AdminRhView() {
         return rhService.rejectAtestado(reasonDialog.item.id, reason);
       }
       if (!filePathText.trim()) {
-        throw new Error("Informe o file_path do documento entregue.");
+        throw new Error("Informe o local do documento entregue.");
       }
       return rhService.deliverAtestado(reasonDialog.item.id, { file_path: filePathText.trim() });
     },
@@ -1505,14 +1505,14 @@ export function AdminRhView() {
               {reasonDialog?.kind === "ferias-cancelar"
                 ? "Explique o cancelamento para manter o historico claro no RH."
                 : reasonDialog?.kind === "atestado-entregar"
-                  ? "O backend ainda opera com file_path. Informe o caminho armazenado do documento."
+                  ? "Informe o local seguro do documento entregue."
                   : "Essa justificativa vai para o historico da solicitacao."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             {reasonDialog?.kind === "atestado-entregar" ? (
-              <Field label="file_path do documento">
-                <Input value={filePathText} onChange={(event) => setFilePathText(event.target.value)} placeholder="financeiro/<uuid>/arquivo.pdf" />
+              <Field label="Local do documento">
+                <Input value={filePathText} onChange={(event) => setFilePathText(event.target.value)} placeholder="Pasta segura do documento" />
               </Field>
             ) : null}
             <Field label={reasonDialog?.kind === "atestado-entregar" ? "Observacao interna" : "Motivo"}>

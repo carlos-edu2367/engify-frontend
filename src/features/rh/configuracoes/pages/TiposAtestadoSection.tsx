@@ -82,7 +82,7 @@ export function TiposAtestadoSection() {
               <FileClock className="size-5" />
               Tipos de atestado
             </CardTitle>
-            <CardDescription>Configuracao operacional ja suportada pelo backend real.</CardDescription>
+            <CardDescription>Defina prazos, regras de abono e descricoes usadas nas solicitacoes de atestado.</CardDescription>
           </div>
           <Button onClick={openCreate}>
             <Plus className="size-4" />

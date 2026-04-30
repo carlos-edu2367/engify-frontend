@@ -53,7 +53,7 @@ export function RegraEncargoDetailPage() {
           <CardContent className="space-y-4">
             <RhImpactChecklist
               items={[
-                { id: "vigencia", label: "Vigencia conferida", description: "Conflitos de vigencia sao bloqueados pelo backend.", checked: true },
+                { id: "vigencia", label: "Vigencia conferida", description: "Conflitos de vigencia sao bloqueados antes da ativacao.", checked: true },
                 { id: "folha", label: "Impacto em folha entendido", description: "A regra ativa pode alterar proximas geracoes de folha.", checked: true },
               ]}
               onToggle={() => undefined}

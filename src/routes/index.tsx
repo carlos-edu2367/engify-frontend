@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { PublicOnlyRoute } from "./PublicOnlyRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
+import { RouteErrorElement } from "./RouteErrorElement";
 
 // Public pages
 import { LandingPage } from "@/pages/public/LandingPage";
@@ -74,6 +75,7 @@ export const router = createBrowserRouter([
   // Grupo público
   {
     element: <PublicOnlyRoute />,
+    errorElement: <RouteErrorElement />,
     children: [
       { path: "/", element: <LandingPage /> },
       { path: "/login", element: <LoginPage /> },
@@ -95,6 +97,7 @@ export const router = createBrowserRouter([
         <AppShell />
       </ProtectedRoute>
     ),
+    errorElement: <RouteErrorElement />,
     children: [
       { path: "/dashboard", element: <DashboardPage /> },
       { path: "/calendario", element: <CalendarioPage /> },

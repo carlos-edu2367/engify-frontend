@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, BriefcaseBusiness, CalendarDays, Clock3, Shield, UserRound, Wallet } from "lucide-react";
+import { AlertTriangle, BriefcaseBusiness, Clock3, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,7 +29,12 @@ import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { formatRhCurrency, formatRhDate, maskCpf, summarizeSchedule } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
+import { FuncionarioOperationalSummary } from "../components/FuncionarioOperationalSummary";
+import { LocaisPontoTab } from "../components/LocaisPontoTab";
+import { UsuarioVinculadoCard } from "../components/UsuarioVinculadoCard";
 import { useFuncionarioDetail } from "../hooks/useFuncionarios";
+
+const weekDayLabels = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"];
 
 export function FuncionarioDetailPage() {
   const { id } = useParams();
@@ -92,7 +97,7 @@ export function FuncionarioDetailPage() {
       <div className="flex flex-col gap-6">
         <RhPageHeader
           title={funcionario?.nome ?? "Funcionario"}
-          description="Resumo inicial do cadastro. As abas operacionais completas serao expandidas nas proximas fases."
+          description="Resumo seguro do cadastro, vinculos e rotinas operacionais do colaborador."
           actions={
             <Button variant="outline" asChild>
               <Link to={rhPaths.funcionarios}>Voltar</Link>
@@ -119,7 +124,7 @@ export function FuncionarioDetailPage() {
                     <SummaryItem label="Cargo" value={funcionario.cargo} />
                     <SummaryItem label="CPF" value={<SensitiveValue value={funcionario.cpf} masked={maskCpf(funcionario.cpf)} canReveal={can("rh.holerites.view_sensitive")} />} />
                     <SummaryItem label="Admissao" value={formatRhDate(funcionario.data_admissao)} />
-                    <SummaryItem label="Usuario" value={funcionario.user_id ? "Vinculado" : "Sem vinculo"} />
+                    <SummaryItem label="Usuario" value={funcionario.usuario_vinculado || funcionario.usuario_nome || funcionario.usuario_email ? "Vinculado" : "Sem vinculo"} />
                   </div>
                 </CardContent>
               </Card>
@@ -133,7 +138,7 @@ export function FuncionarioDetailPage() {
                       canReveal={can("rh.holerites.view_sensitive")}
                     />
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">Alteracoes salariais permanecem no fluxo legado ate a tela de edicao guiada.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Alteracoes salariais exigem permissao e motivo administrativo.</p>
                 </CardContent>
               </Card>
               <Card>
@@ -151,6 +156,7 @@ export function FuncionarioDetailPage() {
                 <TabsTrigger value="contrato">Contrato</TabsTrigger>
                 <TabsTrigger value="jornada">Jornada</TabsTrigger>
                 <TabsTrigger value="ponto">Ponto</TabsTrigger>
+                <TabsTrigger value="locais">Locais de ponto</TabsTrigger>
                 <TabsTrigger value="ausencias">Ferias/Atestados</TabsTrigger>
                 <TabsTrigger value="holerites">Holerites</TabsTrigger>
                 <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
@@ -162,9 +168,11 @@ export function FuncionarioDetailPage() {
                     items={[
                       ["Nome", funcionario.nome],
                       ["CPF", <SensitiveValue key="cpf" value={funcionario.cpf} masked={maskCpf(funcionario.cpf)} canReveal={can("rh.holerites.view_sensitive")} />],
-                      ["Usuario vinculado", funcionario.user_id ?? "Sem vinculo"],
                     ]}
                   />
+                  <div className="mt-4">
+                    <UsuarioVinculadoCard funcionario={funcionario} />
+                  </div>
                 </InfoCard>
               </TabsContent>
               <TabsContent value="contrato">
@@ -184,7 +192,7 @@ export function FuncionarioDetailPage() {
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {funcionario.horario_trabalho.turnos.map((turno) => (
                         <div key={turno.dia_semana} className="rounded-md border p-3">
-                          <p className="font-medium">Dia {turno.dia_semana + 1}</p>
+                          <p className="font-medium">{weekDayLabels[turno.dia_semana] ?? "Dia de trabalho"}</p>
                           <p className="text-sm text-muted-foreground">
                             {turno.hora_entrada.slice(0, 5)} as {turno.hora_saida.slice(0, 5)}
                           </p>
@@ -197,16 +205,19 @@ export function FuncionarioDetailPage() {
                 </InfoCard>
               </TabsContent>
               <TabsContent value="ponto">
-                <PlaceholderCard icon={<Clock3 className="size-5" />} title="Ponto" text="A experiencia detalhada de ponto fica para a Fase 4. Use a tela legada de RH enquanto a rota dedicada nao e migrada." />
+                <FuncionarioOperationalSummary funcionario={funcionario} scope="ponto" />
+              </TabsContent>
+              <TabsContent value="locais">
+                <LocaisPontoTab funcionarioId={funcionario.id} />
               </TabsContent>
               <TabsContent value="ausencias">
-                <PlaceholderCard icon={<CalendarDays className="size-5" />} title="Ferias e atestados" text="Fluxos operacionais serao migrados na Fase 4 sem remover a funcionalidade legada." />
+                <FuncionarioOperationalSummary funcionario={funcionario} scope="ausencias" />
               </TabsContent>
               <TabsContent value="holerites">
-                <PlaceholderCard icon={<Wallet className="size-5" />} title="Holerites" text="A visualizacao avancada de holerites sera implementada na fase de folha." />
+                <FuncionarioOperationalSummary funcionario={funcionario} scope="holerites" />
               </TabsContent>
               <TabsContent value="auditoria">
-                <PlaceholderCard icon={<Shield className="size-5" />} title="Auditoria" text="A auditoria completa sera migrada em fase propria. O backend ja possui endpoint usado pela tela legada." />
+                <FuncionarioOperationalSummary funcionario={funcionario} scope="auditoria" />
               </TabsContent>
             </Tabs>
 
@@ -228,7 +239,7 @@ export function FuncionarioDetailPage() {
                   Editar salario guiado
                 </Button>
                 <p className="basis-full text-xs text-muted-foreground">
-                  Alteracao salarial exige motivo administrativo e usa o endpoint atual de atualizacao do funcionario.
+                  Alteracao salarial exige motivo administrativo e registro no historico do funcionario.
                 </p>
               </CardContent>
             </Card>
@@ -309,14 +320,6 @@ function InfoCard({ icon, title, children }: { icon: React.ReactNode; title: str
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
-  );
-}
-
-function PlaceholderCard({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <InfoCard icon={icon} title={title}>
-      <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">{text}</div>
-    </InfoCard>
   );
 }
 

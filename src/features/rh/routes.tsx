@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { RhTableSkeleton } from "./shared/components/RhTableSkeleton";
+import { AppErrorBoundary } from "@/components/layout/AppErrorBoundary";
 
 const RhDashboardPage = lazy(() =>
   import("./dashboard/pages/RhDashboardPage").then((module) => ({ default: module.RhDashboardPage }))
@@ -71,9 +72,11 @@ const RhLegacyOperationalPage = lazy(async () => {
 
 function LazyRhPage({ children }: { children: ReactNode }) {
   return (
-    <Suspense fallback={<RhTableSkeleton rows={4} />}>
-      {children}
-    </Suspense>
+    <AppErrorBoundary>
+      <Suspense fallback={<RhTableSkeleton rows={4} />}>
+        {children}
+      </Suspense>
+    </AppErrorBoundary>
   );
 }
 

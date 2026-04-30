@@ -1,17 +1,22 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Table2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, Table2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { rhService } from "@/services/rh.service";
 import type { RhTabelaProgressiva } from "@/types/rh.types";
+import { getApiErrorMessage } from "@/lib/utils";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
+import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
+import { TabelaProgressivaDialog } from "../components/TabelaProgressivaDialog";
 
 const columns: Array<RhColumn<RhTabelaProgressiva>> = [
   { key: "nome", header: "Tabela", render: (item) => <div><p className="font-medium">{item.nome}</p><p className="text-xs text-muted-foreground">{item.codigo}</p></div> },
@@ -21,8 +26,11 @@ const columns: Array<RhColumn<RhTabelaProgressiva>> = [
 ];
 
 export function TabelasProgressivasPage() {
+  const { can } = useRhPermission();
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
   const filters = { page, limit: 20, search: debouncedSearch || undefined };
   const query = useQuery({
@@ -30,15 +38,34 @@ export function TabelasProgressivasPage() {
     queryFn: () => rhService.listTabelasProgressivas(filters),
     retry: 1,
   });
+  const createMutation = useMutation({
+    mutationFn: rhService.createTabelaProgressiva,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "encargos", "tabelas"] });
+      toast.success("Tabela criada.");
+      setDialogOpen(false);
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+  const canCreate = can("rh.regras.create");
 
   return (
     <PermissionGate permission="rh.regras.view" showDeniedState>
       <div className="flex flex-col gap-6">
-        <RhPageHeader title="Tabelas progressivas" description="Faixas de calculo versionadas para regras de encargos." />
+        <RhPageHeader
+          title="Tabelas progressivas"
+          description="Cadastre faixas de calculo usadas por regras progressivas."
+          actions={canCreate ? (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="size-4" />
+              Nova tabela
+            </Button>
+          ) : null}
+        />
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Table2 className="size-5" /> Tabelas</CardTitle>
-            <CardDescription>Faixas sao carregadas sob demanda quando retornadas pelo backend.</CardDescription>
+            <CardDescription>Consulte faixas, vigencias e status das tabelas usadas nos calculos.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar tabela" />
@@ -49,7 +76,7 @@ export function TabelasProgressivasPage() {
               loading={query.isLoading}
               error={query.isError}
               emptyTitle="Nenhuma tabela encontrada"
-              emptyDescription="Tabelas progressivas retornadas pelo backend aparecem aqui."
+              emptyDescription="Cadastre tabelas progressivas para manter as faixas de calculo organizadas."
               page={query.data?.page ?? page}
               hasNext={query.data?.has_next}
               onPageChange={setPage}
@@ -57,6 +84,12 @@ export function TabelasProgressivasPage() {
             />
           </CardContent>
         </Card>
+        <TabelaProgressivaDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          loading={createMutation.isPending}
+          onSubmit={(data) => createMutation.mutate(data)}
+        />
       </div>
     </PermissionGate>
   );

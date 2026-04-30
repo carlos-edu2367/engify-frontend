@@ -25,6 +25,8 @@ import type {
   RhFuncionariosResponse,
   RhGerarFolhaRequest,
   RhBeneficiosResponse,
+  RhBeneficioCreateRequest,
+  RhBeneficioUpdateRequest,
   RhFolhaJobsResponse,
   RhHoleriteItensResponse,
   RhHolerite,
@@ -41,6 +43,7 @@ import type {
   RhPontoFilters,
   RhPontoDiaDetalhe,
   RhRegrasEncargosResponse,
+  RhRegraEncargoCreateRequest,
   RhRegistrarPontoRequest,
   RhRegistroPonto,
   RhRegistrosPontoResponse,
@@ -48,6 +51,7 @@ import type {
   RhTipoAtestadoCreateRequest,
   RhTipoAtestadoUpdateRequest,
   RhTabelasProgressivasResponse,
+  RhTabelaProgressivaCreateRequest,
   RhTiposAtestadoResponse,
 } from "@/types/rh.types";
 
@@ -328,6 +332,9 @@ export const rhService = {
   getRegraEncargo: (id: string) =>
     api.get(`/rh/encargos/regras/${id}`).then((r) => r.data),
 
+  createRegraEncargo: (data: RhRegraEncargoCreateRequest) =>
+    api.post("/rh/encargos/regras", data).then((r) => r.data),
+
   activateRegraEncargo: (id: string, motivo: string) =>
     api.post(`/rh/encargos/regras/${id}/ativar`, { motivo }).then((r) => r.data),
 
@@ -345,6 +352,12 @@ export const rhService = {
       })
       .then((r) => r.data),
 
+  createTabelaProgressiva: (data: RhTabelaProgressivaCreateRequest) =>
+    api.post("/rh/encargos/tabelas-progressivas", data).then((r) => r.data),
+
+  updateTabelaProgressivaFaixas: (id: string, faixas: RhTabelaProgressivaCreateRequest["faixas"]) =>
+    api.put(`/rh/encargos/tabelas-progressivas/${id}/faixas`, { faixas }).then((r) => r.data),
+
   listBeneficios: (filters?: { page?: number; limit?: number; search?: string }) =>
     api
       .get<RhBeneficiosResponse>("/rh/beneficios", {
@@ -354,4 +367,16 @@ export const rhService = {
         },
       })
       .then((r) => r.data),
+
+  createBeneficio: (data: RhBeneficioCreateRequest) =>
+    api.post("/rh/beneficios", data).then((r) => r.data),
+
+  updateBeneficio: (id: string, data: RhBeneficioUpdateRequest) =>
+    api.patch(`/rh/beneficios/${id}`, data).then((r) => r.data),
+
+  inactivateBeneficio: (id: string) =>
+    api.post(`/rh/beneficios/${id}/inativar`).then((r) => r.data),
+
+  reactivateBeneficio: (id: string) =>
+    api.post(`/rh/beneficios/${id}/reativar`).then((r) => r.data),
 };

@@ -80,7 +80,7 @@ export function HoleriteBreakdown({
                           ))}
                         </dl>
                       ) : (
-                        <p>{item.calculation_summary ?? "Calculo detalhado sera carregado sob demanda quando o backend retornar snapshot permitido."}</p>
+                        <p>{item.calculation_summary ?? "Calculo detalhado disponivel quando houver memoria de calculo permitida para consulta."}</p>
                       )}
                     </div>
                   ) : null}

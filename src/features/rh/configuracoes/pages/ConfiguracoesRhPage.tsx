@@ -12,7 +12,7 @@ type ConfigSection = "overview" | "beneficios" | "encargos" | "regras" | "tabela
 const sections: Array<{ key: ConfigSection; title: string; path: string; description: string }> = [
   { key: "beneficios", title: "Beneficios", path: rhPaths.configuracoesBeneficios, description: "Beneficios administrativos e aplicabilidade quando disponivel." },
   { key: "encargos", title: "Encargos", path: rhPaths.configuracoesEncargos, description: "Regras de encargos, status e vigencias." },
-  { key: "regras", title: "Regras", path: rhPaths.configuracoesRegras, description: "CRUD e versionamento de regras expostos pelo backend." },
+  { key: "regras", title: "Regras", path: rhPaths.configuracoesRegras, description: "Cadastro e versionamento de regras administrativas." },
   { key: "tabelas-progressivas", title: "Tabelas progressivas", path: rhPaths.configuracoesTabelasProgressivas, description: "Faixas progressivas usadas por regras de calculo." },
 ];
 

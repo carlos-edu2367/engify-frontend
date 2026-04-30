@@ -152,7 +152,7 @@ export function FolhaPage({ fechamento = false }: { fechamento?: boolean }) {
         <Card>
           <CardHeader>
             <CardTitle>Competencia</CardTitle>
-            <CardDescription>O fechamento gera pagamentos operacionais no financeiro pelo endpoint real `/rh/folha/fechar`.</CardDescription>
+            <CardDescription>O fechamento gera pagamentos operacionais no financeiro e preserva o historico da competencia.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="grid gap-3 md:grid-cols-5">

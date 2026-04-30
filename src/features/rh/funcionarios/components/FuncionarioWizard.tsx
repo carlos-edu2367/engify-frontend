@@ -134,7 +134,7 @@ export function FuncionarioWizard() {
     <Card>
       <CardHeader className="pb-4">
         <CardTitle>Cadastro guiado</CardTitle>
-        <CardDescription>Preencha uma etapa por vez. A revisao final mostra exatamente o que sera enviado ao backend.</CardDescription>
+        <CardDescription>Preencha uma etapa por vez. A revisao final mostra os dados que serao salvos no cadastro.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <div className="grid gap-2 md:grid-cols-6">
@@ -180,7 +180,7 @@ export function FuncionarioWizard() {
               <div className="mt-2">
                 <RhStatusBadge status="ativo" />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">O backend cria funcionarios ativos por padrao.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Novos funcionarios entram ativos por padrao.</p>
             </div>
           </div>
         ) : null}

@@ -12,6 +12,7 @@ import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSele
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
+import { RhMapPreview } from "../../shared/components/RhMapPreview";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { employeeDisplay } from "../../shared/utils/display";
@@ -56,6 +57,8 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
   const selectedDate = selected?.timestamp ? selected.timestamp.slice(0, 10) : null;
   const detalheQuery = usePontoDiaDetalhe(selected?.funcionario_id, selectedDate);
   const detalhe = detalheQuery.data;
+  const selectedRegistro = detalhe?.registros.find((registro) => registro.id === selected?.id) ?? selected;
+  const authorizedLocation = detalhe?.locais_autorizados?.find((local) => local.id === selectedRegistro?.local_ponto_id) ?? detalhe?.locais_autorizados?.[0] ?? null;
   const rows = pontosQuery.data?.items ?? [];
   const totalInconsistentes = rows.filter((item) => item.status === "inconsistente").length;
   const totalNegados = rows.filter((item) => item.status === "negado").length;
@@ -155,16 +158,41 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
               <SheetDescription>Linha operacional do registro selecionado.</SheetDescription>
             </SheetHeader>
             {selected ? (
-              <div className="mt-6 space-y-4 text-sm">
+              <div className="mt-6 flex flex-col gap-4 text-sm">
                 <Detail label="Funcionario" value={employeeDisplay(detalhe ?? selected).title} />
                 <Detail label="Data" value={formatRhDate(selected.timestamp)} />
                 <Detail label="Horario" value={new Date(selected.timestamp).toLocaleTimeString("pt-BR")} />
                 <Detail label="Tipo" value={selected.tipo === "entrada" ? "Entrada" : "Saida"} />
                 <Detail label="Status" value={<RhStatusBadge status={selected.status} />} />
-                <Detail label="Local autorizado" value={detalhe?.local_autorizado_nome ?? selected.local_ponto_nome ?? (selected.fora_local_autorizado ? "Fora de local autorizado" : "Nao informado")} />
+                <Detail
+                  label="Local autorizado"
+                  value={
+                    detalhe?.local_autorizado_nome
+                    ?? authorizedLocation?.nome
+                    ?? selected.local_ponto_nome
+                    ?? (selected.fora_local_autorizado ? "Fora de local autorizado" : "Nenhum local autorizado associado a este registro")
+                  }
+                />
+                <Detail
+                  label="Conferencia de local"
+                  value={
+                    selectedRegistro?.fora_local_autorizado
+                      ? "Registro fora da area permitida"
+                      : typeof (selectedRegistro?.distancia_local_metros ?? detalhe?.distancia_local_metros) === "number"
+                        ? `Dentro da area permitida, a ${Math.round(selectedRegistro?.distancia_local_metros ?? detalhe?.distancia_local_metros ?? 0)} m do local`
+                        : "Aguardando conferencia de local"
+                  }
+                />
+                {selected ? (
+                  <RhMapPreview
+                    marker={selectedRegistro}
+                    authorizedLocation={authorizedLocation}
+                    label={authorizedLocation?.nome ?? detalhe?.local_autorizado_nome ?? "Mapa do registro"}
+                  />
+                ) : null}
                 <div className="rounded-md border p-3">
                   <p className="text-xs uppercase text-muted-foreground">Linha do tempo do dia</p>
-                  <div className="mt-3 space-y-2">
+                  <div className="mt-3 flex flex-col gap-2">
                     {(detalhe?.registros ?? [selected]).map((registro) => (
                       <div key={registro.id} className="flex items-center justify-between rounded-md bg-muted/40 p-2">
                         <span>{registro.tipo === "entrada" ? "Entrada" : "Saida"}</span>

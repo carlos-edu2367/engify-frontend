@@ -121,15 +121,15 @@ export function RequestAtestadosView({ startDate, endDate, status }: RequestAtes
             />
           </Field>
         </div>
-        <Field label="file_path do documento">
+        <Field label="Local do documento">
           <Input
             value={form.arquivo}
             onChange={(e) => setForm({ ...form, arquivo: e.target.value })}
-            placeholder="financeiro/<uuid>/arquivo.pdf"
+            placeholder="Pasta segura do documento"
           />
         </Field>
         <p className="text-xs text-muted-foreground">
-          O backend atual valida o atestado a partir do `file_path` armazenado. O upload binario direto ainda depende de suporte especifico no storage para RH.
+          Informe apenas o local seguro do documento ja anexado conforme o fluxo da empresa.
         </p>
       </EmployeeRequestCard>
       <EmployeeTimeline

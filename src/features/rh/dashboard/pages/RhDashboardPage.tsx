@@ -154,7 +154,7 @@ export function RhDashboardPage() {
                   </Button>
                 ) : (
                   <Button variant="outline" size="sm" disabled>
-                    Proxima fase
+                    Em preparacao
                   </Button>
                 )}
               </CardContent>
