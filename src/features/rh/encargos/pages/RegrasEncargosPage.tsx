@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Gavel, Plus } from "lucide-react";
+import { Gavel, HelpCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ import { formatRhDate } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
 import { RegraEncargoDialog } from "../components/RegraEncargoDialog";
+import { RegraEncargoTutorialDialog } from "../components/RegraEncargoTutorialDialog";
 
 const columns: Array<RhColumn<RhRegraEncargo>> = [
   { key: "nome", header: "Regra", render: (item) => <div><p className="font-medium">{item.nome}</p><p className="text-xs text-muted-foreground">{item.codigo}</p></div> },
@@ -37,11 +38,17 @@ export function RegrasEncargosPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
   const filters = { page, limit: 20, search: debouncedSearch || undefined, status: status === "all" ? undefined : status };
   const query = useQuery({
     queryKey: rhQueryKeys.encargos.regras(filters),
     queryFn: () => rhService.listRegrasEncargos(filters),
+    retry: 1,
+  });
+  const tabelasQuery = useQuery({
+    queryKey: rhQueryKeys.encargos.tabelas({ page: 1, limit: 100 }),
+    queryFn: () => rhService.listTabelasProgressivas({ page: 1, limit: 100 }),
     retry: 1,
   });
   const createMutation = useMutation({
@@ -61,12 +68,20 @@ export function RegrasEncargosPage() {
         <RhPageHeader
           title="Regras de encargos"
           description="Configure regras de calculo, vigencia e aplicacao em folha."
-          actions={canCreate ? (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="size-4" />
-              Nova regra
-            </Button>
-          ) : null}
+          actions={(
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => setTutorialOpen(true)}>
+                <HelpCircle className="size-4" />
+                Como criar?
+              </Button>
+              {canCreate ? (
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="size-4" />
+                  Nova regra
+                </Button>
+              ) : null}
+            </div>
+          )}
         />
         <Card>
           <CardHeader>
@@ -105,8 +120,10 @@ export function RegrasEncargosPage() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           loading={createMutation.isPending}
+          tabelasProgressivas={tabelasQuery.data?.items ?? []}
           onSubmit={(data) => createMutation.mutate(data)}
         />
+        <RegraEncargoTutorialDialog open={tutorialOpen} onOpenChange={setTutorialOpen} />
       </div>
     </PermissionGate>
   );

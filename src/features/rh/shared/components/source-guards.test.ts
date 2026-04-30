@@ -73,9 +73,23 @@ describe("rh frontend source guards", () => {
     expect(benefits).toMatch(/Novo beneficio/);
     expect(rules).toMatch(/RegraEncargoDialog/);
     expect(rules).toMatch(/Nova regra/);
+    expect(rules).toMatch(/Como criar\?/);
     expect(tables).toMatch(/TabelaProgressivaDialog/);
     expect(tables).toMatch(/Nova tabela/);
     expect(tableDialog).toMatch(/FaixasProgressivasEditor/);
+  });
+
+  it("charge rule creation uses backend enum values and exposes field guidance", () => {
+    const page = read("src/features/rh/encargos/pages/RegrasEncargosPage.tsx");
+    const dialog = read("src/features/rh/encargos/components/RegraEncargoDialog.tsx");
+    const tutorial = read("src/features/rh/encargos/components/RegraEncargoTutorialDialog.tsx");
+
+    expect(page).toMatch(/RegraEncargoTutorialDialog/);
+    expect(dialog).toMatch(/value="percentual_simples"/);
+    expect(dialog).toMatch(/value="tabela_progressiva"/);
+    expect(tutorial).toMatch(/Tipo percentual simples/);
+    expect(tutorial).toMatch(/Base de calculo/);
+    expect(tutorial).toMatch(/Aplicabilidade/);
   });
 
   it("employee wizard does not ask for a user uuid manually", () => {

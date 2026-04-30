@@ -11,32 +11,53 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { RhRegraEncargoCreateRequest } from "@/types/rh.types";
+import type { RhRegraEncargoCreateRequest, RhTabelaProgressiva } from "@/types/rh.types";
+
+function toDateTimeInputValue(value: string) {
+  return value ? `${value}T00:00:00` : null;
+}
 
 export function RegraEncargoDialog({
   open,
   onOpenChange,
   loading,
+  tabelasProgressivas = [],
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loading?: boolean;
+  tabelasProgressivas?: RhTabelaProgressiva[];
   onSubmit: (data: RhRegraEncargoCreateRequest) => void;
 }) {
   const [nome, setNome] = useState("");
   const [codigo, setCodigo] = useState("");
   const [natureza, setNatureza] = useState("desconto");
-  const [tipoCalculo, setTipoCalculo] = useState("percentual");
+  const [tipoCalculo, setTipoCalculo] = useState("percentual_simples");
   const [baseCalculo, setBaseCalculo] = useState("salario_base");
+  const [valorFixo, setValorFixo] = useState("");
   const [percentual, setPercentual] = useState("");
-  const [prioridade, setPrioridade] = useState(0);
+  const [tabelaProgressivaId, setTabelaProgressivaId] = useState("");
+  const [prioridade, setPrioridade] = useState(100);
   const [vigenciaInicio, setVigenciaInicio] = useState("");
   const [vigenciaFim, setVigenciaFim] = useState("");
 
+  const requiresPercentual = tipoCalculo === "percentual_simples";
+  const requiresValorFixo = tipoCalculo === "valor_fixo";
+  const requiresTabelaProgressiva = tipoCalculo === "tabela_progressiva";
   const validPercentual = !percentual || (Number(percentual) >= 0 && Number(percentual) <= 100);
+  const validValorFixo = !valorFixo || Number(valorFixo) >= 0;
   const validVigencia = !vigenciaInicio || !vigenciaFim || vigenciaInicio <= vigenciaFim;
-  const canSubmit = nome.trim() && codigo.trim() && prioridade >= 0 && validPercentual && validVigencia;
+  const canSubmit =
+    nome.trim() &&
+    codigo.trim() &&
+    prioridade >= 0 &&
+    validPercentual &&
+    validValorFixo &&
+    validVigencia &&
+    (!requiresPercentual || percentual) &&
+    (!requiresValorFixo || valorFixo) &&
+    (!requiresTabelaProgressiva || tabelaProgressivaId);
 
   const submit = () => {
     if (!canSubmit) return;
@@ -45,11 +66,13 @@ export function RegraEncargoDialog({
       codigo: codigo.trim().toUpperCase(),
       natureza,
       tipo_calculo: tipoCalculo,
-      base_calculo: baseCalculo || null,
-      percentual: percentual || null,
+      base_calculo: baseCalculo,
+      valor_fixo: requiresValorFixo ? valorFixo : null,
+      percentual: requiresPercentual ? percentual : null,
+      tabela_progressiva_id: requiresTabelaProgressiva ? tabelaProgressivaId : null,
       prioridade,
-      vigencia_inicio: vigenciaInicio || null,
-      vigencia_fim: vigenciaFim || null,
+      vigencia_inicio: toDateTimeInputValue(vigenciaInicio),
+      vigencia_fim: toDateTimeInputValue(vigenciaFim),
     });
   };
 
@@ -85,21 +108,58 @@ export function RegraEncargoDialog({
             <Select value={tipoCalculo} onValueChange={setTipoCalculo}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="percentual">Percentual</SelectItem>
+                <SelectItem value="percentual_simples">Percentual</SelectItem>
                 <SelectItem value="valor_fixo">Valor fixo</SelectItem>
-                <SelectItem value="progressivo">Progressivo</SelectItem>
+                <SelectItem value="tabela_progressiva">Progressivo</SelectItem>
               </SelectContent>
             </Select>
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">Base de calculo</span>
-            <Input value={baseCalculo} onChange={(event) => setBaseCalculo(event.target.value)} />
+            <Select value={baseCalculo} onValueChange={setBaseCalculo}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="salario_base">Salario base</SelectItem>
+                <SelectItem value="salario_base_mais_extras">Salario base + extras</SelectItem>
+                <SelectItem value="bruto_antes_encargos">Bruto antes dos encargos</SelectItem>
+                <SelectItem value="bruto_antes_irrf">Bruto antes do IRRF</SelectItem>
+                <SelectItem value="liquido_parcial">Liquido parcial</SelectItem>
+                <SelectItem value="valor_referencia_manual">Referencia manual</SelectItem>
+              </SelectContent>
+            </Select>
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Percentual</span>
-            <Input type="number" min={0} max={100} step="0.01" value={percentual} onChange={(event) => setPercentual(event.target.value)} />
-            {!validPercentual ? <span className="text-xs text-destructive">Informe um percentual entre 0 e 100.</span> : null}
-          </label>
+          {requiresPercentual ? (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">Percentual</span>
+              <Input type="number" min={0} max={100} step="0.01" value={percentual} onChange={(event) => setPercentual(event.target.value)} />
+              {!validPercentual ? <span className="text-xs text-destructive">Informe um percentual entre 0 e 100.</span> : null}
+            </label>
+          ) : null}
+          {requiresValorFixo ? (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">Valor fixo</span>
+              <Input type="number" min={0} step="0.01" value={valorFixo} onChange={(event) => setValorFixo(event.target.value)} />
+              {!validValorFixo ? <span className="text-xs text-destructive">Informe um valor maior ou igual a zero.</span> : null}
+            </label>
+          ) : null}
+          {requiresTabelaProgressiva ? (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium">Tabela progressiva</span>
+              <Select value={tabelaProgressivaId} onValueChange={setTabelaProgressivaId}>
+                <SelectTrigger><SelectValue placeholder="Selecione uma tabela" /></SelectTrigger>
+                <SelectContent>
+                  {tabelasProgressivas.map((tabela) => (
+                    <SelectItem key={tabela.id} value={tabela.id}>
+                      {tabela.nome} ({tabela.codigo})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!tabelasProgressivas.length ? (
+                <span className="text-xs text-muted-foreground">Cadastre uma tabela progressiva antes de criar este tipo de regra.</span>
+              ) : null}
+            </label>
+          ) : null}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">Prioridade</span>
             <Input type="number" min={0} value={prioridade} onChange={(event) => setPrioridade(Number(event.target.value))} />

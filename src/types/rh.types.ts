@@ -462,7 +462,9 @@ export interface RhRegraEncargoCreateRequest {
   natureza: string;
   tipo_calculo: string;
   base_calculo?: string | null;
+  valor_fixo?: string | null;
   percentual?: string | null;
+  tabela_progressiva_id?: string | null;
   prioridade?: number | null;
   vigencia_inicio?: string | null;
   vigencia_fim?: string | null;
