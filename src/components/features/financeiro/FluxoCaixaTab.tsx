@@ -8,13 +8,13 @@ import {
   AlertCircle,
   Loader2
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { financeiroService } from "@/services/financeiro.service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
-import type { FluxoCaixaResponse } from "@/types/financeiro.types";
+
 
 export function FluxoCaixaTab() {
   const [range, setRange] = useState("6m");
