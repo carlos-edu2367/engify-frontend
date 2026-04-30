@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Gavel, HelpCircle, Plus } from "lucide-react";
+import { Gavel, HelpCircle, Plus, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { rhPaths } from "../../shared/utils/paths";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
 import { RegraEncargoDialog } from "../components/RegraEncargoDialog";
 import { RegraEncargoTutorialDialog } from "../components/RegraEncargoTutorialDialog";
+import { regraEncargoPresets, type RegraEncargoPreset } from "../utils/encargoPresets";
 
 const columns: Array<RhColumn<RhRegraEncargo>> = [
   { key: "nome", header: "Regra", render: (item) => <div><p className="font-medium">{item.nome}</p><p className="text-xs text-muted-foreground">{item.codigo}</p></div> },
@@ -38,6 +39,7 @@ export function RegrasEncargosPage() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [initialData, setInitialData] = useState<RegraEncargoPreset | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
   const filters = { page, limit: 20, search: debouncedSearch || undefined, status: status === "all" ? undefined : status };
@@ -61,6 +63,15 @@ export function RegrasEncargosPage() {
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });
   const canCreate = can("rh.regras.create");
+  const tabelasProgressivas = tabelasQuery.data?.items ?? [];
+  const inssTabela = tabelasProgressivas.find((tabela) => tabela.codigo.toUpperCase().includes("INSS"));
+  const openPreset = (preset: RegraEncargoPreset) => {
+    setInitialData({
+      ...preset,
+      tabela_progressiva_id: preset.tipo_calculo === "tabela_progressiva" ? inssTabela?.id ?? null : preset.tabela_progressiva_id ?? null,
+    });
+    setDialogOpen(true);
+  };
 
   return (
     <PermissionGate permission="rh.regras.view" showDeniedState>
@@ -75,7 +86,7 @@ export function RegrasEncargosPage() {
                 Como criar?
               </Button>
               {canCreate ? (
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => { setInitialData(null); setDialogOpen(true); }}>
                   <Plus className="size-4" />
                   Nova regra
                 </Button>
@@ -89,6 +100,35 @@ export function RegrasEncargosPage() {
             <CardDescription>Acompanhe regras, vigencias e status usados nos calculos da folha.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+            {canCreate ? (
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="mt-0.5 size-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Regras recomendadas</p>
+                    <p className="text-xs text-muted-foreground">
+                      Comece por modelos comuns de folha e revise base, vigencia e tabela antes de salvar.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={() => openPreset(regraEncargoPresets.inss)}>
+                    Cadastrar regra INSS
+                  </Button>
+                  <Button variant="outline" onClick={() => openPreset(regraEncargoPresets.fgts)}>
+                    Cadastrar regra FGTS
+                  </Button>
+                  <Button variant="outline" onClick={() => openPreset(regraEncargoPresets.fgtsAprendiz)}>
+                    FGTS aprendiz 2%
+                  </Button>
+                </div>
+                {!inssTabela ? (
+                  <p className="text-xs text-muted-foreground">
+                    Para a regra INSS, cadastre ou selecione uma tabela progressiva de INSS antes de salvar.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="grid gap-3 md:grid-cols-[1fr_220px]">
               <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar por nome ou codigo" />
               <Select value={status} onValueChange={(value) => { setStatus(value); setPage(1); }}>
@@ -120,7 +160,8 @@ export function RegrasEncargosPage() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           loading={createMutation.isPending}
-          tabelasProgressivas={tabelasQuery.data?.items ?? []}
+          tabelasProgressivas={tabelasProgressivas}
+          initialData={initialData}
           onSubmit={(data) => createMutation.mutate(data)}
         />
         <RegraEncargoTutorialDialog open={tutorialOpen} onOpenChange={setTutorialOpen} />

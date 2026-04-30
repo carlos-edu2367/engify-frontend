@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { HelpCircle, Plus, Table2 } from "lucide-react";
+import { HelpCircle, Plus, Sparkles, Table2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
 import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
+import { tabelaProgressivaPresets } from "../../encargos/utils/encargoPresets";
 import { TabelaProgressivaDialog } from "../components/TabelaProgressivaDialog";
 import { TabelaProgressivaTutorialDialog } from "../components/TabelaProgressivaTutorialDialog";
 
@@ -32,6 +33,7 @@ export function TabelasProgressivasPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [initialData, setInitialData] = useState<RhTabelaProgressivaFormData | null>(null);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
   const filters = { page, limit: 20, search: debouncedSearch || undefined };
@@ -68,7 +70,7 @@ export function TabelasProgressivasPage() {
                 Como criar?
               </Button>
               {canCreate ? (
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => { setInitialData(null); setDialogOpen(true); }}>
                   <Plus className="size-4" />
                   Nova tabela
                 </Button>
@@ -82,6 +84,28 @@ export function TabelasProgressivasPage() {
             <CardDescription>Consulte faixas, vigencias e status das tabelas usadas nos calculos.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
+            {canCreate ? (
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="mt-0.5 size-4 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Tabelas recomendadas</p>
+                    <p className="text-xs text-muted-foreground">
+                      Use modelos oficiais como ponto de partida e revise a competencia antes de salvar.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setInitialData(tabelaProgressivaPresets.inss2026);
+                    setDialogOpen(true);
+                  }}
+                >
+                  Cadastrar tabela INSS 2026
+                </Button>
+              </div>
+            ) : null}
             <Input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Buscar tabela" />
             <RhDataTable
               items={query.data?.items ?? []}
@@ -102,6 +126,7 @@ export function TabelasProgressivasPage() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           loading={createMutation.isPending}
+          initialData={initialData}
           onSubmit={(data) => createMutation.mutate(data)}
         />
         <TabelaProgressivaTutorialDialog open={tutorialOpen} onOpenChange={setTutorialOpen} />

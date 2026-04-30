@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,15 +21,21 @@ function toDateTimeInputValue(value: string) {
   return value ? `${value}T00:00:00` : null;
 }
 
+function toDateInputValue(value?: string | null) {
+  return value ? value.slice(0, 10) : "";
+}
+
 export function TabelaProgressivaDialog({
   open,
   onOpenChange,
   loading,
+  initialData,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loading?: boolean;
+  initialData?: Partial<RhTabelaProgressivaFormData> | null;
   onSubmit: (data: RhTabelaProgressivaFormData) => void;
 }) {
   const [nome, setNome] = useState("");
@@ -37,6 +43,15 @@ export function TabelaProgressivaDialog({
   const [vigenciaInicio, setVigenciaInicio] = useState("");
   const [vigenciaFim, setVigenciaFim] = useState("");
   const [faixas, setFaixas] = useState<RhFaixaEncargo[]>(initialFaixas);
+
+  useEffect(() => {
+    if (!open) return;
+    setNome(initialData?.nome ?? "");
+    setCodigo(initialData?.codigo ?? "");
+    setVigenciaInicio(toDateInputValue(initialData?.vigencia_inicio));
+    setVigenciaFim(toDateInputValue(initialData?.vigencia_fim));
+    setFaixas(initialData?.faixas?.length ? initialData.faixas : initialFaixas);
+  }, [initialData, open]);
 
   const orderedFaixas = useMemo(
     () =>

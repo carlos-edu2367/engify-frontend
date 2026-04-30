@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,17 +17,23 @@ function toDateTimeInputValue(value: string) {
   return value ? `${value}T00:00:00` : null;
 }
 
+function toDateInputValue(value?: string | null) {
+  return value ? value.slice(0, 10) : "";
+}
+
 export function RegraEncargoDialog({
   open,
   onOpenChange,
   loading,
   tabelasProgressivas = [],
+  initialData,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loading?: boolean;
   tabelasProgressivas?: RhTabelaProgressiva[];
+  initialData?: Partial<RhRegraEncargoCreateRequest> | null;
   onSubmit: (data: RhRegraEncargoCreateRequest) => void;
 }) {
   const [nome, setNome] = useState("");
@@ -38,9 +44,28 @@ export function RegraEncargoDialog({
   const [valorFixo, setValorFixo] = useState("");
   const [percentual, setPercentual] = useState("");
   const [tabelaProgressivaId, setTabelaProgressivaId] = useState("");
+  const [teto, setTeto] = useState("");
+  const [piso, setPiso] = useState("");
   const [prioridade, setPrioridade] = useState(100);
   const [vigenciaInicio, setVigenciaInicio] = useState("");
   const [vigenciaFim, setVigenciaFim] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setNome(initialData?.nome ?? "");
+    setCodigo(initialData?.codigo ?? "");
+    setNatureza(initialData?.natureza ?? "desconto");
+    setTipoCalculo(initialData?.tipo_calculo ?? "percentual_simples");
+    setBaseCalculo(initialData?.base_calculo ?? "salario_base");
+    setValorFixo(initialData?.valor_fixo ?? "");
+    setPercentual(initialData?.percentual ?? "");
+    setTabelaProgressivaId(initialData?.tabela_progressiva_id ?? "");
+    setTeto(initialData?.teto ?? "");
+    setPiso(initialData?.piso ?? "");
+    setPrioridade(initialData?.prioridade ?? 100);
+    setVigenciaInicio(toDateInputValue(initialData?.vigencia_inicio));
+    setVigenciaFim(toDateInputValue(initialData?.vigencia_fim));
+  }, [initialData, open]);
 
   const requiresPercentual = tipoCalculo === "percentual_simples";
   const requiresValorFixo = tipoCalculo === "valor_fixo";
@@ -70,6 +95,8 @@ export function RegraEncargoDialog({
       valor_fixo: requiresValorFixo ? valorFixo : null,
       percentual: requiresPercentual ? percentual : null,
       tabela_progressiva_id: requiresTabelaProgressiva ? tabelaProgressivaId : null,
+      teto: teto || null,
+      piso: piso || null,
       prioridade,
       vigencia_inicio: toDateTimeInputValue(vigenciaInicio),
       vigencia_fim: toDateTimeInputValue(vigenciaFim),
@@ -163,6 +190,14 @@ export function RegraEncargoDialog({
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">Prioridade</span>
             <Input type="number" min={0} value={prioridade} onChange={(event) => setPrioridade(Number(event.target.value))} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Piso</span>
+            <Input type="number" min={0} step="0.01" value={piso} onChange={(event) => setPiso(event.target.value)} />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Teto</span>
+            <Input type="number" min={0} step="0.01" value={teto} onChange={(event) => setTeto(event.target.value)} />
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">Inicio da vigencia</span>

@@ -108,6 +108,24 @@ describe("rh frontend source guards", () => {
     expect(dialog).toMatch(/valor_final/);
   });
 
+  it("charge rule and progressive table pages expose recommended payroll presets", () => {
+    const rulesPage = read("src/features/rh/encargos/pages/RegrasEncargosPage.tsx");
+    const rulesDialog = read("src/features/rh/encargos/components/RegraEncargoDialog.tsx");
+    const tablesPage = read("src/features/rh/tabelas-progressivas/pages/TabelasProgressivasPage.tsx");
+    const tablesDialog = read("src/features/rh/tabelas-progressivas/components/TabelaProgressivaDialog.tsx");
+    const presets = read("src/features/rh/encargos/utils/encargoPresets.ts");
+
+    expect(tablesPage).toMatch(/Cadastrar tabela INSS 2026/);
+    expect(tablesDialog).toMatch(/initialData/);
+    expect(rulesPage).toMatch(/Cadastrar regra INSS/);
+    expect(rulesPage).toMatch(/Cadastrar regra FGTS/);
+    expect(rulesDialog).toMatch(/initialData/);
+    expect(presets).toMatch(/INSS_2026/);
+    expect(presets).toMatch(/8475\.55/);
+    expect(presets).toMatch(/FGTS/);
+    expect(presets).toMatch(/percentual: "8"/);
+  });
+
   it("employee wizard does not ask for a user uuid manually", () => {
     const source = read("src/features/rh/funcionarios/components/FuncionarioWizard.tsx");
 
