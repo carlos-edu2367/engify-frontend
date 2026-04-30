@@ -131,3 +131,22 @@ export interface CommissionReportJobStatusResponse {
   file_url?: string | null;
   error_message?: string | null;
 }
+
+export interface FluxoCaixaItemResponse {
+  mes: string;
+  total_entradas: number;
+  total_saidas: number;
+  saldo: number;
+}
+
+export interface FluxoCaixaResumoResponse {
+  total_entradas: number;
+  total_saidas: number;
+  saldo_total: number;
+}
+
+export interface FluxoCaixaResponse {
+  periodo: string;
+  dados: FluxoCaixaItemResponse[];
+  resumo: FluxoCaixaResumoResponse;
+}

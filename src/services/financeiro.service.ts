@@ -14,6 +14,7 @@ import type {
   CreateCommissionReportRequest,
   CreateCommissionReportResponse,
   CommissionReportJobStatusResponse,
+  FluxoCaixaResponse,
 } from "@/types/financeiro.types";
 import type { PaginatedResponse } from "@/types/api.types";
 
@@ -80,4 +81,7 @@ export const financeiroService = {
     api
       .get<CommissionReportJobStatusResponse>(`/financeiro/relatorios/jobs/${jobId}`)
       .then((r) => r.data),
+
+  getFluxoCaixa: (range: string = "6m") =>
+    api.get<FluxoCaixaResponse>("/financeiro/fluxo-caixa", { params: { range } }).then((r) => r.data),
 };

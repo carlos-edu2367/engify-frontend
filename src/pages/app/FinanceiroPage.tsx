@@ -33,6 +33,7 @@ import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { RelatoriosFinanceirosTab } from "@/components/features/financeiro/RelatoriosFinanceirosTab";
+import { FluxoCaixaTab } from "@/components/features/financeiro/FluxoCaixaTab";
 import { buildPixPayload } from "@/lib/pix";
 import { teamsService } from "@/services/teams.service";
 import type { DiaristResponse } from "@/types/team.types";
@@ -69,9 +70,6 @@ const classeLabels: Record<MovClass, string> = {
   operacional: "Operacional",
 };
 
-// ─── PIX Code Copy Button ────────────────────────────────────────────────────
-// ─── PIX Block inside a payment card ─────────────────────────────────────────
-// ─── Types and Grouping Component ────────────────────────────────────────────
 interface PagamentoGroup {
   type: "group";
   diarist_id: string;
@@ -470,7 +468,6 @@ export function FinanceiroPage() {
   const pendentes = pags.filter((p) => p.status === "aguardando");
 
   const renderPags: RenderablePagamento[] = [];
-  // Key: `${diarist_id}|${dateKey}` to group by diarist AND day
   const pendingByDiaristaAndDate = new Map<string, PagamentoResponse[]>();
 
   pags.forEach((p) => {
@@ -532,7 +529,7 @@ export function FinanceiroPage() {
             </CardHeader>
             <CardContent>
               <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {formatCurrency(totalEntradas)}
+                {formatCurrency(totalEntradas.toString())}
               </p>
             </CardContent>
           </Card>
@@ -542,7 +539,7 @@ export function FinanceiroPage() {
               <TrendingDown className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <p className="text-xl font-bold text-destructive">{formatCurrency(totalSaidas)}</p>
+              <p className="text-xl font-bold text-destructive">{formatCurrency(totalSaidas.toString())}</p>
             </CardContent>
           </Card>
           <Card>
@@ -567,6 +564,7 @@ export function FinanceiroPage() {
                 </span>
               )}
             </TabsTrigger>
+            <TabsTrigger value="fluxo-caixa">Fluxo de Caixa</TabsTrigger>
             <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
           </TabsList>
 
@@ -738,6 +736,10 @@ export function FinanceiroPage() {
                 })}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="fluxo-caixa" className="mt-4">
+            <FluxoCaixaTab />
           </TabsContent>
 
           <TabsContent value="relatorios" className="mt-4">
