@@ -67,17 +67,15 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "engify-auth",
       storage: createJSONStorage(() => localStorage),
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
-        const state = persistedState as PersistedAuthState;
+        const state = (persistedState ?? {}) as PersistedAuthState;
         return {
           user: state.user ?? null,
         };
       },
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
-        isAuthenticated: state.isAuthenticated,
       }),
     }
   )

@@ -28,7 +28,7 @@ const roleLabels: Record<string, string> = {
   engenheiro: "Engenheiro",
   financeiro: "Financeiro",
   cliente: "Cliente",
-  funcionario: "UsuÃ¡rio comum",
+  funcionario: "Usuário comum",
 };
 
 const roleBadge: Record<string, "default" | "info" | "warning" | "success"> = {
@@ -248,7 +248,7 @@ export function MembrosPage() {
                   <SelectItem value="engenheiro">Engenheiro</SelectItem>
                   <SelectItem value="financeiro">Financeiro</SelectItem>
                   <SelectItem value="cliente">Cliente</SelectItem>
-                  <SelectItem value="funcionario">UsuÃ¡rio comum</SelectItem>
+                  <SelectItem value="funcionario">Usuário comum</SelectItem>
                 </SelectContent>
               </Select>
               {errorsInvite.role && <p className="text-xs text-destructive">{errorsInvite.role.message}</p>}

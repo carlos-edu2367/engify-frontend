@@ -26,13 +26,13 @@ export const navItems = [
   },
   {
     to: "/calendario",
-    label: "CalendÃ¡rio",
+    label: "Calendário",
     icon: Calendar,
     roles: ["admin", "engenheiro", "financeiro", "cliente", "super_admin", "funcionario"],
   },
   {
     to: "/diarias",
-    label: "DiÃ¡rias",
+    label: "Diárias",
     icon: CalendarDays,
     roles: ["admin", "engenheiro", "financeiro", "super_admin"],
   },
@@ -63,7 +63,7 @@ export const navItems = [
   },
   {
     to: "/configuracoes",
-    label: "ConfiguraÃ§Ãµes",
+    label: "Configurações",
     icon: Settings,
     roles: ["admin", "super_admin"],
   },

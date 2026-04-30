@@ -1,4 +1,5 @@
 import axios from "axios";
+import { refreshAccessToken } from "@/lib/axios";
 import { useAuthStore } from "@/store/auth.store";
 import type { MeResponse } from "@/types/auth.types";
 
@@ -14,22 +15,11 @@ function mapUser(me: MeResponse) {
   };
 }
 
-// Usa raw axios para isolar o bootstrap completamente do interceptor —
-// evita Authorization: Bearer null, loops e deadlocks.
 async function rawMe(token: string): Promise<MeResponse> {
   const { data } = await axios.get<MeResponse>(`${BASE}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return data;
-}
-
-async function rawRefresh(): Promise<string> {
-  const { data } = await axios.post<{ access_token: string }>(
-    `${BASE}/auth/refresh`,
-    {},
-    { withCredentials: true }
-  );
-  return data.access_token;
 }
 
 let restoreSessionPromise: Promise<void> | null = null;
@@ -44,7 +34,6 @@ export function restoreSession() {
     store.startBootstrap();
 
     try {
-      // 1. Tenta validar o accessToken persistido (caso normal após Fix 1).
       const currentToken = useAuthStore.getState().accessToken;
       if (currentToken) {
         try {
@@ -52,13 +41,11 @@ export function restoreSession() {
           useAuthStore.getState().setAuth(currentToken, mapUser(me));
           return;
         } catch {
-          // Token expirado ou inválido — continua para refresh.
+          // Token expirado ou invalido: continua para refresh via cookie HttpOnly.
         }
       }
 
-      // 2. Sem token válido, tenta renovar via cookie HttpOnly.
-      const newToken = await rawRefresh();
-      useAuthStore.getState().setAccessToken(newToken);
+      const newToken = await refreshAccessToken();
       const me = await rawMe(newToken);
       useAuthStore.getState().setAuth(newToken, mapUser(me));
     } catch {

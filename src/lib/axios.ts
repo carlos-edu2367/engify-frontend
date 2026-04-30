@@ -1,31 +1,34 @@
-import axios from "axios";
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { useAuthStore } from "@/store/auth.store";
 
-type QueueItem = {
-  resolve: (token: string) => void;
-  reject: (err: unknown) => void;
+type RetriableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
 };
 
-let isRefreshing = false;
-let failedQueue: QueueItem[] = [];
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
-function processQueue(error: unknown, token: string | null = null) {
-  failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else prom.resolve(token!);
-  });
-  failedQueue = [];
+let refreshPromise: Promise<string> | null = null;
+
+function isAuthEndpoint(url: string | undefined, endpoint: string) {
+  return typeof url === "string" && url.includes(endpoint);
 }
 
-// Aguarda o bootstrap terminar antes de prosseguir.
-// Cobre tanto isBootstrapping=true quanto o frame inicial onde ambas as flags
-// são false (antes do useEffect do ProtectedRoute disparar restoreSession).
+function isAnonymousAuthRequest(url: string | undefined) {
+  return (
+    isAuthEndpoint(url, "/auth/login") ||
+    isAuthEndpoint(url, "/auth/register") ||
+    isAuthEndpoint(url, "/auth/refresh") ||
+    isAuthEndpoint(url, "/auth/recovery")
+  );
+}
+
 function waitForBootstrap(): Promise<void> {
   return new Promise((resolve) => {
     if (useAuthStore.getState().hasBootstrapped) {
       resolve();
       return;
     }
+
     const unsub = useAuthStore.subscribe((state) => {
       if (state.hasBootstrapped) {
         unsub();
@@ -35,23 +38,37 @@ function waitForBootstrap(): Promise<void> {
   });
 }
 
+export async function refreshAccessToken(): Promise<string> {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post<{ access_token: string }>(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true })
+      .then(({ data }) => {
+        useAuthStore.getState().setAccessToken(data.access_token);
+        return data.access_token;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
+
+function redirectToLogin() {
+  useAuthStore.getState().logout();
+  if (window.location.pathname !== "/login") {
+    window.location.assign("/login");
+  }
+}
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL as string,
+  baseURL: API_BASE_URL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
 });
 
-// Injeta access_token em toda request
 api.interceptors.request.use((config) => {
-  const requestUrl =
-    typeof config.url === "string" ? config.url : "";
-  const isAnonymousAuthRequest =
-    requestUrl.includes("/auth/login") ||
-    requestUrl.includes("/auth/register") ||
-    requestUrl.includes("/auth/refresh") ||
-    requestUrl.includes("/auth/recovery");
-
-  if (isAnonymousAuthRequest) {
+  if (isAnonymousAuthRequest(config.url)) {
     return config;
   }
 
@@ -59,99 +76,44 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
-// Interceptor de response — refresh automático ao receber 401
 api.interceptors.response.use(
   (response) => response,
-  async (error: unknown) => {
-    if (
-      !error ||
-      typeof error !== "object" ||
-      !("config" in error) ||
-      !("response" in error)
-    ) {
+  async (error: AxiosError) => {
+    const originalRequest = error.config as RetriableRequestConfig | undefined;
+    const status = error.response?.status;
+
+    if (!originalRequest || status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
 
-    const axiosError = error as {
-      config: { _retry?: boolean; headers: Record<string, string> } & object;
-      response?: { status: number };
-    };
-
-    const originalRequest = axiosError.config;
-    const status = axiosError.response?.status;
-    const requestUrl =
-      typeof (originalRequest as { url?: unknown }).url === "string"
-        ? ((originalRequest as { url?: string }).url as string)
-        : "";
-    const isRefreshRequest = requestUrl.includes("/auth/refresh");
-
-    // Nunca tenta "refresh do refresh"
-    if (status === 401 && isRefreshRequest) {
+    if (isAuthEndpoint(originalRequest.url, "/auth/refresh")) {
+      redirectToLogin();
       return Promise.reject(error);
     }
 
-    if (status === 401 && !originalRequest._retry) {
-      // Se o bootstrap ainda está em andamento OU ainda não começou (frame
-      // inicial antes do useEffect do ProtectedRoute), aguarda terminar e
-      // retenta com o token que ele definiu — evita refresh paralelo.
-      const { isBootstrapping, hasBootstrapped } = useAuthStore.getState();
-      if (isBootstrapping || !hasBootstrapped) {
-        await waitForBootstrap();
-        const newToken = useAuthStore.getState().accessToken;
-        if (newToken) {
-          originalRequest.headers.Authorization = `Bearer ${newToken}`;
-          originalRequest._retry = true;
-          return api(originalRequest);
-        }
-        return Promise.reject(error);
+    const { isBootstrapping, hasBootstrapped } = useAuthStore.getState();
+    if (isBootstrapping || !hasBootstrapped) {
+      await waitForBootstrap();
+      const bootstrapToken = useAuthStore.getState().accessToken;
+      if (bootstrapToken) {
+        originalRequest._retry = true;
+        originalRequest.headers.Authorization = `Bearer ${bootstrapToken}`;
+        return api(originalRequest);
       }
+    }
 
-      // FIX 1: Requests concorrentes entram na fila e recebem _retry = true
-      // antes de retentar, evitando loop de refresh se o retry receber outro 401.
-      if (isRefreshing) {
-        return new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          originalRequest._retry = true;
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return api(originalRequest);
-        });
-      }
-
+    try {
+      const token = await refreshAccessToken();
       originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        const { data } = await axios.post<{ access_token: string }>(
-          `${import.meta.env.VITE_API_BASE_URL as string}/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
-        const newToken = data.access_token;
-        useAuthStore.getState().setAccessToken(newToken);
-        processQueue(null, newToken);
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-
-        // FIX 2: await garante que isRefreshing só é resetado após o retry
-        // concluir, evitando que um 401 chegando nesse intervalo dispare
-        // um novo ciclo de refresh em paralelo.
-        const retryResponse = await api(originalRequest);
-        return retryResponse;
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        useAuthStore.getState().logout();
-        if (window.location.pathname !== "/login") {
-          window.location.assign("/login");
-        }
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
+      originalRequest.headers.Authorization = `Bearer ${token}`;
+      return api(originalRequest);
+    } catch (refreshError) {
+      redirectToLogin();
+      return Promise.reject(refreshError);
     }
-
-    return Promise.reject(error);
   }
 );

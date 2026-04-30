@@ -19,7 +19,7 @@ import {
   XCircle,
   TrendingDown,
   LayoutDashboard,
-  Smartphone
+  Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -158,7 +158,7 @@ export function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }} className="space-y-6">
               <Badge variant="secondary" className="text-sm px-4 py-1.5 border-primary/20 bg-primary/10 text-primary">
-                Novo — Trial gratuito por 7 dias
+                Novo - Trial gratuito por 7 dias
               </Badge>
               <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
                 Gestão de obras <span className="text-primary block">sem complicação</span>
@@ -242,7 +242,7 @@ export function LandingPage() {
 
         {/* Problem Agitation Solution (PAS) */}
         <section className="container py-24">
-           <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
+          <motion.div {...fadeUp} className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl font-bold sm:text-4xl mb-4">Ainda gerenciando obras no caos das planilhas?</h2>
             <p className="text-xl text-muted-foreground">
               Desvios de orçamento, falta de previsibilidade e perda de informações não precisam ser o padrão do seu dia a dia.
@@ -253,7 +253,7 @@ export function LandingPage() {
             {[
               { icon: AlertTriangle, title: "Informação descentralizada", desc: "Arquivos perdidos no WhatsApp e falhas de comunicação entre escritório e canteiro." },
               { icon: XCircle, title: "Pagamentos duplicados", desc: "Controle de diárias feito no papel gera confusão nas sextas-feiras de pagamento." },
-              { icon: TrendingDown, title: "Falta de visão do cronograma", desc: "Atrasos em tarefas críticas que só são descobertos quando já causaram prejuízo." }
+              { icon: TrendingDown, title: "Falta de visão do cronograma", desc: "Atrasos em tarefas críticas que só são descobertos quando já causaram prejuízo." },
             ].map((problem, i) => (
               <motion.div key={i} {...fadeUp} transition={{ ...fadeUp.transition, delay: i * 0.1 }}>
                 <Card className="bg-destructive/5 border-destructive/20 h-full">
@@ -273,7 +273,6 @@ export function LandingPage() {
         {/* Features - Z-Pattern */}
         <section className="py-24 bg-muted/10 overflow-hidden">
           <div className="container space-y-32">
-            
             {/* Feature 1: Kanban (Text Left, Image Right) */}
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <motion.div {...fadeUp} className="space-y-6">
@@ -296,24 +295,24 @@ export function LandingPage() {
               <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative">
                 <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-3xl -z-10" />
                 <div className="bg-card border rounded-2xl p-6 shadow-xl space-y-4">
-                   {/* Fake Kanban layout */}
-                   <div className="grid grid-cols-3 gap-4">
-                     {["A Fazer", "Fazendo", "Concluído"].map((col, i) => (
-                       <div key={i} className="bg-muted rounded-lg p-3 space-y-3">
-                         <div className="text-xs font-semibold uppercase">{col}</div>
-                         <div className="h-20 bg-background rounded border shadow-sm p-3">
-                           <div className="h-3 w-3/4 bg-muted rounded mb-2"/>
-                           <div className="h-2 w-1/2 bg-muted rounded"/>
-                         </div>
-                         {i !== 2 && (
-                           <div className="h-20 bg-background rounded border shadow-sm p-3 opacity-60">
-                             <div className="h-3 w-full bg-muted rounded mb-2"/>
-                             <div className="h-2 w-1/3 bg-muted rounded"/>
-                           </div>
-                         )}
-                       </div>
-                     ))}
-                   </div>
+                  {/* Fake Kanban layout */}
+                  <div className="grid grid-cols-3 gap-4">
+                    {["A Fazer", "Fazendo", "Concluído"].map((col, i) => (
+                      <div key={i} className="bg-muted rounded-lg p-3 space-y-3">
+                        <div className="text-xs font-semibold uppercase">{col}</div>
+                        <div className="h-20 bg-background rounded border shadow-sm p-3">
+                          <div className="h-3 w-3/4 bg-muted rounded mb-2" />
+                          <div className="h-2 w-1/2 bg-muted rounded" />
+                        </div>
+                        {i !== 2 && (
+                          <div className="h-20 bg-background rounded border shadow-sm p-3 opacity-60">
+                            <div className="h-3 w-full bg-muted rounded mb-2" />
+                            <div className="h-2 w-1/3 bg-muted rounded" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             </div>
@@ -326,27 +325,27 @@ export function LandingPage() {
                   {/* Fake notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-muted rounded-b-xl" />
                   <div className="mt-6 flex-1 space-y-4">
-                     <div className="flex items-center gap-3 border-b pb-3">
-                       <Smartphone className="text-emerald-500" />
-                       <span className="font-semibold text-sm">Registro de Ponto</span>
-                     </div>
-                     <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center justify-between">
-                       <div>
-                         <div className="text-xs text-muted-foreground">João Silva (Pedreiro)</div>
-                         <div className="text-sm font-semibold">1 Diária registrada</div>
-                       </div>
-                       <Check className="text-emerald-500 h-5 w-5" />
-                     </div>
-                     <div className="space-y-2 pt-4">
-                       <div className="h-10 bg-muted rounded-lg w-full" />
-                       <div className="h-10 bg-muted rounded-lg w-full" />
-                       <div className="h-10 bg-muted rounded-lg w-full opacity-50" />
-                     </div>
-                     <div className="mt-auto pt-4">
-                       <div className="h-12 bg-emerald-500 rounded-lg w-full flex items-center justify-center">
-                         <span className="text-white text-sm font-semibold">Gerar Pagamentos</span>
-                       </div>
-                     </div>
+                    <div className="flex items-center gap-3 border-b pb-3">
+                      <Smartphone className="text-emerald-500" />
+                      <span className="font-semibold text-sm">Registro de Ponto</span>
+                    </div>
+                    <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg flex items-center justify-between">
+                      <div>
+                        <div className="text-xs text-muted-foreground">João Silva (Pedreiro)</div>
+                        <div className="text-sm font-semibold">1 Diária registrada</div>
+                      </div>
+                      <Check className="text-emerald-500 h-5 w-5" />
+                    </div>
+                    <div className="space-y-2 pt-4">
+                      <div className="h-10 bg-muted rounded-lg w-full" />
+                      <div className="h-10 bg-muted rounded-lg w-full" />
+                      <div className="h-10 bg-muted rounded-lg w-full opacity-50" />
+                    </div>
+                    <div className="mt-auto pt-4">
+                      <div className="h-12 bg-emerald-500 rounded-lg w-full flex items-center justify-center">
+                        <span className="text-white text-sm font-semibold">Gerar Pagamentos</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -391,32 +390,31 @@ export function LandingPage() {
               <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="relative">
                 <div className="absolute -inset-4 bg-blue-500/10 blur-3xl rounded-3xl -z-10" />
                 <div className="bg-card border rounded-2xl p-6 shadow-xl">
-                   <div className="flex items-center gap-2 mb-6">
-                     <LayoutDashboard className="h-5 w-5 text-blue-500" />
-                     <span className="font-semibold">Resumo Financeiro</span>
-                   </div>
-                   <div className="grid grid-cols-2 gap-4 mb-6">
-                     <div className="p-4 border rounded-xl bg-background">
-                       <div className="text-xs text-muted-foreground mb-1">Receitas</div>
-                       <div className="text-lg font-bold text-emerald-500">R$ 45.000,00</div>
-                     </div>
-                     <div className="p-4 border rounded-xl bg-background">
-                       <div className="text-xs text-muted-foreground mb-1">Despesas</div>
-                       <div className="text-lg font-bold text-destructive">R$ 23.450,00</div>
-                     </div>
-                   </div>
-                   {/* Fake Chart bars */}
-                   <div className="h-32 flex items-end gap-2 px-2 border-b">
-                      {[40, 70, 30, 80, 50, 100, 60].map((h, i) => (
-                        <div key={i} className="w-full bg-blue-500/20 rounded-t-sm" style={{ height: `${h}%` }}>
-                          <div className="w-full bg-blue-500 rounded-t-sm" style={{ height: `${h * 0.7}%` }} />
-                        </div>
-                      ))}
-                   </div>
+                  <div className="flex items-center gap-2 mb-6">
+                    <LayoutDashboard className="h-5 w-5 text-blue-500" />
+                    <span className="font-semibold">Resumo Financeiro</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="p-4 border rounded-xl bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">Receitas</div>
+                      <div className="text-lg font-bold text-emerald-500">R$ 45.000,00</div>
+                    </div>
+                    <div className="p-4 border rounded-xl bg-background">
+                      <div className="text-xs text-muted-foreground mb-1">Despesas</div>
+                      <div className="text-lg font-bold text-destructive">R$ 23.450,00</div>
+                    </div>
+                  </div>
+                  {/* Fake Chart bars */}
+                  <div className="h-32 flex items-end gap-2 px-2 border-b">
+                    {[40, 70, 30, 80, 50, 100, 60].map((h, i) => (
+                      <div key={i} className="w-full bg-blue-500/20 rounded-t-sm" style={{ height: `${h}%` }}>
+                        <div className="w-full bg-blue-500 rounded-t-sm" style={{ height: `${h * 0.7}%` }} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </motion.div>
             </div>
-
           </div>
         </section>
 
@@ -427,17 +425,17 @@ export function LandingPage() {
             <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">
               Escolha o plano ideal para o tamanho da sua construtora. Explore tudo sem compromisso por 7 dias.
             </p>
-            
+
             <div className="mt-8 inline-flex items-center justify-center p-1 bg-muted rounded-full">
-              <button 
-                onClick={() => setIsAnnual(false)} 
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!isAnnual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              <button
+                onClick={() => setIsAnnual(false)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${!isAnnual ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               >
                 Mensal
               </button>
-              <button 
+              <button
                 onClick={() => setIsAnnual(true)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${isAnnual ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${isAnnual ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
               >
                 Anual <span className="ml-1 text-xs text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">-20%</span>
               </button>
@@ -456,12 +454,12 @@ export function LandingPage() {
                 <Card className={`relative h-full flex flex-col ${plan.highlight ? "border-primary shadow-xl ring-2 ring-primary scale-105 z-10" : "border-border/50"}`}>
                   {plan.highlight && (
                     <div className="absolute -top-4 left-0 right-0 flex justify-center">
-                       <Badge className="bg-primary text-primary-foreground text-xs uppercase tracking-wider py-1 px-3">
-                         Plano Inicial Recomendado
-                       </Badge>
+                      <Badge className="bg-primary text-primary-foreground text-xs uppercase tracking-wider py-1 px-3">
+                        Plano Inicial Recomendado
+                      </Badge>
                     </div>
                   )}
-                  <CardHeader className={`${plan.highlight ? 'pt-8' : ''}`}>
+                  <CardHeader className={`${plan.highlight ? "pt-8" : ""}`}>
                     <CardTitle className="text-xl">{plan.name}</CardTitle>
                     <div className="mt-4 flex items-baseline gap-1">
                       <span className="text-4xl font-extrabold">{isAnnual ? plan.priceAnual : plan.priceMensal}</span>
@@ -481,7 +479,7 @@ export function LandingPage() {
                   </CardContent>
                   <CardFooter>
                     {plan.active ? (
-                      <Button className={`w-full ${plan.highlight ? 'h-12 text-base' : ''}`} variant={plan.highlight ? 'default' : 'outline'} asChild>
+                      <Button className={`w-full ${plan.highlight ? "h-12 text-base" : ""}`} variant={plan.highlight ? "default" : "outline"} asChild>
                         <Link to={plan.href}>{plan.cta}</Link>
                       </Button>
                     ) : (
@@ -517,18 +515,18 @@ export function LandingPage() {
             </motion.div>
             <div className="space-y-4">
               {faqs.map((faq, index) => (
-                <motion.div 
-                  key={index} 
+                <motion.div
+                  key={index}
                   {...fadeUp}
                   transition={{ ...fadeUp.transition, delay: index * 0.1 }}
                   className="border rounded-lg bg-card overflow-hidden"
                 >
-                  <button 
+                  <button
                     onClick={() => setOpenFaq(openFaq === index ? null : index)}
                     className="w-full px-6 py-4 flex items-center justify-between font-medium text-left hover:bg-muted/50 transition-colors"
                   >
                     <span>{faq.q}</span>
-                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${openFaq === index ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${openFaq === index ? "rotate-180" : ""}`} />
                   </button>
                   <AnimatePresence>
                     {openFaq === index && (
@@ -586,4 +584,3 @@ export function LandingPage() {
     </TooltipProvider>
   );
 }
-

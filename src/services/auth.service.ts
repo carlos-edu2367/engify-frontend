@@ -1,5 +1,5 @@
 import axios from "axios";
-import { api } from "@/lib/axios";
+import { api, refreshAccessToken } from "@/lib/axios";
 import type {
   LoginRequest,
   LoginResponse,
@@ -25,7 +25,7 @@ export const authService = {
     authApi.post<RegisterResponse>("/auth/register", data).then((r) => r.data),
 
   refresh: () =>
-    authApi.post<{ access_token: string; token_type: string }>("/auth/refresh").then((r) => r.data),
+    refreshAccessToken().then((accessToken) => ({ access_token: accessToken, token_type: "bearer" })),
 
   logout: () =>
     api.post<{ message: string }>("/auth/logout").then((r) => r.data),
