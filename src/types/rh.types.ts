@@ -263,6 +263,12 @@ export interface RhMeResumo {
   ultimo_holerite_fechado?: RhUltimoHoleriteResumo | null;
 }
 
+export interface RhMeVinculo {
+  vinculado: boolean;
+  funcionario_id?: string | null;
+  funcionario_nome?: string | null;
+}
+
 export interface RhAuditLog {
   id: string;
   entity_type: string;

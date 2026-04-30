@@ -21,6 +21,7 @@ import { DiariasPage } from "@/pages/app/DiariasPage";
 import { FinanceiroPage } from "@/pages/app/FinanceiroPage";
 import { MembrosPage } from "@/pages/app/MembrosPage";
 import { RhPage } from "@/pages/app/RhPage";
+import { MeuRhPage } from "@/pages/app/MeuRhPage";
 import { ConfiguracoesPage } from "@/pages/app/ConfiguracoesPage";
 import { PerfilPage } from "@/pages/app/PerfilPage";
 import { CalendarioPage } from "@/pages/app/CalendarioPage";
@@ -122,7 +123,7 @@ export const router = createBrowserRouter([
       {
         path: "/rh",
         element: (
-          <ProtectedRoute roles={["admin", "financeiro", "funcionario", "super_admin"]}>
+          <ProtectedRoute roles={["admin", "financeiro", "super_admin"]}>
             <RhPage />
           </ProtectedRoute>
         ),
@@ -130,11 +131,13 @@ export const router = createBrowserRouter([
       {
         path: "/app/rh",
         element: (
-          <ProtectedRoute roles={["admin", "financeiro", "funcionario", "super_admin"]}>
+          <ProtectedRoute roles={["admin", "financeiro", "super_admin"]}>
             <RhPage />
           </ProtectedRoute>
         ),
       },
+      { path: "/meu-rh", element: <MeuRhPage /> },
+      { path: "/app/meu-rh", element: <MeuRhPage /> },
       ...rhAdminRouteElements.map((route) => ({
         path: route.path,
         element: (

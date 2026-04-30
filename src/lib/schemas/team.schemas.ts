@@ -26,7 +26,7 @@ export const createFirstUserSchema = z
 
 export const inviteSchema = z.object({
   email: z.string().email("Email inválido"),
-  role: z.enum(["admin", "engenheiro", "financeiro", "cliente"]),
+  role: z.enum(["admin", "engenheiro", "financeiro", "cliente", "funcionario"]),
 });
 
 export const diaristaSchema = z.object({

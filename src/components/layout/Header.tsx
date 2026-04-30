@@ -23,6 +23,8 @@ const breadcrumbMap: Record<string, string> = {
   "/obras": "Obras",
   "/diarias": "Diárias",
   "/financeiro": "Financeiro",
+  "/rh": "RH",
+  "/meu-rh": "Meu RH",
   "/membros": "Membros",
   "/configuracoes": "Configurações",
   "/perfil": "Meu Perfil",

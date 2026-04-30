@@ -1,69 +1,10 @@
 import { NavLink } from "react-router-dom";
-import {
-  LayoutDashboard,
-  HardHat,
-  CalendarDays,
-  Calendar,
-  Wallet,
-  Users,
-  UserCog,
-  Settings,
-  Building2,
-} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
-
-const navItems = [
-  {
-    to: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    roles: ["admin", "engenheiro", "financeiro", "cliente", "super_admin", "funcionario"],
-  },
-  {
-    to: "/obras",
-    label: "Obras",
-    icon: HardHat,
-    roles: ["admin", "engenheiro", "financeiro", "super_admin"],
-  },
-  {
-    to: "/calendario",
-    label: "Calendário",
-    icon: Calendar,
-    roles: ["admin", "engenheiro", "financeiro", "cliente", "super_admin", "funcionario"],
-  },
-  {
-    to: "/diarias",
-    label: "Diárias",
-    icon: CalendarDays,
-    roles: ["admin", "engenheiro", "financeiro", "super_admin"],
-  },
-  {
-    to: "/financeiro",
-    label: "Financeiro",
-    icon: Wallet,
-    roles: ["admin", "financeiro", "super_admin"],
-  },
-  {
-    to: "/rh",
-    label: "RH",
-    icon: UserCog,
-    roles: ["admin", "financeiro", "funcionario", "super_admin"],
-  },
-  {
-    to: "/membros",
-    label: "Membros",
-    icon: Users,
-    roles: ["admin", "super_admin"],
-  },
-  {
-    to: "/configuracoes",
-    label: "Configurações",
-    icon: Settings,
-    roles: ["admin", "super_admin"],
-  },
-] as const;
-
+import { rhService } from "@/services/rh.service";
+import { getVisibleNavItems } from "./navigation";
 
 interface SidebarProps {
   className?: string;
@@ -73,10 +14,18 @@ interface SidebarProps {
 
 export function Sidebar({ className, compact = false, onNavigate }: SidebarProps) {
   const user = useAuthStore((s) => s.user);
+  const employeeLinkQuery = useQuery({
+    queryKey: ["rh-me-vinculo"],
+    queryFn: rhService.getMyVinculo,
+    enabled: !!user,
+    staleTime: 60_000,
+    retry: false,
+  });
 
-  const visibleItems = navItems.filter(
-    (item) => user && (item.roles as readonly string[]).includes(user.role)
-  );
+  const visibleItems = getVisibleNavItems({
+    role: user?.role,
+    hasEmployeeLink: employeeLinkQuery.data?.vinculado ?? false,
+  });
 
   return (
     <aside
@@ -85,13 +34,11 @@ export function Sidebar({ className, compact = false, onNavigate }: SidebarProps
         className
       )}
     >
-      {/* Logo */}
       <div className={cn("flex items-center gap-2 border-b border-sidebar-border px-5", compact ? "h-14" : "h-16")}>
         <Building2 className="h-6 w-6 text-sidebar-primary" />
         <span className="text-xl font-bold tracking-tight text-sidebar-foreground">Engify</span>
       </div>
 
-      {/* Nav */}
       <nav className={cn("flex-1 space-y-1 overflow-y-auto px-3", compact ? "py-3" : "py-4")}>
         {visibleItems.map((item) => (
           <NavLink
@@ -114,11 +61,10 @@ export function Sidebar({ className, compact = false, onNavigate }: SidebarProps
         ))}
       </nav>
 
-      {/* User info */}
       {user && (
         <div className="border-t border-sidebar-border px-4 py-3">
-          <p className="text-xs font-medium text-sidebar-foreground/90 truncate">{user.nome}</p>
-          <p className="text-xs text-sidebar-foreground/50 capitalize">{user.role}</p>
+          <p className="truncate text-xs font-medium text-sidebar-foreground/90">{user.nome}</p>
+          <p className="text-xs capitalize text-sidebar-foreground/50">{user.role}</p>
         </div>
       )}
     </aside>

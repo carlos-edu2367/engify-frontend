@@ -40,6 +40,7 @@ import type {
   RhLocalPontoUpdateRequest,
   RhLocaisPontoResponse,
   RhMeResumo,
+  RhMeVinculo,
   RhPontoFilters,
   RhPontoDiaDetalhe,
   RhRegrasEncargosResponse,
@@ -283,6 +284,9 @@ export const rhService = {
 
   getMyResumo: () =>
     api.get<RhMeResumo>("/rh/me/resumo").then((r) => r.data),
+
+  getMyVinculo: () =>
+    api.get<RhMeVinculo>("/rh/me/vinculo").then((r) => r.data),
 
   listPontos: (filters?: RhPontoFilters) =>
     api
