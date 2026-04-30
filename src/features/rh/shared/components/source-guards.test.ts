@@ -76,6 +76,7 @@ describe("rh frontend source guards", () => {
     expect(rules).toMatch(/Como criar\?/);
     expect(tables).toMatch(/TabelaProgressivaDialog/);
     expect(tables).toMatch(/Nova tabela/);
+    expect(tables).toMatch(/Como criar\?/);
     expect(tableDialog).toMatch(/FaixasProgressivasEditor/);
   });
 
@@ -90,6 +91,21 @@ describe("rh frontend source guards", () => {
     expect(tutorial).toMatch(/Tipo percentual simples/);
     expect(tutorial).toMatch(/Base de calculo/);
     expect(tutorial).toMatch(/Aplicabilidade/);
+  });
+
+  it("progressive table creation explains usage and persists ranges after creating the draft", () => {
+    const page = read("src/features/rh/tabelas-progressivas/pages/TabelasProgressivasPage.tsx");
+    const tutorial = read("src/features/rh/tabelas-progressivas/components/TabelaProgressivaTutorialDialog.tsx");
+    const dialog = read("src/features/rh/tabelas-progressivas/components/TabelaProgressivaDialog.tsx");
+
+    expect(page).toMatch(/TabelaProgressivaTutorialDialog/);
+    expect(page).toMatch(/createTabelaProgressiva/);
+    expect(page).toMatch(/updateTabelaProgressivaFaixas/);
+    expect(tutorial).toMatch(/calculo marginal/i);
+    expect(tutorial).toMatch(/aliquota/i);
+    expect(tutorial).toMatch(/deducao/i);
+    expect(dialog).toMatch(/valor_inicial/);
+    expect(dialog).toMatch(/valor_final/);
   });
 
   it("employee wizard does not ask for a user uuid manually", () => {

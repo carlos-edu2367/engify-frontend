@@ -52,6 +52,7 @@ import type {
   RhTipoAtestadoUpdateRequest,
   RhTabelasProgressivasResponse,
   RhTabelaProgressivaCreateRequest,
+  RhFaixaEncargo,
   RhTiposAtestadoResponse,
 } from "@/types/rh.types";
 
@@ -355,7 +356,7 @@ export const rhService = {
   createTabelaProgressiva: (data: RhTabelaProgressivaCreateRequest) =>
     api.post("/rh/encargos/tabelas-progressivas", data).then((r) => r.data),
 
-  updateTabelaProgressivaFaixas: (id: string, faixas: RhTabelaProgressivaCreateRequest["faixas"]) =>
+  updateTabelaProgressivaFaixas: (id: string, faixas: RhFaixaEncargo[]) =>
     api.put(`/rh/encargos/tabelas-progressivas/${id}/faixas`, { faixas }).then((r) => r.data),
 
   listBeneficios: (filters?: { page?: number; limit?: number; search?: string }) =>

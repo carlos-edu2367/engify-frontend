@@ -10,10 +10,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { RhFaixaEncargo, RhTabelaProgressivaCreateRequest } from "@/types/rh.types";
+import type { RhFaixaEncargo, RhTabelaProgressivaFormData } from "@/types/rh.types";
 import { FaixasProgressivasEditor } from "./FaixasProgressivasEditor";
 
-const initialFaixas: RhFaixaEncargo[] = [{ inicio: "0", fim: "", aliquota: "0", deducao: "0" }];
+const initialFaixas: RhFaixaEncargo[] = [
+  { ordem: 0, valor_inicial: "0", valor_final: "", aliquota: "0", deducao: "0", calculo_marginal: false },
+];
+
+function toDateTimeInputValue(value: string) {
+  return value ? `${value}T00:00:00` : null;
+}
 
 export function TabelaProgressivaDialog({
   open,
@@ -24,7 +30,7 @@ export function TabelaProgressivaDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loading?: boolean;
-  onSubmit: (data: RhTabelaProgressivaCreateRequest) => void;
+  onSubmit: (data: RhTabelaProgressivaFormData) => void;
 }) {
   const [nome, setNome] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -33,18 +39,21 @@ export function TabelaProgressivaDialog({
   const [faixas, setFaixas] = useState<RhFaixaEncargo[]>(initialFaixas);
 
   const orderedFaixas = useMemo(
-    () => [...faixas].sort((a, b) => Number(a.inicio || 0) - Number(b.inicio || 0)),
+    () =>
+      [...faixas]
+        .sort((a, b) => Number(a.valor_inicial || 0) - Number(b.valor_inicial || 0))
+        .map((faixa, index) => ({ ...faixa, ordem: index })),
     [faixas]
   );
   const hasInvalidFaixa = orderedFaixas.some((faixa, index) => {
-    const inicio = Number(faixa.inicio);
-    const fim = faixa.fim ? Number(faixa.fim) : null;
+    const inicio = Number(faixa.valor_inicial);
+    const fim = faixa.valor_final ? Number(faixa.valor_final) : null;
     const next = orderedFaixas[index + 1];
     return !Number.isFinite(inicio)
       || (fim !== null && fim < inicio)
       || Number(faixa.aliquota) < 0
       || Number(faixa.aliquota) > 100
-      || (next ? Number(next.inicio) <= (fim ?? inicio) : false);
+      || (next ? Number(next.valor_inicial) <= (fim ?? inicio) : false);
   });
   const validVigencia = !vigenciaInicio || !vigenciaFim || vigenciaInicio <= vigenciaFim;
   const canSubmit = nome.trim() && codigo.trim() && validVigencia && !hasInvalidFaixa;
@@ -54,8 +63,8 @@ export function TabelaProgressivaDialog({
     onSubmit({
       nome: nome.trim(),
       codigo: codigo.trim().toUpperCase(),
-      vigencia_inicio: vigenciaInicio || null,
-      vigencia_fim: vigenciaFim || null,
+      vigencia_inicio: toDateTimeInputValue(vigenciaInicio),
+      vigencia_fim: toDateTimeInputValue(vigenciaFim),
       faixas: orderedFaixas,
     });
   };

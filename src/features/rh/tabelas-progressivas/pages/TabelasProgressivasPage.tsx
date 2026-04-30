@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Table2 } from "lucide-react";
+import { HelpCircle, Plus, Table2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { rhService } from "@/services/rh.service";
-import type { RhTabelaProgressiva } from "@/types/rh.types";
+import type { RhTabelaProgressiva, RhTabelaProgressivaFormData } from "@/types/rh.types";
 import { getApiErrorMessage } from "@/lib/utils";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
@@ -17,6 +17,7 @@ import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
 import { TabelaProgressivaDialog } from "../components/TabelaProgressivaDialog";
+import { TabelaProgressivaTutorialDialog } from "../components/TabelaProgressivaTutorialDialog";
 
 const columns: Array<RhColumn<RhTabelaProgressiva>> = [
   { key: "nome", header: "Tabela", render: (item) => <div><p className="font-medium">{item.nome}</p><p className="text-xs text-muted-foreground">{item.codigo}</p></div> },
@@ -31,6 +32,7 @@ export function TabelasProgressivasPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [tutorialOpen, setTutorialOpen] = useState(false);
   const debouncedSearch = useDebouncedValue(search);
   const filters = { page, limit: 20, search: debouncedSearch || undefined };
   const query = useQuery({
@@ -39,7 +41,11 @@ export function TabelasProgressivasPage() {
     retry: 1,
   });
   const createMutation = useMutation({
-    mutationFn: rhService.createTabelaProgressiva,
+    mutationFn: async (data: RhTabelaProgressivaFormData) => {
+      const { faixas, ...tabelaPayload } = data;
+      const tabela = await rhService.createTabelaProgressiva(tabelaPayload);
+      return rhService.updateTabelaProgressivaFaixas(tabela.id, faixas);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "encargos", "tabelas"] });
       toast.success("Tabela criada.");
@@ -55,12 +61,20 @@ export function TabelasProgressivasPage() {
         <RhPageHeader
           title="Tabelas progressivas"
           description="Cadastre faixas de calculo usadas por regras progressivas."
-          actions={canCreate ? (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="size-4" />
-              Nova tabela
-            </Button>
-          ) : null}
+          actions={(
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={() => setTutorialOpen(true)}>
+                <HelpCircle className="size-4" />
+                Como criar?
+              </Button>
+              {canCreate ? (
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="size-4" />
+                  Nova tabela
+                </Button>
+              ) : null}
+            </div>
+          )}
         />
         <Card>
           <CardHeader>
@@ -90,6 +104,7 @@ export function TabelasProgressivasPage() {
           loading={createMutation.isPending}
           onSubmit={(data) => createMutation.mutate(data)}
         />
+        <TabelaProgressivaTutorialDialog open={tutorialOpen} onOpenChange={setTutorialOpen} />
       </div>
     </PermissionGate>
   );

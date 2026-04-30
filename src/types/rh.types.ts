@@ -482,10 +482,12 @@ export interface RhTabelaProgressiva {
 
 export interface RhFaixaEncargo {
   id?: string;
-  inicio: string;
-  fim?: string | null;
+  ordem: number;
+  valor_inicial: string;
+  valor_final?: string | null;
   aliquota: string;
   deducao?: string | null;
+  calculo_marginal?: boolean;
 }
 
 export type RhTabelasProgressivasResponse = PaginatedResponse<RhTabelaProgressiva>;
@@ -493,8 +495,12 @@ export type RhTabelasProgressivasResponse = PaginatedResponse<RhTabelaProgressiv
 export interface RhTabelaProgressivaCreateRequest {
   nome: string;
   codigo: string;
+  descricao?: string | null;
   vigencia_inicio?: string | null;
   vigencia_fim?: string | null;
+}
+
+export interface RhTabelaProgressivaFormData extends RhTabelaProgressivaCreateRequest {
   faixas: RhFaixaEncargo[];
 }
 

@@ -24,7 +24,7 @@ export function FaixasProgressivasEditor({
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => onChange([...value, { inicio: "", fim: "", aliquota: "", deducao: "0" }])}
+          onClick={() => onChange([...value, { ordem: value.length, valor_inicial: "", valor_final: "", aliquota: "", deducao: "0", calculo_marginal: false }])}
         >
           <Plus className="size-4" />
           Adicionar faixa
@@ -35,11 +35,11 @@ export function FaixasProgressivasEditor({
           <div key={index} className="grid gap-3 rounded-md border p-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto]">
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Valor inicial</span>
-              <Input type="number" min={0} value={faixa.inicio} onChange={(event) => update(index, { inicio: event.target.value })} />
+              <Input type="number" min={0} value={faixa.valor_inicial} onChange={(event) => update(index, { valor_inicial: event.target.value })} />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Valor final</span>
-              <Input type="number" min={0} value={faixa.fim ?? ""} onChange={(event) => update(index, { fim: event.target.value || null })} />
+              <Input type="number" min={0} value={faixa.valor_final ?? ""} onChange={(event) => update(index, { valor_final: event.target.value || null })} />
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">Aliquota</span>
@@ -52,6 +52,15 @@ export function FaixasProgressivasEditor({
             <Button type="button" variant="outline" size="sm" className="self-end" onClick={() => remove(index)} disabled={value.length <= 1}>
               <Trash2 className="size-4" />
             </Button>
+            <label className="flex items-center gap-2 md:col-span-5">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-border"
+                checked={Boolean(faixa.calculo_marginal)}
+                onChange={(event) => update(index, { calculo_marginal: event.target.checked })}
+              />
+              <span className="text-xs text-muted-foreground">Calcular somente a parcela desta faixa quando a tabela usar modo marginal</span>
+            </label>
           </div>
         ))}
       </div>
