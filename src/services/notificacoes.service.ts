@@ -21,6 +21,11 @@ export const notificacoesService = {
       .patch<NotificacaoResponse>(`/notificacoes/${id}/lida`)
       .then((r) => r.data),
 
+  marcarNaoLida: (id: string) =>
+    api
+      .patch<NotificacaoResponse>(`/notificacoes/${id}/nao-lida`)
+      .then((r) => r.data),
+
   marcarTodasLidas: () =>
     api
       .patch<{ message: string }>("/notificacoes/marcar-todas-lidas")

@@ -1,6 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, Building2, MessageSquare, Clock } from "lucide-react";
+import {
+  AtSign,
+  Bell,
+  Building2,
+  CheckSquare,
+  Clock,
+  MailCheck,
+  MailOpen,
+  MessageSquare,
+  Square,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -15,10 +25,14 @@ import {
   useNotificacoesContagem,
   useNotificacoesList,
   useMarcarLida,
+  useMarcarMultiplasLidas,
+  useMarcarNaoLida,
   useMarcarTodasLidas,
 } from "@/hooks/useNotificacoes";
 import type { NotificacaoResponse, NotificacaoTipo } from "@/types/notificacoes.types";
 import { cn } from "@/lib/utils";
+
+type NotificationFilter = "todas" | "mencoes";
 
 function getNavDestino(notificacao: NotificacaoResponse): string | null {
   if (!notificacao.reference_id) return null;
@@ -41,14 +55,29 @@ function NotificacaoIcon({ tipo }: { tipo: NotificacaoTipo }) {
 export function NotificacoesDropdown() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<NotificationFilter>("todas");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: contagemData } = useNotificacoesContagem();
   const { data: listData, isLoading } = useNotificacoesList(1, 10);
   const marcarLida = useMarcarLida();
+  const marcarNaoLida = useMarcarNaoLida();
+  const marcarMultiplas = useMarcarMultiplasLidas();
   const marcarTodas = useMarcarTodasLidas();
 
   const naoLidas = contagemData?.nao_lidas ?? 0;
   const notificacoes = listData?.items ?? [];
+  const filteredNotificacoes = useMemo(
+    () => filter === "mencoes"
+      ? notificacoes.filter((n) => n.tipo === "mencao_mural")
+      : notificacoes,
+    [filter, notificacoes]
+  );
+  const selectedUnreadIds = filteredNotificacoes
+    .filter((n) => selectedIds.has(n.id) && !n.lida)
+    .map((n) => n.id);
+  const allVisibleSelected = filteredNotificacoes.length > 0
+    && filteredNotificacoes.every((n) => selectedIds.has(n.id));
 
   function handleClickNotificacao(notificacao: NotificacaoResponse) {
     const destino = getNavDestino(notificacao);
@@ -61,6 +90,50 @@ export function NotificacoesDropdown() {
 
   function handleMarcarTodas() {
     marcarTodas.mutate();
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleSelectVisible() {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        filteredNotificacoes.forEach((n) => next.delete(n.id));
+      } else {
+        filteredNotificacoes.forEach((n) => next.add(n.id));
+      }
+      return next;
+    });
+  }
+
+  function handleMarcarSelecionadas() {
+    if (selectedUnreadIds.length === 0) return;
+    marcarMultiplas.mutate(selectedUnreadIds, {
+      onSuccess: () => setSelectedIds(new Set()),
+    });
+  }
+
+  function handleToggleLida(notificacao: NotificacaoResponse) {
+    if (notificacao.lida) {
+      marcarNaoLida.mutate(notificacao.id);
+    } else {
+      marcarLida.mutate(notificacao.id);
+    }
+  }
+
+  function handleFilterChange(nextFilter: NotificationFilter) {
+    setFilter(nextFilter);
+    setSelectedIds(new Set());
   }
 
   return (
@@ -81,7 +154,7 @@ export function NotificacoesDropdown() {
         </button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-80 p-0">
+      <DropdownMenuContent align="end" className="w-[380px] p-0">
         <div className="flex items-center justify-between px-3 py-2.5">
           <DropdownMenuLabel className="p-0 text-sm font-semibold">
             Notificações
@@ -100,30 +173,96 @@ export function NotificacoesDropdown() {
         </div>
         <DropdownMenuSeparator className="my-0" />
 
+        <div className="flex items-center justify-between gap-2 px-3 py-2">
+          <div className="flex rounded-md border p-0.5">
+            <Button
+              type="button"
+              variant={filter === "todas" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => handleFilterChange("todas")}
+            >
+              Todas
+            </Button>
+            <Button
+              type="button"
+              variant={filter === "mencoes" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => handleFilterChange("mencoes")}
+            >
+              <AtSign className="h-3.5 w-3.5" />
+              Menções
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={toggleSelectVisible}
+              disabled={filteredNotificacoes.length === 0}
+              title={allVisibleSelected ? "Limpar seleção" : "Selecionar visíveis"}
+            >
+              {allVisibleSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleMarcarSelecionadas}
+              disabled={selectedUnreadIds.length === 0 || marcarMultiplas.isPending}
+            >
+              <MailCheck className="h-3.5 w-3.5" />
+              Lidas
+            </Button>
+          </div>
+        </div>
+        <DropdownMenuSeparator className="my-0" />
+
         <div className="max-h-[360px] overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
               Carregando...
             </div>
-          ) : notificacoes.length === 0 ? (
+          ) : filteredNotificacoes.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-1 py-8">
               <Bell className="h-6 w-6 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">Nenhuma notificação</p>
+              <p className="text-sm text-muted-foreground">
+                {filter === "mencoes" ? "Nenhuma menção" : "Nenhuma notificação"}
+              </p>
             </div>
           ) : (
-            notificacoes.map((n) => (
-              <button
+            filteredNotificacoes.map((n) => (
+              <div
                 key={n.id}
                 className={cn(
-                  "flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-accent",
+                  "flex w-full items-start gap-2 px-3 py-3 text-left transition-colors hover:bg-accent",
                   !n.lida && "bg-accent/40"
                 )}
-                onClick={() => handleClickNotificacao(n)}
               >
+                <button
+                  type="button"
+                  className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    toggleSelected(n.id);
+                  }}
+                  aria-label={selectedIds.has(n.id) ? "Remover da seleção" : "Selecionar notificação"}
+                >
+                  {selectedIds.has(n.id) ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                </button>
                 <div className="mt-0.5">
                   <NotificacaoIcon tipo={n.tipo} />
                 </div>
-                <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => handleClickNotificacao(n)}
+                >
                   <p className={cn("text-sm leading-snug", !n.lida && "font-medium")}>
                     {n.titulo}
                   </p>
@@ -136,11 +275,22 @@ export function NotificacoesDropdown() {
                       locale: ptBR,
                     })}
                   </p>
-                </div>
-                {!n.lida && (
-                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                )}
-              </button>
+                </button>
+                <button
+                  type="button"
+                  className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-50"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleToggleLida(n);
+                  }}
+                  aria-label={n.lida ? "Marcar como não lida" : "Marcar como lida"}
+                  title={n.lida ? "Marcar como não lida" : "Marcar como lida"}
+                  disabled={marcarLida.isPending || marcarNaoLida.isPending}
+                >
+                  {n.lida ? <MailOpen className="h-4 w-4" /> : <MailCheck className="h-4 w-4" />}
+                </button>
+                {!n.lida && <span className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
+              </div>
             ))
           )}
         </div>

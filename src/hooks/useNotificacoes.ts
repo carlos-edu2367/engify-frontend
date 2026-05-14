@@ -33,6 +33,26 @@ export function useMarcarLida() {
   });
 }
 
+export function useMarcarNaoLida() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => notificacoesService.marcarNaoLida(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notificacoes"] });
+    },
+  });
+}
+
+export function useMarcarMultiplasLidas() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (ids: string[]) => Promise.all(ids.map((id) => notificacoesService.marcarLida(id))),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notificacoes"] });
+    },
+  });
+}
+
 export function useMarcarTodasLidas() {
   const queryClient = useQueryClient();
   return useMutation({
