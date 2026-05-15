@@ -6,6 +6,17 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+const DEV = import.meta.env.DEV;
+
+function devLog(msg: string, extra?: unknown) {
+  if (DEV) {
+    if (extra !== undefined) {
+      console.log(`[Axios] ${msg}`, extra);
+    } else {
+      console.log(`[Axios] ${msg}`);
+    }
+  }
+}
 
 let refreshPromise: Promise<string> | null = null;
 
@@ -40,11 +51,18 @@ function waitForBootstrap(): Promise<void> {
 
 export async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
+    devLog("POST /auth/refresh — withCredentials:true, cookie será enviado pelo browser");
     refreshPromise = axios
       .post<{ access_token: string }>(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true })
       .then(({ data }) => {
+        devLog("refresh OK — novo access token recebido");
         useAuthStore.getState().setAccessToken(data.access_token);
         return data.access_token;
+      })
+      .catch((err: unknown) => {
+        const status = axios.isAxiosError(err) ? err.response?.status : "sem resposta";
+        devLog("refresh FALHOU", { status, message: axios.isAxiosError(err) ? err.message : err });
+        return Promise.reject(err);
       })
       .finally(() => {
         refreshPromise = null;
@@ -91,6 +109,7 @@ api.interceptors.response.use(
     }
 
     if (isAuthEndpoint(originalRequest.url, "/auth/refresh")) {
+      devLog("401 no próprio /auth/refresh — cookie ausente ou inválido → redirect login");
       redirectToLogin();
       return Promise.reject(error);
     }
@@ -106,12 +125,14 @@ api.interceptors.response.use(
       }
     }
 
+    devLog("401 em rota protegida — tentando refresh automático", { url: originalRequest.url });
     try {
       const token = await refreshAccessToken();
       originalRequest._retry = true;
       originalRequest.headers.Authorization = `Bearer ${token}`;
       return api(originalRequest);
     } catch (refreshError) {
+      devLog("refresh automático falhou → redirect login");
       redirectToLogin();
       return Promise.reject(refreshError);
     }

@@ -4,6 +4,17 @@ import { useAuthStore } from "@/store/auth.store";
 import type { MeResponse } from "@/types/auth.types";
 
 const BASE = import.meta.env.VITE_API_BASE_URL as string;
+const DEV = import.meta.env.DEV;
+
+function devLog(msg: string, extra?: unknown) {
+  if (DEV) {
+    if (extra !== undefined) {
+      console.log(`[Auth] ${msg}`, extra);
+    } else {
+      console.log(`[Auth] ${msg}`);
+    }
+  }
+}
 
 function mapUser(me: MeResponse) {
   return {
@@ -30,25 +41,46 @@ export function restoreSession() {
   }
 
   restoreSessionPromise = (async () => {
+    devLog("bootstrap iniciado", { origin: window.location.origin });
+
     const store = useAuthStore.getState();
     store.startBootstrap();
 
     try {
       const currentToken = useAuthStore.getState().accessToken;
+      devLog("token em memória?", !!currentToken);
+
       if (currentToken) {
         try {
           const me = await rawMe(currentToken);
+          devLog("/me com token existente: 200 ✓");
           useAuthStore.getState().setAuth(currentToken, mapUser(me));
           return;
         } catch {
-          // Token expirado ou invalido: continua para refresh via cookie HttpOnly.
+          devLog("/me com token existente: falhou — tentando refresh via cookie");
         }
       }
 
+      devLog("chamando /auth/refresh via cookie HttpOnly...");
       const newToken = await refreshAccessToken();
+      devLog("refresh: novo token recebido ✓");
+
       const me = await rawMe(newToken);
+      devLog("/me após refresh: 200 ✓");
       useAuthStore.getState().setAuth(newToken, mapUser(me));
-    } catch {
+    } catch (err: unknown) {
+      const isAxiosErr = axios.isAxiosError(err);
+      const status = isAxiosErr ? err.response?.status : undefined;
+      const isNetworkError = isAxiosErr && !err.response;
+
+      if (isNetworkError) {
+        // Erro de rede (sem resposta): cookie pode estar ok, problema é conectividade.
+        // Limpamos auth igualmente para não deixar estado inconsistente, mas logamos.
+        devLog("bootstrap: erro de REDE (sem resposta do servidor) — clearAuth");
+      } else {
+        devLog("bootstrap: falha na restauração", { status });
+      }
+
       useAuthStore.getState().clearAuth();
     } finally {
       useAuthStore.getState().finishBootstrap();
