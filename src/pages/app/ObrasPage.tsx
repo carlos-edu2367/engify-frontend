@@ -328,7 +328,7 @@ export function ObrasPage() {
 
             {/* Grid de obras */}
             {isLoading ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <Skeleton key={i} className="h-40" />
                 ))}
@@ -354,7 +354,7 @@ export function ObrasPage() {
                 }
               />
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {obras.map((obra) => {
                   const categoria = obra.categoria_id
                     ? categoriasMap[obra.categoria_id]
@@ -362,12 +362,12 @@ export function ObrasPage() {
                   return (
                     <Card
                       key={obra.id}
-                      className="cursor-pointer transition-shadow hover:shadow-md"
+                      className="min-w-0 cursor-pointer overflow-hidden transition-shadow hover:shadow-md"
                       onClick={() => navigate(`/obras/${obra.id}`)}
                     >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex min-w-0 items-center gap-2">
+                      <CardHeader className="min-w-0 pb-3">
+                        <div className="flex min-w-0 items-start justify-between gap-2">
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
                             {/* Bolinha de categoria */}
                             {categoria && (
                               <span
@@ -376,7 +376,7 @@ export function ObrasPage() {
                                 style={{ backgroundColor: categoria.cor ?? "#64748b" }}
                               />
                             )}
-                            <CardTitle className="truncate text-base leading-tight">
+                            <CardTitle className="min-w-0 truncate text-base leading-tight">
                               {obra.title}
                             </CardTitle>
                           </div>
@@ -388,19 +388,19 @@ export function ObrasPage() {
                           </Badge>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-2">
+                      <CardContent className="min-w-0 space-y-2">
                         {obra.valor && (
                           <div className="space-y-1">
-                            <p className="text-sm font-semibold">
+                            <p className="truncate text-sm font-semibold">
                               {formatCurrency(obra.valor)}
                             </p>
                             {obra.total_recebido !== undefined && (
                               <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                  <p className="text-xs text-muted-foreground">
+                                <div className="flex min-w-0 items-center justify-between gap-2">
+                                  <p className="min-w-0 truncate text-xs text-muted-foreground">
                                     Recebido: {formatCurrency(obra.total_recebido)}
                                   </p>
-                                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                  <p className="shrink-0 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                     {Math.min(100, Math.round((parseFloat(obra.total_recebido) / parseFloat(obra.valor)) * 100))}%
                                   </p>
                                 </div>
