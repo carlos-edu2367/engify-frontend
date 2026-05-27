@@ -6,7 +6,7 @@
  * Clique em um card abre um drawer com as fotos do item.
  */
 import { useState } from "react";
-import { ImageIcon, X, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
+import { ImageIcon, X, ZoomIn, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -130,6 +130,17 @@ function PublicCard({
       )}
     >
       <p className="text-sm font-medium leading-tight">{item.title}</p>
+
+      {item.descricao && (
+        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.descricao}</p>
+      )}
+
+      {item.responsavel_nome && (
+        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+          <User className="h-3 w-3" />
+          <span className="truncate">{item.responsavel_nome}</span>
+        </div>
+      )}
 
       {hasPhotos && (
         <div className="mt-2 flex gap-1.5">

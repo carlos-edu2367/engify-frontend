@@ -80,6 +80,8 @@ export interface PublicItemView {
   id: string;
   title: string;
   status: ObraStatus;
+  descricao?: string;
+  responsavel_nome?: string;
   attachments: PublicItemAttachmentView[];
 }
 
