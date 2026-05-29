@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Copy, CalendarClock, CheckCircle2, Clock } from "lucide-react";
+import { Plus, Copy, CalendarClock, CheckCircle2, Clock, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatISO, parseISO } from "date-fns";
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoleGuard } from "@/components/shared/RoleGuard";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { financeiroService } from "@/services/financeiro.service";
 import { obrasService } from "@/services/obras.service";
@@ -27,6 +28,7 @@ interface PagamentosTabProps {
 export function PagamentosTab({ obraId }: PagamentosTabProps) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [deletePagamentoId, setDeletePagamentoId] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["pagamentos", { obra: obraId }],
@@ -55,6 +57,18 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
       toast.success("Pagamento agendado!");
       setCreateOpen(false);
       reset();
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => financeiroService.deletePagamento(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["obras"] });
+      toast.success("Pagamento removido.");
+      setDeletePagamentoId(null);
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -152,6 +166,19 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
                     </div>
                   )}
                 </div>
+                {p.status === "aguardando" && (
+                  <RoleGuard roles={["admin", "engenheiro", "financeiro"]}>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 shrink-0 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeletePagamentoId(p.id)}
+                      title="Excluir pagamento"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </RoleGuard>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -211,6 +238,17 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deletePagamentoId}
+        onOpenChange={(open) => !open && setDeletePagamentoId(null)}
+        title="Excluir pagamento"
+        description="Esta acao remove o pagamento agendado. Pagamentos ja pagos nao podem ser removidos."
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={() => deletePagamentoId && deleteMutation.mutate(deletePagamentoId)}
+        loading={deleteMutation.isPending}
+      />
     </div>
   );
 }

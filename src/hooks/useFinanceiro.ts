@@ -58,6 +58,18 @@ export function useUpdatePagamento() {
   });
 }
 
+export function useDeletePagamento() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => financeiroService.deletePagamento(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
+      queryClient.invalidateQueries({ queryKey: ["obras"] });
+    },
+  });
+}
+
 export function usePayPagamento() {
   const queryClient = useQueryClient();
   return useMutation({

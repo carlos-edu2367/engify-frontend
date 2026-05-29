@@ -53,6 +53,9 @@ export const financeiroService = {
   updatePagamento: (id: string, data: UpdatePagamentoRequest) =>
     api.put<PagamentoResponse>(`/financeiro/pagamentos/${id}`, data).then((r) => r.data),
 
+  deletePagamento: (id: string) =>
+    api.delete<{ message: string }>(`/financeiro/pagamentos/${id}`).then((r) => r.data),
+
   payPagamento: (id: string) =>
     api.patch<MovimentacaoResponse>(`/financeiro/pagamentos/${id}/pay`).then((r) => r.data),
 

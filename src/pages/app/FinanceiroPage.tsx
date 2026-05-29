@@ -102,10 +102,12 @@ function GroupedPaymentCard({
   group,
   onPay,
   onPayAll,
+  onDelete,
 }: {
   group: PagamentoGroup;
   onPay: (id: string) => void;
   onPayAll: (group: PagamentoGroup) => void;
+  onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
@@ -208,6 +210,15 @@ function GroupedPaymentCard({
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <p className="text-sm font-bold">{formatCurrency(p.valor)}</p>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => onDelete(p.id)}
+                      title="Excluir pagamento"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                     <Button size="sm" onClick={() => onPay(p.id)}>
                       Pagar
                     </Button>
@@ -225,9 +236,11 @@ function GroupedPaymentCard({
 function SinglePaymentCard({
   payment,
   onPay,
+  onDelete,
 }: {
   payment: PagamentoResponse;
   onPay: (id: string) => void;
+  onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
@@ -266,6 +279,17 @@ function SinglePaymentCard({
             {payment.status === "aguardando" && (
               <Button size="sm" onClick={() => onPay(payment.id)}>
                 Pagar
+              </Button>
+            )}
+            {payment.status === "aguardando" && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10"
+                onClick={() => onDelete(payment.id)}
+                title="Excluir pagamento"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             )}
             <Button size="sm" variant="outline" onClick={() => setExpanded(!expanded)} className="gap-1.5">
@@ -330,6 +354,7 @@ export function FinanceiroPage() {
   const [payAllPreview, setPayAllPreview] = useState<PayAllPreview | null>(null);
   const [selectedMov, setSelectedMov] = useState<MovimentacaoResponse | null>(null);
   const [deleteMovId, setDeleteMovId] = useState<string | null>(null);
+  const [deletePagId, setDeletePagId] = useState<string | null>(null);
   const [movFormObraId, setMovFormObraId] = useState<string>("");
 
   // Filtros de Movimentações
@@ -416,6 +441,18 @@ export function FinanceiroPage() {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success(`${result.quantidade} pagamentos marcados como pagos — ${formatCurrency(result.valor_total.toString())}`);
       setPayAllPreview(null);
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const deletePagMutation = useMutation({
+    mutationFn: (id: string) => financeiroService.deletePagamento(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
+      queryClient.invalidateQueries({ queryKey: ["obras"] });
+      setDeletePagId(null);
+      toast.success("Pagamento removido.");
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -718,6 +755,7 @@ export function FinanceiroPage() {
                         key={groupKey}
                         group={r}
                         onPay={setConfirmPayId}
+                        onDelete={setDeletePagId}
                         onPayAll={(group) =>
                           setPayAllPreview({
                             ids: group.items.map((item) => item.id),
@@ -732,7 +770,14 @@ export function FinanceiroPage() {
                     );
                   }
 
-                  return <SinglePaymentCard key={r.item.id} payment={r.item} onPay={setConfirmPayId} />;
+                  return (
+                    <SinglePaymentCard
+                      key={r.item.id}
+                      payment={r.item}
+                      onPay={setConfirmPayId}
+                      onDelete={setDeletePagId}
+                    />
+                  );
                 })}
               </div>
             )}
@@ -875,6 +920,17 @@ export function FinanceiroPage() {
           }
         }}
         loading={deleteMovMutation.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deletePagId}
+        onOpenChange={(o) => !o && setDeletePagId(null)}
+        title="Excluir pagamento"
+        description="Esta acao remove o pagamento agendado. Pagamentos ja pagos nao podem ser removidos."
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={() => deletePagId && deletePagMutation.mutate(deletePagId)}
+        loading={deletePagMutation.isPending}
       />
 
       {/* Confirmar pagamento */}
