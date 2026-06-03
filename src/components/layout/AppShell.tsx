@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { ExpirationBanner } from "@/components/shared/ExpirationBanner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ArkyWidget } from "@/features/arky/ArkyWidget";
 
 export function AppShell() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -22,6 +23,8 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+
+      <ArkyWidget />
 
       <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
         <SheetContent side="left" className="w-[84vw] max-w-[320px] p-0">
