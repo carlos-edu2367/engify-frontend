@@ -1,11 +1,10 @@
 import { useCallback, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { Camera, Send, X } from "lucide-react";
 import { arkyService } from "./arky.service";
 import { ArkyMessageList } from "./ArkyMessageList";
 import { captureViewport } from "./screenshot-capture";
 import { useArkyScreenContext } from "./useArkyContext";
-import type { ArkyMessage, ArkyChatResponse } from "./arky.types";
+import type { ArkyMessage, ArkyStreamEvent } from "./arky.types";
 
 interface ArkyPanelProps {
   onClose: () => void;
@@ -16,33 +15,28 @@ export function ArkyPanel({ onClose }: ArkyPanelProps) {
   const [input, setInput] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [screenshotPending, setScreenshotPending] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamEvents, setStreamEvents] = useState<ArkyStreamEvent[]>([]);
+  const [sendError, setSendError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const streamEventsRef = useRef<ArkyStreamEvent[]>([]);
   const screenCtx = useArkyScreenContext();
 
-  const chatMutation = useMutation({
-    mutationFn: arkyService.chat,
-    onSuccess: (data: ArkyChatResponse) => {
-      if (!conversationId) setConversationId(data.conversation_id);
-
-      const assistantMsg: ArkyMessage = {
-        id: data.message_id,
-        role: "assistant",
-        content: data.message,
-        timestamp: new Date(),
-        cards: data.cards,
-        actions: data.actions,
-        citations: data.citations,
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-    },
-  });
+  const appendStreamEvent = useCallback((event: ArkyStreamEvent) => {
+    streamEventsRef.current = [...streamEventsRef.current, event];
+    setStreamEvents(streamEventsRef.current);
+  }, []);
 
   const handleSend = useCallback(
     async (withScreenshot = false) => {
       const text = input.trim();
-      if (!text || chatMutation.isPending) return;
+      if (!text || isStreaming || screenshotPending) return;
 
       setInput("");
+      setSendError(null);
+      setIsStreaming(true);
+      streamEventsRef.current = [];
+      setStreamEvents([]);
 
       const userMsg: ArkyMessage = {
         id: `local-${Date.now()}`,
@@ -55,23 +49,78 @@ export function ArkyPanel({ onClose }: ArkyPanelProps) {
       let screenshot: string | null = null;
 
       if (withScreenshot) {
+        appendStreamEvent({
+          type: "status",
+          status: "capturando_screenshot",
+          label: "Capturando tela",
+        });
         setScreenshotPending(true);
         try {
           const result = await captureViewport();
           screenshot = result?.base64 ?? null;
+          appendStreamEvent({
+            type: "status",
+            status: screenshot ? "screenshot_anexado" : "screenshot_indisponivel",
+            label: screenshot ? "Captura anexada" : "Captura indisponivel",
+            summary: screenshot ? "Imagem reduzida e redigida antes do envio." : "A mensagem sera enviada sem imagem.",
+          });
         } finally {
           setScreenshotPending(false);
         }
       }
 
-      chatMutation.mutate({
-        message: text,
-        screen: screenCtx,
-        conversation_id: conversationId,
-        screenshot,
-      });
+      let finalHandled = false;
+      try {
+        const finalData = await arkyService.chatStream(
+          {
+            message: text,
+            screen: screenCtx,
+            conversation_id: conversationId,
+            screenshot,
+          },
+          (event) => {
+            appendStreamEvent(event);
+            if (event.type !== "final" || !event.data) return;
+
+            finalHandled = true;
+            setConversationId(event.data.conversation_id);
+            const assistantMsg: ArkyMessage = {
+              id: event.data.message_id,
+              role: "assistant",
+              content: event.data.message,
+              timestamp: new Date(),
+              cards: event.data.cards,
+              actions: event.data.actions,
+              citations: event.data.citations,
+              events: streamEventsRef.current,
+            };
+            setMessages((prev) => [...prev, assistantMsg]);
+          }
+        );
+
+        if (finalData && !finalHandled) {
+          setConversationId(finalData.conversation_id);
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: finalData.message_id,
+              role: "assistant",
+              content: finalData.message,
+              timestamp: new Date(),
+              cards: finalData.cards,
+              actions: finalData.actions,
+              citations: finalData.citations,
+              events: streamEventsRef.current,
+            },
+          ]);
+        }
+      } catch {
+        setSendError("Erro ao enviar mensagem. Tente novamente.");
+      } finally {
+        setIsStreaming(false);
+      }
     },
-    [input, conversationId, chatMutation, screenCtx]
+    [appendStreamEvent, conversationId, input, isStreaming, screenCtx, screenshotPending]
   );
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -81,7 +130,7 @@ export function ArkyPanel({ onClose }: ArkyPanelProps) {
     }
   }
 
-  const isLoading = chatMutation.isPending || screenshotPending;
+  const isLoading = isStreaming || screenshotPending;
   const module = screenCtx.module;
   const screenshotBlocked = module === "financeiro" || module === "rh";
 
@@ -113,6 +162,7 @@ export function ArkyPanel({ onClose }: ArkyPanelProps) {
       <ArkyMessageList
         messages={messages}
         isLoading={isLoading}
+        events={streamEvents}
         onActionConfirmed={(id) => {
           setMessages((prev) =>
             prev.map((m) =>
@@ -125,9 +175,9 @@ export function ArkyPanel({ onClose }: ArkyPanelProps) {
       />
 
       {/* Error banner */}
-      {chatMutation.isError && (
+      {sendError && (
         <div className="mx-3 mb-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          Erro ao enviar mensagem. Tente novamente.
+          {sendError}
         </div>
       )}
 

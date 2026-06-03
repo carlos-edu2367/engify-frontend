@@ -51,6 +51,37 @@ export interface ArkyChatResponse {
   citations: Record<string, unknown>[];
 }
 
+export type ArkyStreamEventType =
+  | "status"
+  | "tool_start"
+  | "tool_end"
+  | "tool_error"
+  | "final";
+
+export type ArkyStreamStatus =
+  | "recebendo_mensagem"
+  | "buscando_contexto"
+  | "consultando_documentacao"
+  | "chamando_tool"
+  | "tool_concluida"
+  | "tool_bloqueada"
+  | "tool_erro"
+  | "processando_resposta"
+  | "finalizado"
+  | "erro"
+  | "capturando_screenshot"
+  | "screenshot_anexado"
+  | "screenshot_indisponivel";
+
+export interface ArkyStreamEvent {
+  type: ArkyStreamEventType;
+  status: ArkyStreamStatus | string;
+  label: string;
+  tool_name?: string | null;
+  summary?: string | null;
+  data?: ArkyChatResponse;
+}
+
 export interface ArkyConfirmResponse {
   action_preview_id: string;
   status: "confirmed" | "rejected" | "expired";
@@ -67,6 +98,7 @@ export interface ArkyMessage {
   cards?: ArkyCardResponse[];
   actions?: ArkyActionResponse[];
   citations?: Record<string, unknown>[];
+  events?: ArkyStreamEvent[];
 }
 
 export type RiskLevel =
