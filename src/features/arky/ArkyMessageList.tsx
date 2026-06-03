@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AlertCircle, Bot, CheckCircle, Loader2, User, Wrench } from "lucide-react";
+import ReactMarkdown, { type Components } from "react-markdown";
 import { ArkyActionCard } from "./ArkyActionCard";
-import { ArkyMarkdownMessage } from "./ArkyMarkdownMessage";
 import type { ArkyMessage, ArkyStreamEvent } from "./arky.types";
 
 interface ArkyMessageListProps {
@@ -101,7 +101,9 @@ function MessageBubble({
           {isUser ? (
             <p className="whitespace-pre-wrap break-words">{message.content}</p>
           ) : (
-            <ArkyMarkdownMessage content={message.content} />
+            <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+              {message.content}
+            </ReactMarkdown>
           )}
         </div>
 
@@ -198,3 +200,53 @@ const QUICK_PROMPTS = [
   "Me explique essa tela",
   "Quais pendências existem?",
 ];
+
+const MARKDOWN_COMPONENTS: Components = {
+  h1: ({ children }) => (
+    <h2 className="mb-1 text-sm font-semibold leading-snug text-foreground">{children}</h2>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mb-1 text-sm font-semibold leading-snug text-foreground">{children}</h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mb-1 text-xs font-semibold leading-snug text-foreground">{children}</h3>
+  ),
+  p: ({ children }) => (
+    <p className="mb-2 whitespace-pre-wrap break-words leading-relaxed last:mb-0">{children}</p>
+  ),
+  ul: ({ children }) => (
+    <ul className="mb-2 ml-4 list-disc space-y-1 leading-relaxed last:mb-0">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mb-2 ml-4 list-decimal space-y-1 leading-relaxed last:mb-0">{children}</ol>
+  ),
+  li: ({ children }) => (
+    <li className="pl-0.5">{children}</li>
+  ),
+  strong: ({ children }) => (
+    <strong className="font-semibold text-foreground">{children}</strong>
+  ),
+  em: ({ children }) => (
+    <em className="text-foreground/90">{children}</em>
+  ),
+  code: ({ children }) => (
+    <code className="rounded bg-background/80 px-1 py-0.5 text-[0.85em] text-foreground">
+      {children}
+    </code>
+  ),
+  pre: ({ children }) => (
+    <pre className="mb-2 max-w-full overflow-x-auto rounded-md border border-border bg-background/80 px-2 py-1.5 text-xs leading-relaxed text-foreground last:mb-0">
+      {children}
+    </pre>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target={href?.startsWith("/") ? undefined : "_blank"}
+      rel={href?.startsWith("/") ? undefined : "noreferrer"}
+      className="font-medium text-primary underline-offset-2 hover:underline"
+    >
+      {children}
+    </a>
+  ),
+};
