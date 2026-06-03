@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { AlertCircle, Bot, CheckCircle, Loader2, User, Wrench } from "lucide-react";
 import { ArkyActionCard } from "./ArkyActionCard";
+import { ArkyMarkdownMessage } from "./ArkyMarkdownMessage";
 import type { ArkyMessage, ArkyStreamEvent } from "./arky.types";
 
 interface ArkyMessageListProps {
@@ -97,7 +98,11 @@ function MessageBubble({
               : "rounded-tl-sm bg-muted text-foreground"
           }`}
         >
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          {isUser ? (
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          ) : (
+            <ArkyMarkdownMessage content={message.content} />
+          )}
         </div>
 
         {!isUser && message.events && message.events.length > 0 && (
