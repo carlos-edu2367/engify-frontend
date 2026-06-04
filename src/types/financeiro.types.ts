@@ -42,6 +42,11 @@ export interface PagamentoResponse {
   obra_id?: string;
   diarist_id?: string;
   payment_date?: string;
+  created_by_user_id?: string;
+  created_by_role?: string;
+  created_by_name?: string;
+  created_by_engineer: boolean;
+  created_at?: string;
 }
 
 export interface CreatePagamentoRequest {
@@ -59,6 +64,7 @@ export interface UpdatePagamentoRequest {
   title?: string;
   details?: string;
   valor?: string;
+  classe?: MovClass;
   data_agendada?: string;
   payment_cod?: string;
   obra_id?: string;

@@ -40,7 +40,7 @@ export const navItems = [
     to: "/financeiro",
     label: "Financeiro",
     icon: Wallet,
-    roles: ["admin", "financeiro", "super_admin"],
+    roles: ["admin", "engenheiro", "financeiro", "super_admin"],
   },
   {
     to: "/rh",

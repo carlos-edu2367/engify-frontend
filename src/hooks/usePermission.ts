@@ -9,7 +9,7 @@ export function usePermission() {
   }
 
   const canEdit = hasRole("admin", "engenheiro");
-  const canViewFinanceiro = hasRole("admin", "financeiro");
+  const canViewFinanceiro = hasRole("admin", "engenheiro", "financeiro");
   const isAdmin = hasRole("admin");
 
   return { hasRole, canEdit, canViewFinanceiro, isAdmin };

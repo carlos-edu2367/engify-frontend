@@ -3,7 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt, CheckCheck, Trash2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, CheckCircle2, Copy, ChevronDown, ChevronUp, Building2, ChevronRight, Receipt, CheckCheck, Trash2, Pencil } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -37,6 +37,7 @@ import { FluxoCaixaTab } from "@/components/features/financeiro/FluxoCaixaTab";
 import { buildPixPayload } from "@/lib/pix";
 import { teamsService } from "@/services/teams.service";
 import type { DiaristResponse } from "@/types/team.types";
+import { useAuthStore } from "@/store/auth.store";
 
 function getDueStatus(dataAgendada: string | undefined, status: string): "today" | "overdue" | null {
   if (!dataAgendada || status !== "aguardando") return null;
@@ -58,6 +59,22 @@ function DueBadge({ status }: { status: "today" | "overdue" }) {
     <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30">
       Atrasado
     </span>
+  );
+}
+
+function PaymentCreatorMeta({ payment }: { payment: PagamentoResponse }) {
+  const createdBy = payment.created_by_name || payment.created_by_user_id || "Sistema/legado";
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      {payment.created_by_engineer && (
+        <Badge variant="outline" className="border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-300">
+          Criado por engenheiro
+        </Badge>
+      )}
+      <span>Criado por: {createdBy}</span>
+      {payment.created_at && <span>Criado em: {formatDate(payment.created_at)}</span>}
+    </div>
   );
 }
 
@@ -103,11 +120,13 @@ function GroupedPaymentCard({
   onPay,
   onPayAll,
   onDelete,
+  canPay,
 }: {
   group: PagamentoGroup;
   onPay: (id: string) => void;
   onPayAll: (group: PagamentoGroup) => void;
   onDelete: (id: string) => void;
+  canPay: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
@@ -170,17 +189,19 @@ function GroupedPaymentCard({
                   </button>
                 )}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10"
-                onClick={() => onPayAll(group)}
-              >
-                <CheckCheck className="h-3.5 w-3.5 mr-1" />
-                Pagar todos
-              </Button>
+              {canPay && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-emerald-600 border-emerald-500/40 hover:bg-emerald-500/10"
+                  onClick={() => onPayAll(group)}
+                >
+                  <CheckCheck className="h-3.5 w-3.5 mr-1" />
+                  Pagar todos
+                </Button>
+              )}
             </div>
-            {group.pix_payload && (
+            {canPay && group.pix_payload && (
               <PixQrCodeBlock payload={group.pix_payload} originalCode={group.pix_key} compact />
             )}
             {group.items.map((p) => (
@@ -207,6 +228,9 @@ function GroupedPaymentCard({
                         </button>
                       )}
                     </div>
+                    <div className="mt-2">
+                      <PaymentCreatorMeta payment={p} />
+                    </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <p className="text-sm font-bold">{formatCurrency(p.valor)}</p>
@@ -219,9 +243,11 @@ function GroupedPaymentCard({
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" onClick={() => onPay(p.id)}>
-                      Pagar
-                    </Button>
+                    {canPay && (
+                      <Button size="sm" onClick={() => onPay(p.id)}>
+                        Pagar
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -237,10 +263,16 @@ function SinglePaymentCard({
   payment,
   onPay,
   onDelete,
+  onEdit,
+  canPay,
+  canEdit,
 }: {
   payment: PagamentoResponse;
   onPay: (id: string) => void;
   onDelete: (id: string) => void;
+  onEdit: (payment: PagamentoResponse) => void;
+  canPay: boolean;
+  canEdit: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const navigate = useNavigate();
@@ -257,7 +289,7 @@ function SinglePaymentCard({
   return (
     <Card className={`shadow-sm ${borderClass}`}>
       <CardContent className="py-3 space-y-0">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <p className="font-medium">{payment.title}</p>
@@ -273,15 +305,23 @@ function SinglePaymentCard({
               {payment.data_agendada && <span>Vencimento: {formatDate(payment.data_agendada)}</span>}
               {payment.details && <span className="truncate max-w-[320px]">{payment.details}</span>}
             </div>
+            <div className="mt-2">
+              <PaymentCreatorMeta payment={payment} />
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 sm:justify-end">
             <p className="font-bold">{formatCurrency(payment.valor)}</p>
-            {payment.status === "aguardando" && (
+            {canPay && payment.status === "aguardando" && (
               <Button size="sm" onClick={() => onPay(payment.id)}>
                 Pagar
               </Button>
             )}
-            {payment.status === "aguardando" && (
+            {canEdit && payment.status === "aguardando" && (
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onEdit(payment)} title="Editar pagamento">
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            {canEdit && payment.status === "aguardando" && (
               <Button
                 size="icon"
                 variant="ghost"
@@ -337,7 +377,9 @@ function SinglePaymentCard({
             )}
 
             {payment.status === "aguardando" && payment.pix_copy_and_past && (
-              <PixQrCodeBlock payload={payment.pix_copy_and_past} originalCode={payment.payment_cod} compact />
+              canPay ? (
+                <PixQrCodeBlock payload={payment.pix_copy_and_past} originalCode={payment.payment_cod} compact />
+              ) : null
             )}
           </div>
         )}
@@ -348,14 +390,19 @@ function SinglePaymentCard({
 
 export function FinanceiroPage() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+  const isEngineerOnly = user?.role === "engenheiro";
+  const canManageFinancials = user?.role === "admin" || user?.role === "financeiro";
   const [createMovOpen, setCreateMovOpen] = useState(false);
   const [createPagOpen, setCreatePagOpen] = useState(false);
+  const [editingPag, setEditingPag] = useState<PagamentoResponse | null>(null);
   const [confirmPayId, setConfirmPayId] = useState<string | null>(null);
   const [payAllPreview, setPayAllPreview] = useState<PayAllPreview | null>(null);
   const [selectedMov, setSelectedMov] = useState<MovimentacaoResponse | null>(null);
   const [deleteMovId, setDeleteMovId] = useState<string | null>(null);
   const [deletePagId, setDeletePagId] = useState<string | null>(null);
   const [movFormObraId, setMovFormObraId] = useState<string>("");
+  const [pagFormObraId, setPagFormObraId] = useState<string>("");
 
   // Filtros de Movimentações
   const [movPeriodo, setMovPeriodo] = useState<{ start: string; end: string }>({ start: "", end: "" });
@@ -373,6 +420,7 @@ export function FinanceiroPage() {
   const { data: diaristasData } = useQuery({
     queryKey: ["diaristas"],
     queryFn: () => teamsService.getDiaristas(1, 200),
+    enabled: canManageFinancials,
   });
   const obrasOptions = (obrasData?.items ?? []).map((o) => ({ value: o.id, label: o.title }));
   const diaristasMap = Object.fromEntries(
@@ -389,6 +437,7 @@ export function FinanceiroPage() {
         obra_id: movObraId || undefined,
         classe: movClasse,
       }),
+    enabled: canManageFinancials,
   });
 
   const { data: pagsData, isLoading: pagsLoading } = useQuery({
@@ -412,14 +461,36 @@ export function FinanceiroPage() {
     mutationFn: (v: PagamentoFormValues) =>
       financeiroService.createPagamento({
         ...v,
-        data_agendada: v.data_agendada
-          ? formatISO(parseISO(v.data_agendada))
-          : undefined,
+        data_agendada: formatISO(parseISO(v.data_agendada)),
+        obra_id: v.obra_id || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success("Pagamento agendado!");
       setCreatePagOpen(false);
+      setPagFormObraId("");
+      resetPag();
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
+  const updatePagMutation = useMutation({
+    mutationFn: ({ id, values }: { id: string; values: PagamentoFormValues }) =>
+      financeiroService.updatePagamento(id, {
+        title: values.title,
+        details: values.details,
+        valor: values.valor,
+        classe: values.classe,
+        data_agendada: formatISO(parseISO(values.data_agendada)),
+        payment_cod: values.payment_cod,
+        obra_id: values.obra_id || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
+      toast.success("Pagamento atualizado!");
+      setEditingPag(null);
+      setPagFormObraId("");
       resetPag();
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
@@ -498,6 +569,40 @@ export function FinanceiroPage() {
     formState: { errors: errorsPag },
   } = useForm<PagamentoFormValues>({ resolver: zodResolver(pagamentoSchema) });
 
+  function closePagamentoDialog() {
+    setCreatePagOpen(false);
+    setEditingPag(null);
+    setPagFormObraId("");
+    resetPag();
+  }
+
+  function openEditPagamento(payment: PagamentoResponse) {
+    setEditingPag(payment);
+    setCreatePagOpen(true);
+    setPagFormObraId(payment.obra_id ?? "");
+    resetPag({
+      title: payment.title,
+      details: payment.details ?? "",
+      valor: payment.valor,
+      classe: payment.classe,
+      data_agendada: payment.data_agendada ? format(parseISO(payment.data_agendada), "yyyy-MM-dd") : "",
+      payment_cod: payment.payment_cod ?? "",
+      obra_id: payment.obra_id,
+    });
+  }
+
+  function submitPagamento(values: PagamentoFormValues) {
+    if (isEngineerOnly && !values.payment_cod?.trim()) {
+      toast.error("Codigo de pagamento e obrigatorio para engenheiros.");
+      return;
+    }
+    if (editingPag) {
+      updatePagMutation.mutate({ id: editingPag.id, values });
+      return;
+    }
+    createPagMutation.mutate(values);
+  }
+
   const movs = movsData?.items ?? [];
   const pags = pagsData?.items ?? [];
   const totalEntradas = movs.filter((m) => m.type === "entrada").reduce((s, m) => s + parseFloat(m.valor), 0);
@@ -508,7 +613,7 @@ export function FinanceiroPage() {
   const pendingByDiaristaAndDate = new Map<string, PagamentoResponse[]>();
 
   pags.forEach((p) => {
-    if (p.status === "aguardando" && p.classe === "diarista" && p.diarist_id) {
+    if (!isEngineerOnly && p.status === "aguardando" && p.classe === "diarista" && p.diarist_id) {
       const dateKey = p.data_agendada
         ? format(parseISO(p.data_agendada), "yyyy-MM-dd")
         : "sem-data";
@@ -558,7 +663,7 @@ export function FinanceiroPage() {
         <h1 className="text-2xl font-bold">Financeiro</h1>
 
         {/* KPIs */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className={canManageFinancials ? "grid gap-4 sm:grid-cols-3" : "hidden"}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm text-muted-foreground font-normal">Entradas</CardTitle>
@@ -590,8 +695,33 @@ export function FinanceiroPage() {
           </Card>
         </div>
 
-        <Tabs defaultValue="movimentacoes">
-          <TabsList>
+        {!canManageFinancials && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm text-muted-foreground font-normal">Minhas solicitacoes pendentes</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">{pendentes.length}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm text-muted-foreground font-normal">Total pendente</CardTitle>
+                <Receipt className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-xl font-bold">
+                  {formatCurrency(pendentes.reduce((sum, p) => sum + Number(p.valor), 0).toString())}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        <Tabs defaultValue={isEngineerOnly ? "pagamentos" : "movimentacoes"}>
+          <TabsList className={isEngineerOnly ? "hidden" : undefined}>
             <TabsTrigger value="movimentacoes">Movimentações</TabsTrigger>
             <TabsTrigger value="pagamentos">
               Pagamentos
@@ -606,6 +736,7 @@ export function FinanceiroPage() {
           </TabsList>
 
           {/* Movimentações */}
+          {canManageFinancials && (
           <TabsContent value="movimentacoes" className="mt-4 space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -718,6 +849,7 @@ export function FinanceiroPage() {
               </div>
             )}
           </TabsContent>
+          )}
 
           {/* Pagamentos */}
           <TabsContent value="pagamentos" className="mt-4 space-y-4">
@@ -756,6 +888,7 @@ export function FinanceiroPage() {
                         group={r}
                         onPay={setConfirmPayId}
                         onDelete={setDeletePagId}
+                        canPay={canManageFinancials}
                         onPayAll={(group) =>
                           setPayAllPreview({
                             ids: group.items.map((item) => item.id),
@@ -776,6 +909,9 @@ export function FinanceiroPage() {
                       payment={r.item}
                       onPay={setConfirmPayId}
                       onDelete={setDeletePagId}
+                      onEdit={openEditPagamento}
+                      canPay={canManageFinancials}
+                      canEdit={isEngineerOnly || canManageFinancials}
                     />
                   );
                 })}
@@ -783,13 +919,17 @@ export function FinanceiroPage() {
             )}
           </TabsContent>
 
-          <TabsContent value="fluxo-caixa" className="mt-4">
-            <FluxoCaixaTab />
-          </TabsContent>
+          {canManageFinancials && (
+            <TabsContent value="fluxo-caixa" className="mt-4">
+              <FluxoCaixaTab />
+            </TabsContent>
+          )}
 
-          <TabsContent value="relatorios" className="mt-4">
-            <RelatoriosFinanceirosTab />
-          </TabsContent>
+          {canManageFinancials && (
+            <TabsContent value="relatorios" className="mt-4">
+              <RelatoriosFinanceirosTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
@@ -851,10 +991,10 @@ export function FinanceiroPage() {
       </Dialog>
 
       {/* Dialog criar pagamento */}
-      <Dialog open={createPagOpen} onOpenChange={setCreatePagOpen}>
+      <Dialog open={createPagOpen} onOpenChange={(open) => { if (!open) closePagamentoDialog(); else setCreatePagOpen(true); }}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Novo Pagamento</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitPag((v) => createPagMutation.mutate(v))} className="space-y-4">
+          <DialogHeader><DialogTitle>{editingPag ? "Editar Pagamento" : "Novo Pagamento"}</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmitPag(submitPagamento)} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Título *</Label>
               <Input placeholder="Ex: Aluguel do escritório" {...registerPag("title")} />
@@ -867,7 +1007,8 @@ export function FinanceiroPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Valor *</Label>
-                <Input placeholder="4500.00" {...registerPag("valor")} />
+                <Input inputMode="decimal" placeholder="190,50" {...registerPag("valor")} />
+                {errorsPag.valor && <p className="text-xs text-destructive">{errorsPag.valor.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>Classe *</Label>
@@ -884,15 +1025,28 @@ export function FinanceiroPage() {
             <div className="space-y-1.5">
               <Label>Data de vencimento (opcional)</Label>
               <Input type="date" {...registerPag("data_agendada")} />
+              {errorsPag.data_agendada && <p className="text-xs text-destructive">{errorsPag.data_agendada.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Obra (opcional)</Label>
+              <SearchableSelect
+                options={obrasOptions}
+                value={pagFormObraId}
+                onChange={(v) => { setPagFormObraId(v); setValuePag("obra_id", v || undefined); }}
+                allOptionLabel="Nenhuma obra"
+                placeholder="Vincular a uma obra..."
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Código de pagamento (opcional)</Label>
               <Input placeholder="PIX copia e cola, código de barras..." {...registerPag("payment_cod")} />
             </div>
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setCreatePagOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={createPagMutation.isPending}>
-                {createPagMutation.isPending ? "Agendando..." : "Agendar"}
+              <Button variant="outline" type="button" onClick={closePagamentoDialog}>Cancelar</Button>
+              <Button type="submit" disabled={createPagMutation.isPending || updatePagMutation.isPending}>
+                {editingPag
+                  ? updatePagMutation.isPending ? "Salvando..." : "Salvar"
+                  : createPagMutation.isPending ? "Agendando..." : "Agendar"}
               </Button>
             </DialogFooter>
           </form>

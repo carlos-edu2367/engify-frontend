@@ -25,6 +25,21 @@ interface PagamentosTabProps {
   obraId: string;
 }
 
+function PaymentCreatorMeta({ payment }: { payment: PagamentoResponse }) {
+  const createdBy = payment.created_by_name || payment.created_by_user_id || "Sistema/legado";
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      {payment.created_by_engineer && (
+        <Badge variant="outline" className="border-blue-500/30 bg-blue-500/5 text-blue-600 dark:text-blue-300">
+          Criado por engenheiro
+        </Badge>
+      )}
+      <span>Criado por: {createdBy}</span>
+      {payment.created_at && <span>Criado em: {formatDate(payment.created_at)}</span>}
+    </div>
+  );
+}
+
 export function PagamentosTab({ obraId }: PagamentosTabProps) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
@@ -144,6 +159,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
                     <span>{formatCurrency(p.valor)}</span>
                     {p.data_agendada && <span>Venc. {formatDate(p.data_agendada)}</span>}
                   </div>
+                  <PaymentCreatorMeta payment={p} />
 
                   {p.payment_cod && (
                     <button
@@ -207,7 +223,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Valor *</Label>
-                <Input type="number" step="0.01" min="0" placeholder="0.00" {...register("valor")} />
+                <Input inputMode="decimal" placeholder="190,50" {...register("valor")} />
                 {errors.valor && <p className="text-xs text-destructive">{errors.valor.message}</p>}
               </div>
               <div className="space-y-1.5">
