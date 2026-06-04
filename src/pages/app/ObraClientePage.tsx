@@ -1,15 +1,26 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, CalendarDays, ClipboardList, HardHat, ImageIcon } from "lucide-react";
+import {
+  AlertCircle,
+  CalendarDays,
+  ClipboardList,
+  Download,
+  ExternalLink,
+  FileText,
+  HardHat,
+  ImageIcon,
+  Receipt,
+} from "lucide-react";
 import { PublicKanbanBoard } from "@/components/features/kanban/PublicKanbanBoard";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { MediaGallery } from "@/components/shared/MediaGallery";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { obrasService } from "@/services/obras.service";
-import type { ObraStatus, PublicImageView } from "@/types/obra.types";
+import type { ObraStatus, PublicImageView, PublicRecebimentoView } from "@/types/obra.types";
 
 const STATUS_LABELS: Record<ObraStatus, string> = {
   planejamento: "Planejamento",
@@ -66,6 +77,91 @@ function PublicImageGallery({ images }: { images: PublicImageView[] }) {
         emptyTitle="Nenhuma midia disponivel"
       />
     </>
+  );
+}
+
+function PublicRecebimentosList({ recebimentos }: { recebimentos: PublicRecebimentoView[] }) {
+  if (recebimentos.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 text-center">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted/60">
+          <Receipt className="h-5 w-5 text-muted-foreground/40" />
+        </div>
+        <p className="text-sm text-muted-foreground">Nenhum recebimento disponivel</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {recebimentos.map((recebimento) => (
+        <div
+          key={recebimento.id}
+          className="rounded-xl border border-border/60 bg-muted/20 p-4"
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold leading-snug">{recebimento.title}</p>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                <span>{formatDate(recebimento.data_movimentacao)}</span>
+              </div>
+            </div>
+            <Badge variant="secondary" className="w-fit text-[10px]">
+              {recebimento.attachments.length} anexo{recebimento.attachments.length !== 1 ? "s" : ""}
+            </Badge>
+          </div>
+
+          {recebimento.attachments.length > 0 ? (
+            <div className="mt-3 grid gap-2">
+              {recebimento.attachments.map((attachment) => (
+                <div
+                  key={attachment.id}
+                  className="flex items-center gap-3 rounded-lg border border-border/50 bg-background p-3"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium" title={attachment.file_name}>
+                      {attachment.file_name}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {attachment.content_type === "application/pdf" ? "PDF" : attachment.content_type}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                      <a
+                        href={attachment.download_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Abrir ${attachment.file_name}`}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                      <a
+                        href={attachment.download_url}
+                        download={attachment.file_name}
+                        aria-label={`Baixar ${attachment.file_name}`}
+                      >
+                        <Download className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 rounded-lg border border-dashed border-border/60 bg-background/60 px-3 py-4 text-center text-xs text-muted-foreground">
+              Nenhum documento anexado a este recebimento
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -216,6 +312,14 @@ export function ObraClientePage() {
               <h2 className="text-lg font-semibold">Galeria da obra</h2>
             </div>
             <PublicImageGallery images={obra.images} />
+          </div>
+
+          <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-sm md:p-8">
+            <div className="mb-5 flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Recebimentos e notas fiscais</h2>
+            </div>
+            <PublicRecebimentosList recebimentos={obra.recebimentos} />
           </div>
 
           <p className="pb-4 text-center text-xs text-muted-foreground/40">Visao somente leitura | Engify</p>

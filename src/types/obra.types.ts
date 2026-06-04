@@ -92,6 +92,20 @@ export interface PublicImageView {
   content_type?: string;
 }
 
+export interface PublicRecebimentoAttachmentView {
+  id: string;
+  file_name: string;
+  download_url: string;
+  content_type: string;
+}
+
+export interface PublicRecebimentoView {
+  id: string;
+  title: string;
+  data_movimentacao: string;
+  attachments: PublicRecebimentoAttachmentView[];
+}
+
 export interface PublicObraResponse {
   id: string;
   title: string;
@@ -100,4 +114,5 @@ export interface PublicObraResponse {
   data_entrega?: string;
   items: PublicItemView[];
   images: PublicImageView[];
+  recebimentos: PublicRecebimentoView[];
 }
