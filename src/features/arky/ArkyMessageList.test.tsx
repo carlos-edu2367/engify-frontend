@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ArkyMessageList } from "./ArkyMessageList";
-import type { ArkyMessage } from "./arky.types";
+import type { ArkyMessage, ArkyStreamEvent } from "./arky.types";
 
 describe("ArkyMessageList markdown rendering", () => {
   it("renders assistant markdown with react-markdown styling", () => {
@@ -52,5 +52,36 @@ describe("ArkyMessageList markdown rendering", () => {
     expect(html).not.toContain("<script>");
     expect(html).not.toContain("javascript:alert");
     expect(html).toContain("&lt;script&gt;");
+  });
+
+  it("shows only the active tool while streaming", () => {
+    const events: ArkyStreamEvent[] = [
+      {
+        type: "tool_start",
+        status: "chamando_tool",
+        label: "Consultando obras",
+        tool_name: "obras_list",
+      },
+      {
+        type: "tool_end",
+        status: "tool_concluida",
+        label: "Obras consultadas",
+        tool_name: "obras_list",
+      },
+      {
+        type: "tool_start",
+        status: "chamando_tool",
+        label: "Consultando pagamentos",
+        tool_name: "financeiro_pagamentos_overview",
+      },
+    ];
+
+    const html = renderToStaticMarkup(
+      <ArkyMessageList messages={[]} isLoading events={events} />
+    );
+
+    expect(html).toContain("Consultando pagamentos");
+    expect(html).not.toContain("Consultando obras");
+    expect(html).not.toContain("Obras consultadas");
   });
 });

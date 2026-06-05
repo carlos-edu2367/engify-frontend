@@ -136,6 +136,7 @@ function MessageBubble({
 
 function ThinkingIndicator({ events }: { events: ArkyStreamEvent[] }) {
   const lastEvent = events[events.length - 1];
+  const activeTool = getActiveToolEvent(events);
 
   return (
     <div className="flex gap-2">
@@ -147,8 +148,38 @@ function ThinkingIndicator({ events }: { events: ArkyStreamEvent[] }) {
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
           <span>{lastEvent?.label ?? "Pensando..."}</span>
         </div>
-        {events.length > 0 && <ToolTimeline events={events} />}
+        {activeTool && <ActiveToolIndicator event={activeTool} />}
       </div>
+    </div>
+  );
+}
+
+function getActiveToolEvent(events: ArkyStreamEvent[]) {
+  let activeTool: ArkyStreamEvent | null = null;
+
+  for (const event of events) {
+    if (event.type === "tool_start") {
+      activeTool = event;
+      continue;
+    }
+
+    if (
+      activeTool &&
+      (event.type === "tool_end" || event.type === "tool_error") &&
+      (!event.tool_name || event.tool_name === activeTool.tool_name)
+    ) {
+      activeTool = null;
+    }
+  }
+
+  return activeTool;
+}
+
+function ActiveToolIndicator({ event }: { event: ArkyStreamEvent }) {
+  return (
+    <div className="mt-2 flex items-center gap-1.5 rounded-md border border-border/60 bg-background/60 px-2 py-1 text-[11px] text-muted-foreground">
+      <Wrench className="h-3 w-3 shrink-0 text-primary" />
+      <span className="truncate">{event.label}</span>
     </div>
   );
 }

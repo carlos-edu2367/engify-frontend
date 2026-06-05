@@ -107,7 +107,11 @@ export function ArkyActionCard({
                   {formatData(item.data_agendada) && <span>· {formatData(item.data_agendada)}</span>}
                   {item.diarist_nome && <span>· {item.diarist_nome}</span>}
                   {item.obra_title && <span>· {item.obra_title}</span>}
-                  {item.tem_codigo_pagamento && <span>· Pix ✓</span>}
+                  {item.payment_cod ? (
+                    <span className="break-all">· Código Pix: {item.payment_cod}</span>
+                  ) : (
+                    item.tem_codigo_pagamento && <span>· Pix ✓</span>
+                  )}
                 </p>
               </div>
               <span className="shrink-0 text-xs font-semibold text-foreground">

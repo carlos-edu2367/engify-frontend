@@ -31,6 +31,7 @@ export interface ArkyPagamentoPreviewItem {
   classe: string;
   data_agendada?: string | null;
   tem_codigo_pagamento?: boolean;
+  payment_cod?: string | null;
   obra_title?: string | null;
   diarist_nome?: string | null;
 }
