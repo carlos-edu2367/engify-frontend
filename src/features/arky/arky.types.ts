@@ -86,6 +86,13 @@ export interface ArkyConfirmResponse {
   action_preview_id: string;
   status: "confirmed" | "rejected" | "expired";
   message: string;
+  // Resultado da execucao da acao confirmada (ex.: pagamentos criados).
+  // Ausente em acoes preview-only.
+  result?: {
+    created?: number;
+    total?: number;
+    pagamento_ids?: string[];
+  } | null;
 }
 
 export type MessageRole = "user" | "assistant";
