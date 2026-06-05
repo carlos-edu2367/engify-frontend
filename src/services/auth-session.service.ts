@@ -1,5 +1,6 @@
 import axios from "axios";
 import { refreshAccessToken } from "@/lib/axios";
+import { loadSessionAccessToken } from "@/services/auth-session-token";
 import { useAuthStore } from "@/store/auth.store";
 import type { MeResponse } from "@/types/auth.types";
 
@@ -47,7 +48,7 @@ export function restoreSession() {
     store.startBootstrap();
 
     try {
-      const currentToken = useAuthStore.getState().accessToken;
+      const currentToken = useAuthStore.getState().accessToken ?? loadSessionAccessToken();
       devLog("token em memória?", !!currentToken);
 
       if (currentToken) {

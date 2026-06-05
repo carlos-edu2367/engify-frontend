@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Role } from "@/types/auth.types";
+import { clearSessionAccessToken, saveSessionAccessToken } from "@/services/auth-session-token";
 
 export interface AuthUser {
   id: string;
@@ -39,11 +40,15 @@ export const useAuthStore = create<AuthState>()(
       isBootstrapping: false,
       hasBootstrapped: false,
 
-      setAuth: (token, user) =>
-        set({ accessToken: token, user, isAuthenticated: true }),
+      setAuth: (token, user) => {
+        saveSessionAccessToken(token);
+        set({ accessToken: token, user, isAuthenticated: true });
+      },
 
-      setAccessToken: (token) =>
-        set({ accessToken: token }),
+      setAccessToken: (token) => {
+        saveSessionAccessToken(token);
+        set({ accessToken: token });
+      },
 
       setUser: (user) => set({ user }),
 
@@ -52,17 +57,21 @@ export const useAuthStore = create<AuthState>()(
       finishBootstrap: () =>
         set({ isBootstrapping: false, hasBootstrapped: true }),
 
-      clearAuth: () =>
-        set({ accessToken: null, user: null, isAuthenticated: false }),
+      clearAuth: () => {
+        clearSessionAccessToken();
+        set({ accessToken: null, user: null, isAuthenticated: false });
+      },
 
-      logout: () =>
+      logout: () => {
+        clearSessionAccessToken();
         set({
           accessToken: null,
           user: null,
           isAuthenticated: false,
           isBootstrapping: false,
           hasBootstrapped: true,
-        }),
+        });
+      },
     }),
     {
       name: "engify-auth",
