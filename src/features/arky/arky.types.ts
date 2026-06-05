@@ -25,6 +25,24 @@ export interface ArkyChatRequest {
   screenshot?: string | null;
 }
 
+export interface ArkyPagamentoPreviewItem {
+  title: string;
+  valor: number;
+  classe: string;
+  data_agendada?: string | null;
+  tem_codigo_pagamento?: boolean;
+  obra_title?: string | null;
+  diarist_nome?: string | null;
+}
+
+export interface ArkyCardData {
+  total?: number;
+  quantidade?: number;
+  itens?: ArkyPagamentoPreviewItem[];
+  // Outras ações preparadas podem trazer pares chave/valor arbitrários.
+  [key: string]: unknown;
+}
+
 export interface ArkyCardResponse {
   type: string;
   title: string;
@@ -32,6 +50,8 @@ export interface ArkyCardResponse {
   risk: string;
   requires_confirmation: boolean;
   action_preview_id?: string | null;
+  // Detalhes estruturados da ação preparada (ex.: itens de pagamento).
+  data?: ArkyCardData | null;
 }
 
 export interface ArkyActionResponse {

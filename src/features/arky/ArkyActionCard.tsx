@@ -53,6 +53,15 @@ export function ArkyActionCard({
   const confirmActions = actions.filter((a) => a.type === "confirm_action");
   const deepLinks = actions.filter((a) => a.type === "deep_link");
 
+  const pagamentoItens = Array.isArray(card.data?.itens) ? card.data!.itens! : [];
+  const brl = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+  const formatData = (iso?: string | null) => {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString("pt-BR");
+  };
+
   function handleConfirm() {
     const confirmAction = confirmActions[0] ?? actions.find((a) => a.action_preview_id);
     const previewId = confirmAction?.action_preview_id ?? card.action_preview_id;
@@ -82,6 +91,38 @@ export function ArkyActionCard({
           <span>{riskInfo.label}</span>
         </div>
       </div>
+
+      {/* Detalhes dos pagamentos a agendar */}
+      {pagamentoItens.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          {pagamentoItens.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-start justify-between gap-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1.5"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-foreground">{item.title}</p>
+                <p className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
+                  <span className="capitalize">{item.classe}</span>
+                  {formatData(item.data_agendada) && <span>· {formatData(item.data_agendada)}</span>}
+                  {item.diarist_nome && <span>· {item.diarist_nome}</span>}
+                  {item.obra_title && <span>· {item.obra_title}</span>}
+                  {item.tem_codigo_pagamento && <span>· Pix ✓</span>}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-foreground">
+                {brl(item.valor)}
+              </span>
+            </div>
+          ))}
+          {typeof card.data?.total === "number" && (
+            <div className="flex justify-between border-t border-border/60 px-2.5 pt-1.5 text-xs font-semibold text-foreground">
+              <span>Total ({card.data?.quantidade ?? pagamentoItens.length})</span>
+              <span>{brl(card.data.total)}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status feedback */}
       {status === "confirmed" && (
