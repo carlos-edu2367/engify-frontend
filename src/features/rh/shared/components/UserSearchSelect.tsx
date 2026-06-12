@@ -4,15 +4,18 @@ import { Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usersService } from "@/services/users.service";
+import type { Role } from "@/types/auth.types";
 import type { UserResponse } from "@/types/user.types";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 export function UserSearchSelect({
   value,
   onChange,
+  filterRole,
 }: {
   value?: UserResponse | null;
   onChange: (user: UserResponse | null) => void;
+  filterRole?: Role;
 }) {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 350);
@@ -25,9 +28,10 @@ export function UserSearchSelect({
   const items = useMemo(() => {
     const term = debouncedSearch.trim().toLowerCase();
     return (query.data ?? [])
+      .filter((user) => !filterRole || user.role === filterRole)
       .filter((user) => !term || `${user.nome} ${user.email}`.toLowerCase().includes(term))
       .slice(0, 20);
-  }, [debouncedSearch, query.data]);
+  }, [debouncedSearch, filterRole, query.data]);
 
   return (
     <div className="flex flex-col gap-2">

@@ -32,6 +32,7 @@ import { rhQueryKeys } from "../../shared/utils/queryKeys";
 import { FuncionarioOperationalSummary } from "../components/FuncionarioOperationalSummary";
 import { LocaisPontoTab } from "../components/LocaisPontoTab";
 import { UsuarioVinculadoCard } from "../components/UsuarioVinculadoCard";
+import { UsuarioVinculoEditor } from "../components/UsuarioVinculoEditor";
 import { useFuncionarioDetail } from "../hooks/useFuncionarios";
 
 const weekDayLabels = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"];
@@ -171,7 +172,11 @@ export function FuncionarioDetailPage() {
                     ]}
                   />
                   <div className="mt-4">
-                    <UsuarioVinculadoCard funcionario={funcionario} />
+                    {can("rh.funcionarios.update") ? (
+                      <UsuarioVinculoEditor funcionario={funcionario} />
+                    ) : (
+                      <UsuarioVinculadoCard funcionario={funcionario} />
+                    )}
                   </div>
                 </InfoCard>
               </TabsContent>

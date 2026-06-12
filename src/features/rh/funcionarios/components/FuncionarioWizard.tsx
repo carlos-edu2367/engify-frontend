@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Check, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Info, Mail, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { rhService } from "@/services/rh.service";
+import { usersService } from "@/services/users.service";
 import { getApiErrorMessage } from "@/lib/utils";
 import { funcionarioSchema } from "@/lib/schemas/rh.schemas";
 import { buildDefaultSchedule, extractTurnos, type ScheduleRow } from "@/components/features/rh/rh-utils";
@@ -34,8 +36,11 @@ const steps = [
   "Salario",
   "Jornada",
   "Beneficios",
+  "Vincular Usuario",
   "Revisao",
 ] as const;
+
+const REVISAO_STEP = steps.length - 1;
 
 const initialValues: WizardValues = {
   nome: "",
@@ -64,7 +69,7 @@ function validateStep(step: number, values: WizardValues, schedule: ScheduleRow[
   if (step === 3 && extractTurnos(schedule).length === 0) {
     return "Selecione pelo menos um dia de jornada.";
   }
-  if (step === 5 && !parsed.success) {
+  if (step === REVISAO_STEP && !parsed.success) {
     return parsed.error.issues[0]?.message ?? "Revise os dados antes de criar o funcionario.";
   }
   return null;
@@ -78,12 +83,27 @@ export function FuncionarioWizard() {
   const [selectedUser, setSelectedUser] = useState<UserResponse | null>(null);
   const [schedule, setSchedule] = useState<ScheduleRow[]>(buildDefaultSchedule);
   const [error, setError] = useState<string | null>(null);
+  const [inviteEmail, setInviteEmail] = useState("");
 
   const turnos = useMemo(() => extractTurnos(schedule), [schedule]);
 
+  const inviteMutation = useMutation({
+    mutationFn: () => {
+      if (!inviteEmail.trim() || !inviteEmail.includes("@")) {
+        throw new Error("Informe um e-mail valido para o convite.");
+      }
+      return usersService.inviteFuncionario(inviteEmail.trim());
+    },
+    onSuccess: () => {
+      toast.success(`Convite enviado para ${inviteEmail.trim()}. O usuario podera ser vinculado apos o cadastro.`);
+      setInviteEmail("");
+    },
+    onError: (err) => toast.error(getApiErrorMessage(err)),
+  });
+
   const createMutation = useMutation({
     mutationFn: () => {
-      const validationError = validateStep(5, values, schedule);
+      const validationError = validateStep(REVISAO_STEP, values, schedule);
       if (validationError) {
         throw new Error(validationError);
       }
@@ -137,7 +157,7 @@ export function FuncionarioWizard() {
         <CardDescription>Preencha uma etapa por vez. A revisao final mostra os dados que serao salvos no cadastro.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
-        <div className="grid gap-2 md:grid-cols-6">
+        <div className="grid gap-2 md:grid-cols-7">
           {steps.map((label, index) => (
             <div key={label} className="flex items-center gap-2 rounded-md border p-2">
               <Badge variant={index === step ? "default" : index < step ? "success" : "secondary"}>
@@ -157,12 +177,6 @@ export function FuncionarioWizard() {
             </Field>
             <Field label="CPF">
               <Input value={values.cpf} onChange={(event) => updateValue("cpf", event.target.value)} />
-            </Field>
-            <Field label="Usuario vinculado" description="Opcional. Busque por nome ou email; o identificador fica interno.">
-              <UserSearchSelect value={selectedUser} onChange={(user) => {
-                setSelectedUser(user);
-                updateValue("user_id", user?.user_id ?? "");
-              }} />
             </Field>
           </div>
         ) : null}
@@ -221,6 +235,64 @@ export function FuncionarioWizard() {
         ) : null}
 
         {step === 5 ? (
+          <div className="flex flex-col gap-4">
+            <div className="rounded-md border border-muted p-3 text-sm text-muted-foreground">
+              <p>
+                <strong>Opcional.</strong> Vincule uma conta de usuario existente a este funcionario, ou convide um novo
+                usuario com perfil <em>Funcionario</em> para acesso ao modulo Meu RH.
+              </p>
+            </div>
+            <Tabs defaultValue="buscar">
+              <TabsList className="w-full">
+                <TabsTrigger value="buscar" className="flex-1">Buscar existente</TabsTrigger>
+                <TabsTrigger value="convidar" className="flex-1">Convidar novo</TabsTrigger>
+              </TabsList>
+              <TabsContent value="buscar" className="mt-4">
+                <UserSearchSelect
+                  filterRole="funcionario"
+                  value={selectedUser}
+                  onChange={(user) => {
+                    setSelectedUser(user);
+                    updateValue("user_id", user?.user_id ?? "");
+                  }}
+                />
+              </TabsContent>
+              <TabsContent value="convidar" className="mt-4">
+                <div className="flex flex-col gap-3">
+                  <Field
+                    label="E-mail do novo usuario"
+                    description="O convidado recebera um link para criar a conta com perfil Funcionario. Apos o cadastro, edite este funcionario para vincular."
+                  >
+                    <Input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(event) => setInviteEmail(event.target.value)}
+                      placeholder="funcionario@empresa.com"
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => inviteMutation.mutate()}
+                    disabled={inviteMutation.isPending || !inviteEmail.trim()}
+                    className="self-start"
+                  >
+                    <Mail className="mr-2 size-4" />
+                    {inviteMutation.isPending ? "Enviando..." : "Enviar convite"}
+                  </Button>
+                  {inviteMutation.isSuccess ? (
+                    <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
+                      <UserPlus className="size-4 shrink-0" />
+                      <span>Convite enviado. Vincule o usuario apos o cadastro na edicao do funcionario.</span>
+                    </div>
+                  ) : null}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        ) : null}
+
+        {step === 6 ? (
           <div className="grid gap-4 lg:grid-cols-2">
             <ReviewCard title="Dados pessoais" items={[["Nome", values.nome], ["CPF", values.cpf], ["Usuario", selectedUser ? `${selectedUser.nome} (${selectedUser.email})` : "Sem vinculo"]]} />
             <ReviewCard title="Contrato" items={[["Cargo", values.cargo], ["Admissao", values.data_admissao], ["Status", "Ativo"]]} />
