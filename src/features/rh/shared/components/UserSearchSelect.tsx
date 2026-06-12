@@ -8,6 +8,13 @@ import type { Role } from "@/types/auth.types";
 import type { UserResponse } from "@/types/user.types";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
+function formatCpf(cpf?: string) {
+  if (!cpf) return "";
+  const clean = cpf.replace(/\D/g, "");
+  if (clean.length !== 11) return cpf;
+  return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
+}
+
 export function UserSearchSelect({
   value,
   onChange,
@@ -27,9 +34,22 @@ export function UserSearchSelect({
 
   const items = useMemo(() => {
     const term = debouncedSearch.trim().toLowerCase();
+    const cleanTerm = term.replace(/\D/g, "");
+
     return (query.data ?? [])
       .filter((user) => !filterRole || user.role === filterRole)
-      .filter((user) => !term || `${user.nome} ${user.email}`.toLowerCase().includes(term))
+      .filter((user) => {
+        if (!term) return true;
+        const nameMatch = user.nome.toLowerCase().includes(term);
+        const emailMatch = user.email.toLowerCase().includes(term);
+        
+        const userCpf = user.cpf ?? "";
+        const cleanUserCpf = userCpf.replace(/\D/g, "");
+        const cpfMatch = cleanTerm.length > 0 && cleanUserCpf.includes(cleanTerm);
+        const formattedCpfMatch = userCpf.toLowerCase().includes(term);
+
+        return nameMatch || emailMatch || cpfMatch || formattedCpfMatch;
+      })
       .slice(0, 20);
   }, [debouncedSearch, filterRole, query.data]);
 
@@ -40,16 +60,19 @@ export function UserSearchSelect({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar usuario por nome ou email"
+          placeholder="Buscar usuario por nome, email ou CPF"
           className="pl-9"
-          aria-label="Buscar usuario por nome ou email"
+          aria-label="Buscar usuario por nome, email ou CPF"
         />
       </label>
       {value ? (
         <div className="flex items-center justify-between rounded-md border bg-muted/30 p-2 text-sm">
           <div>
             <p className="font-medium">{value.nome}</p>
-            <p className="text-xs text-muted-foreground">{value.email}</p>
+            <p className="text-xs text-muted-foreground">
+              {value.email}
+              {value.cpf ? ` • CPF: ${formatCpf(value.cpf)}` : ""}
+            </p>
           </div>
           <Button type="button" variant="ghost" size="icon" onClick={() => onChange(null)} aria-label="Remover usuario">
             <X className="size-4" />
@@ -73,7 +96,15 @@ export function UserSearchSelect({
             }}
           >
             <span className="font-medium">{user.nome}</span>
-            <span className="text-xs text-muted-foreground">{user.email}</span>
+            <div className="flex gap-2 text-xs text-muted-foreground">
+              <span>{user.email}</span>
+              {user.cpf ? (
+                <>
+                  <span>•</span>
+                  <span>CPF: {formatCpf(user.cpf)}</span>
+                </>
+              ) : null}
+            </div>
           </button>
         ))}
       </div>

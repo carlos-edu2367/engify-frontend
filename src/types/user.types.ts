@@ -6,6 +6,7 @@ export interface UserResponse {
   email: string;
   role: Role;
   team_id?: string;
+  cpf?: string;
 }
 
 export interface UpdateUserRequest {
