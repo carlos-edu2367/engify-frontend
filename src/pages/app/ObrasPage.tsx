@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Plus, HardHat } from "lucide-react";
+import { Plus, HardHat, Search, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -23,7 +23,9 @@ import { CategoriaObraSelect } from "@/components/features/categorias/CategoriaO
 import { obrasService } from "@/services/obras.service";
 import { itemsService } from "@/services/items.service";
 import { usersService } from "@/services/users.service";
-import { useAllCategoriasObras, useObrasByCategoria } from "@/hooks/useCategoriasObras";
+import { useAllCategoriasObras, useObrasByCategoriaInfinite } from "@/hooks/useCategoriasObras";
+import { useObrasInfinite } from "@/hooks/useObras";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { obraSchema, type ObraFormValues } from "@/lib/schemas/obra.schemas";
 import { formatISO, parseISO } from "date-fns";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
@@ -76,20 +78,28 @@ export function ObrasPage() {
   const [omitFinalizadas, setOmitFinalizadas] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
   const [createInitialPlanning, setCreateInitialPlanning] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput.trim(), 350);
+  const search = debouncedSearch || undefined;
 
   // ── Queries ────────────────────────────────────────────────────────────────
-  // Lista normal (sem filtro de categoria)
-  const { data: obrasData, isLoading: obrasLoading } = useQuery({
-    queryKey: ["obras", { status: filter }],
-    queryFn: () => obrasService.list({ status: filter, limit: 50 }),
-    enabled: !categoriaFilter,
-  });
+  // Lista normal (sem filtro de categoria) — paginação infinita
+  const {
+    data: obrasData,
+    isLoading: obrasLoading,
+    fetchNextPage: fetchNextObrasPage,
+    hasNextPage: hasNextObrasPage,
+    isFetchingNextPage: isFetchingNextObrasPage,
+  } = useObrasInfinite({ status: filter, search, limit: 50 });
 
-  // Lista filtrada por categoria
-  const { data: obrasCatData, isLoading: obrasCatLoading } = useObrasByCategoria(
-    categoriaFilter,
-    { limit: 50 }
-  );
+  // Lista filtrada por categoria — paginação infinita
+  const {
+    data: obrasCatData,
+    isLoading: obrasCatLoading,
+    fetchNextPage: fetchNextCatPage,
+    hasNextPage: hasNextCatPage,
+    isFetchingNextPage: isFetchingNextCatPage,
+  } = useObrasByCategoriaInfinite(categoriaFilter, { search, limit: 50 });
 
   const { data: users = [] } = useQuery({
     queryKey: ["users"],
@@ -104,8 +114,8 @@ export function ObrasPage() {
   );
 
   const allObras = categoriaFilter
-    ? (obrasCatData?.items ?? [])
-    : (obrasData?.items ?? []);
+    ? (obrasCatData?.pages.flatMap((p) => p.items) ?? [])
+    : (obrasData?.pages.flatMap((p) => p.items) ?? []);
 
   const obras = allObras.filter((obra) => {
     if (!omitFinalizadas) return true;
@@ -114,8 +124,31 @@ export function ObrasPage() {
     return true;
   });
 
-  const total = obras.length;
+  const total = categoriaFilter
+    ? (obrasCatData?.pages[0]?.total ?? 0)
+    : (obrasData?.pages[0]?.total ?? 0);
   const isLoading = categoriaFilter ? obrasCatLoading : obrasLoading;
+  const hasNextPage = categoriaFilter ? hasNextCatPage : hasNextObrasPage;
+  const isFetchingNextPage = categoriaFilter ? isFetchingNextCatPage : isFetchingNextObrasPage;
+  const fetchNextPage = categoriaFilter ? fetchNextCatPage : fetchNextObrasPage;
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // ── Criar obra ─────────────────────────────────────────────────────────────
   const createMutation = useMutation({
@@ -223,6 +256,27 @@ export function ObrasPage() {
 
           {/* ── Aba Obras ───────────────────────────────────────────────────── */}
           <TabsContent value="obras" className="mt-4 space-y-4">
+            {/* Busca por título */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Buscar obra por título..."
+                className="pl-9 pr-9"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => setSearchInput("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
             {/* Controles: status + categoria + botão nova obra */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
@@ -433,6 +487,14 @@ export function ObrasPage() {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+
+            {!isLoading && obras.length > 0 && (
+              <div ref={sentinelRef} className="flex justify-center py-4">
+                {isFetchingNextPage && (
+                  <p className="text-sm text-muted-foreground">Carregando mais obras...</p>
+                )}
               </div>
             )}
           </TabsContent>
