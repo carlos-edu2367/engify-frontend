@@ -15,10 +15,13 @@ import type { PagamentoResponse, CreateObraPagamentoRequest } from "@/types/fina
 import type { ObraImageResponse, CreateAttachmentRequest } from "@/types/attachment.types";
 
 export const obrasService = {
-  list: (params: { page?: number; limit?: number; status?: ObraStatus | "all" } = {}) => {
+  list: (params: { page?: number; limit?: number; status?: ObraStatus | "all"; search?: string } = {}) => {
     const queryParams = { ...params };
     if (queryParams.status === "all") {
       delete queryParams.status;
+    }
+    if (!queryParams.search) {
+      delete queryParams.search;
     }
     return api
       .get<PaginatedResponse<ObraResponse>>("/obras", { params: queryParams })
