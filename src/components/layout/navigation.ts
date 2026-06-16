@@ -75,6 +75,9 @@ export function getVisibleNavItems({ role, hasEmployeeLink }: { role?: Role; has
   if (!role) {
     return [];
   }
+  if (role === "funcionario") {
+    return navItems.filter((item) => item.to === "/meu-rh");
+  }
   return navItems.filter((item) => {
     const roleAllowed = (item.roles as readonly string[]).includes(role);
     const linkAllowed = !("requiresEmployeeLink" in item) || !item.requiresEmployeeLink || hasEmployeeLink;

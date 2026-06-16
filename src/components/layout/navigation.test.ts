@@ -9,11 +9,9 @@ describe("getVisibleNavItems", () => {
     expect(items.map((item) => item.label)).toContain("Meu RH");
   });
 
-  it("shows only Meu RH for a common employee user linked to an employee", () => {
+  it("shows only Meu RH for a funcionario user", () => {
     const items = getVisibleNavItems({ role: "funcionario", hasEmployeeLink: true });
-
-    expect(items.map((item) => item.label)).toContain("Meu RH");
-    expect(items.map((item) => item.label)).not.toContain("RH");
+    expect(items.map((item) => item.label)).toEqual(["Meu RH"]);
   });
 
   it("hides Meu RH when the user is not linked to an employee", () => {
