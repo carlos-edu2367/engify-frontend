@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Building2 } from "lucide-react";
+import { Building2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth.store";
 import { rhService } from "@/services/rh.service";
+import { useInstallPrompt } from "@/hooks/useInstallPrompt";
+import { InstallAppDialog } from "@/components/shared/InstallAppDialog";
 import { getVisibleNavItems } from "./navigation";
 
 interface SidebarProps {
@@ -26,6 +30,17 @@ export function Sidebar({ className, compact = false, onNavigate }: SidebarProps
     role: user?.role,
     hasEmployeeLink: employeeLinkQuery.data?.vinculado ?? false,
   });
+
+  const { canShow, isIOS, canInstallDirectly, promptInstall } = useInstallPrompt();
+  const [installOpen, setInstallOpen] = useState(false);
+
+  const handleInstallClick = async () => {
+    if (canInstallDirectly && !isIOS) {
+      await promptInstall();
+    } else {
+      setInstallOpen(true);
+    }
+  };
 
   return (
     <aside
@@ -61,6 +76,19 @@ export function Sidebar({ className, compact = false, onNavigate }: SidebarProps
         ))}
       </nav>
 
+      {canShow && (
+        <div className="border-t border-sidebar-border px-3 py-3">
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-3"
+            onClick={() => { void handleInstallClick(); onNavigate?.(); }}
+          >
+            <Download className="h-4 w-4 shrink-0" />
+            Instalar aplicativo
+          </Button>
+        </div>
+      )}
+      <InstallAppDialog open={installOpen} onOpenChange={setInstallOpen} isIOS={isIOS} />
       {user && (
         <div className="border-t border-sidebar-border px-4 py-3">
           <p className="truncate text-xs font-medium text-sidebar-foreground/90">{user.nome}</p>
