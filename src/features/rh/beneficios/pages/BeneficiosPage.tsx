@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit2, Gift, Plus, Power } from "lucide-react";
+import { Edit2, Gift, Plus, Power, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { useDebouncedValue } from "../../shared/hooks/useDebouncedValue";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
 import { BeneficioDialog } from "../components/BeneficioDialog";
+import { BeneficioFuncionariosDialog } from "../components/BeneficioFuncionariosDialog";
 
 export function BeneficiosPage() {
   const { can } = useRhPermission();
@@ -26,6 +27,7 @@ export function BeneficiosPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<RhBeneficio | null>(null);
   const [statusTarget, setStatusTarget] = useState<RhBeneficio | null>(null);
+  const [assignTarget, setAssignTarget] = useState<RhBeneficio | null>(null);
   const debouncedSearch = useDebouncedValue(search);
   const filters = { page, limit: 20, search: debouncedSearch || undefined };
   const query = useQuery({
@@ -59,6 +61,7 @@ export function BeneficiosPage() {
   const columns: Array<RhColumn<RhBeneficio>> = [
     { key: "nome", header: "Beneficio", render: (item) => <div><p className="font-medium">{item.nome}</p><p className="text-xs text-muted-foreground">{item.descricao ?? "Sem descricao"}</p></div> },
     { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status ?? "ativo"} /> },
+    { key: "valor_dia", header: "Valor/dia", render: (item) => `R$ ${Number(item.valor_dia ?? 0).toFixed(2)}` },
     {
       key: "actions",
       header: "Acoes",
@@ -69,6 +72,9 @@ export function BeneficiosPage() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setStatusTarget(item)}>
             <Power className="size-4" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setAssignTarget(item)}>
+            <Users className="size-4" />
           </Button>
         </div>
       ) : "Disponivel",
@@ -116,6 +122,11 @@ export function BeneficiosPage() {
           beneficio={selected}
           loading={saveMutation.isPending}
           onSubmit={(data) => saveMutation.mutate(data)}
+        />
+        <BeneficioFuncionariosDialog
+          beneficio={assignTarget}
+          open={!!assignTarget}
+          onOpenChange={(open) => !open && setAssignTarget(null)}
         />
         <ConfirmDialog
           open={!!statusTarget}
