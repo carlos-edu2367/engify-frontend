@@ -21,4 +21,20 @@ describe("getNextPageParam", () => {
     const lastPage = page([], 1, 0);
     expect(getNextPageParam(lastPage)).toBeUndefined();
   });
+
+  it("returns undefined exactly at the page*limit === total boundary", () => {
+    const lastPage = page([1, 2, 3], 2, 100, 50);
+    expect(getNextPageParam(lastPage)).toBeUndefined();
+  });
+
+  it("returns undefined when has_next is true but items is empty (defensive guard)", () => {
+    const lastPage: PaginatedResponse<number> = {
+      items: [],
+      page: 1,
+      limit: 50,
+      total: 120,
+      has_next: true,
+    };
+    expect(getNextPageParam(lastPage)).toBeUndefined();
+  });
 });
