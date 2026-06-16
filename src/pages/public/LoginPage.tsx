@@ -40,7 +40,8 @@ export function LoginPage() {
         role: data.role,
         teamId: data.team_id,
       });
-      navigate("/dashboard", { replace: true });
+      const destino = data.role === "funcionario" ? "/meu-rh" : "/dashboard";
+      navigate(destino, { replace: true });
     } catch (err) {
       toast.error(getApiErrorMessage(err));
     }

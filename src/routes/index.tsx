@@ -100,9 +100,30 @@ export const router = createBrowserRouter([
     ),
     errorElement: <RouteErrorElement />,
     children: [
-      { path: "/dashboard", element: <DashboardPage /> },
-      { path: "/calendario", element: <CalendarioPage /> },
-      { path: "/obras", element: <ObrasPage /> },
+      {
+        path: "/dashboard",
+        element: (
+          <ProtectedRoute roles={["admin", "engenheiro", "financeiro", "cliente", "super_admin"]}>
+            <DashboardPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/calendario",
+        element: (
+          <ProtectedRoute roles={["admin", "engenheiro", "financeiro", "cliente", "super_admin"]}>
+            <CalendarioPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/obras",
+        element: (
+          <ProtectedRoute roles={["admin", "engenheiro", "financeiro", "super_admin"]}>
+            <ObrasPage />
+          </ProtectedRoute>
+        ),
+      },
       { path: "/obras/:obraId", element: <ObraDetailPage /> },
       {
         path: "/diarias",
