@@ -1,11 +1,23 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { obrasService } from "@/services/obras.service";
+import { getNextPageParam } from "@/lib/pagination";
 import type { ObraStatus, CreateObraRequest, UpdateObraRequest, RecebimentoRequest } from "@/types/obra.types";
 
 export function useObrasList(params: { status?: ObraStatus | "all"; limit?: number } = {}) {
   return useQuery({
     queryKey: ["obras", params],
     queryFn: () => obrasService.list(params),
+  });
+}
+
+export function useObrasInfinite(params: { status?: ObraStatus | "all"; search?: string; limit?: number } = {}) {
+  const limit = params.limit ?? 50;
+  return useInfiniteQuery({
+    queryKey: ["obras", "infinite", { status: params.status, search: params.search, limit }],
+    queryFn: ({ pageParam }) =>
+      obrasService.list({ status: params.status, search: params.search, limit, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam,
   });
 }
 

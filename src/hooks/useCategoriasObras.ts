@@ -1,4 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { getNextPageParam } from "@/lib/pagination";
 import { categoriasObrasService } from "@/services/categorias-obras.service";
 import type {
   CreateCategoriaObraRequest,
@@ -65,6 +66,21 @@ export function useObrasByCategoria(
   return useQuery({
     queryKey: ["obras", "by-categoria", categoriaId, params],
     queryFn: () => categoriasObrasService.listObras(categoriaId!, params),
+    enabled: !!categoriaId,
+  });
+}
+
+export function useObrasByCategoriaInfinite(
+  categoriaId: string | null,
+  params: { search?: string; limit?: number } = {}
+) {
+  const limit = params.limit ?? 50;
+  return useInfiniteQuery({
+    queryKey: ["obras", "by-categoria", "infinite", categoriaId, { search: params.search, limit }],
+    queryFn: ({ pageParam }) =>
+      categoriasObrasService.listObras(categoriaId!, { search: params.search, limit, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam,
     enabled: !!categoriaId,
   });
 }
