@@ -721,9 +721,9 @@ export function FinanceiroPage() {
         )}
 
         <Tabs defaultValue={isEngineerOnly ? "pagamentos" : "movimentacoes"}>
-          <TabsList className={isEngineerOnly ? "hidden" : undefined}>
-            <TabsTrigger value="movimentacoes">Movimentações</TabsTrigger>
-            <TabsTrigger value="pagamentos">
+          <TabsList className={isEngineerOnly ? "hidden" : "flex w-full justify-start gap-1 overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch] sm:w-auto"}>
+            <TabsTrigger value="movimentacoes" className="min-h-11">Movimentações</TabsTrigger>
+            <TabsTrigger value="pagamentos" className="min-h-11">
               Pagamentos
               {pendentes.length > 0 && (
                 <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-xs text-white">
@@ -731,8 +731,8 @@ export function FinanceiroPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="fluxo-caixa">Fluxo de Caixa</TabsTrigger>
-            <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
+            <TabsTrigger value="fluxo-caixa" className="min-h-11">Fluxo de Caixa</TabsTrigger>
+            <TabsTrigger value="relatorios" className="min-h-11">Relatórios</TabsTrigger>
           </TabsList>
 
           {/* Movimentações */}

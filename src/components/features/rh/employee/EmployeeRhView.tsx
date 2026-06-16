@@ -18,11 +18,11 @@ export function EmployeeRhView() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex w-full flex-wrap justify-start">
-          <TabsTrigger value="overview">Visao geral</TabsTrigger>
-          <TabsTrigger value="ponto">Ponto eletrônico</TabsTrigger>
-          <TabsTrigger value="requests">Solicitacoes</TabsTrigger>
-          <TabsTrigger value="holerites">Holerites</TabsTrigger>
+        <TabsList className="flex w-full justify-start gap-1 overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch] sm:flex-wrap">
+          <TabsTrigger value="overview" className="min-h-11">Visao geral</TabsTrigger>
+          <TabsTrigger value="ponto" className="min-h-11">Ponto eletrônico</TabsTrigger>
+          <TabsTrigger value="requests" className="min-h-11">Solicitacoes</TabsTrigger>
+          <TabsTrigger value="holerites" className="min-h-11">Holerites</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
