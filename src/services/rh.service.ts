@@ -384,4 +384,13 @@ export const rhService = {
 
   reactivateBeneficio: (id: string) =>
     api.post(`/rh/beneficios/${id}/reativar`).then((r) => r.data),
+
+  listBeneficioFuncionarios: (beneficioId: string) =>
+    api.get(`/rh/beneficios/${beneficioId}/funcionarios`).then((r) => r.data),
+
+  assignBeneficioFuncionario: (beneficioId: string, funcionarioId: string) =>
+    api.post(`/rh/beneficios/${beneficioId}/funcionarios`, { funcionario_id: funcionarioId }).then((r) => r.data),
+
+  removeBeneficioFuncionario: (beneficioId: string, funcionarioId: string) =>
+    api.delete(`/rh/beneficios/${beneficioId}/funcionarios/${funcionarioId}`).then((r) => r.data),
 };

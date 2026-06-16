@@ -517,12 +517,21 @@ export interface RhBeneficio {
   nome: string;
   status?: string | null;
   descricao?: string | null;
+  valor_dia: string;
 }
 
 export interface RhBeneficioCreateRequest {
   nome: string;
   descricao?: string | null;
   status?: string | null;
+  valor_dia?: string;
+}
+
+export interface RhBeneficioFuncionario {
+  id: string;
+  beneficio_id: string;
+  funcionario_id: string;
+  status: string;
 }
 
 export type RhBeneficioUpdateRequest = Partial<RhBeneficioCreateRequest>;
