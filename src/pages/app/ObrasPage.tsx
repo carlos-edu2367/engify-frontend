@@ -113,9 +113,26 @@ export function ObrasPage() {
     (categoriasData?.items ?? []).map((c) => [c.id, c])
   );
 
-  const allObras = categoriaFilter
-    ? (obrasCatData?.pages.flatMap((p) => p.items) ?? [])
-    : (obrasData?.pages.flatMap((p) => p.items) ?? []);
+  // Seleciona a query ativa (categoria vs. listagem geral) uma única vez,
+  // em vez de repetir o mesmo ternário para cada campo derivado.
+  const activeQuery = categoriaFilter
+    ? {
+        data: obrasCatData,
+        isLoading: obrasCatLoading,
+        hasNextPage: hasNextCatPage,
+        isFetchingNextPage: isFetchingNextCatPage,
+        fetchNextPage: fetchNextCatPage,
+      }
+    : {
+        data: obrasData,
+        isLoading: obrasLoading,
+        hasNextPage: hasNextObrasPage,
+        isFetchingNextPage: isFetchingNextObrasPage,
+        fetchNextPage: fetchNextObrasPage,
+      };
+  const { isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = activeQuery;
+
+  const allObras = activeQuery.data?.pages.flatMap((p) => p.items) ?? [];
 
   const obras = allObras.filter((obra) => {
     if (!omitFinalizadas) return true;
@@ -124,14 +141,11 @@ export function ObrasPage() {
     return true;
   });
 
-  const total = categoriaFilter
-    ? (obrasCatData?.pages[0]?.total ?? 0)
-    : (obrasData?.pages[0]?.total ?? 0);
-  const isLoading = categoriaFilter ? obrasCatLoading : obrasLoading;
-  const hasNextPage = categoriaFilter ? hasNextCatPage : hasNextObrasPage;
-  const isFetchingNextPage = categoriaFilter ? isFetchingNextCatPage : isFetchingNextObrasPage;
-  const fetchNextPage = categoriaFilter ? fetchNextCatPage : fetchNextObrasPage;
+  const total = activeQuery.data?.pages[0]?.total ?? 0;
 
+  // Único sentinel no DOM (compartilhado entre a listagem geral e a por
+  // categoria), então o nó não muda de identidade ao trocar categoriaFilter —
+  // não precisa entrar nas deps do effect abaixo.
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
