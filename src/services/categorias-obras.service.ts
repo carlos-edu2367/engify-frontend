@@ -26,8 +26,13 @@ export const categoriasObrasService = {
   delete: (id: string) =>
     api.delete<{ message: string }>(`/categorias-obra/${id}`).then((r) => r.data),
 
-  listObras: (categoriaId: string, params: { page?: number; limit?: number; search?: string } = {}) =>
-    api
-      .get<PaginatedResponse<ObraResponse>>(`/categorias-obra/${categoriaId}/obras`, { params })
-      .then((r) => r.data),
+  listObras: (categoriaId: string, params: { page?: number; limit?: number; search?: string } = {}) => {
+    const queryParams = { ...params };
+    if (!queryParams.search) {
+      delete queryParams.search;
+    }
+    return api
+      .get<PaginatedResponse<ObraResponse>>(`/categorias-obra/${categoriaId}/obras`, { params: queryParams })
+      .then((r) => r.data);
+  },
 };
