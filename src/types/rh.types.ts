@@ -255,12 +255,22 @@ export interface RhUltimoHoleriteResumo {
   status: RhStatusHolerite;
 }
 
+export interface RhEstadoPonto7Dias {
+  inicio: string;
+  fim: string;
+  faltas: number;
+  horas_extras: string;
+  horas_faltantes: string;
+  pontos_inconsistentes: number;
+}
+
 export interface RhMeResumo {
   ultimo_ponto?: RhUltimoPontoResumo | null;
   ajustes_pendentes: number;
   ferias_pendentes: number;
   atestados_pendentes: number;
   ultimo_holerite_fechado?: RhUltimoHoleriteResumo | null;
+  estado_ponto_7_dias?: RhEstadoPonto7Dias | null;
 }
 
 export interface RhMeVinculo {

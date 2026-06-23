@@ -186,44 +186,105 @@ export function AdminDashboardSection({
 export function EmployeeSummarySection({ summary, loading }: { summary?: RhMeResumo; loading: boolean }) {
   if (loading || !summary) {
     return (
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-24" />
-        ))}
+      <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className="h-24" />
+          ))}
+        </div>
+        <Skeleton className="h-44" />
       </div>
     );
   }
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <Card>
-        <CardContent className="py-4">
-          <p className="text-xs uppercase text-muted-foreground">Ultimo ponto</p>
-          <p className="text-lg font-semibold">{summary.ultimo_ponto ? statusLabel(summary.ultimo_ponto.status) : "Sem registro"}</p>
-          <p className="text-xs text-muted-foreground">
-            {summary.ultimo_ponto ? formatDateTime(summary.ultimo_ponto.timestamp) : "Ainda nao ha batidas recentes"}
-          </p>
-        </CardContent>
-      </Card>
-      <StatCard title="Ajustes pendentes" value={summary.ajustes_pendentes} />
-      <StatCard title="Ferias pendentes" value={summary.ferias_pendentes} />
-      <Card>
-        <CardContent className="py-4">
-          <p className="text-xs uppercase text-muted-foreground">Ultimo holerite</p>
-          <p className="text-lg font-semibold">
-            {summary.ultimo_holerite_fechado
-              ? formatCurrency(summary.ultimo_holerite_fechado.valor_liquido)
-              : "Sem fechamento"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {summary.ultimo_holerite_fechado
-              ? `${String(summary.ultimo_holerite_fechado.mes_referencia).padStart(2, "0")}/${summary.ultimo_holerite_fechado.ano_referencia}`
-              : "Nenhum holerite fechado ainda"}
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-xs uppercase text-muted-foreground">Ultimo ponto</p>
+            <p className="text-lg font-semibold">{summary.ultimo_ponto ? statusLabel(summary.ultimo_ponto.status) : "Sem registro"}</p>
+            <p className="text-xs text-muted-foreground">
+              {summary.ultimo_ponto ? formatDateTime(summary.ultimo_ponto.timestamp) : "Ainda nao ha batidas recentes"}
+            </p>
+          </CardContent>
+        </Card>
+        <StatCard title="Ajustes pendentes" value={summary.ajustes_pendentes} />
+        <StatCard title="Ferias pendentes" value={summary.ferias_pendentes} />
+        <Card>
+          <CardContent className="py-4">
+            <p className="text-xs uppercase text-muted-foreground">Ultimo holerite</p>
+            <p className="text-lg font-semibold">
+              {summary.ultimo_holerite_fechado
+                ? formatCurrency(summary.ultimo_holerite_fechado.valor_liquido)
+                : "Sem fechamento"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {summary.ultimo_holerite_fechado
+                ? `${String(summary.ultimo_holerite_fechado.mes_referencia).padStart(2, "0")}/${summary.ultimo_holerite_fechado.ano_referencia}`
+                : "Nenhum holerite fechado ainda"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      <EmployeePointStateSection summary={summary} />
     </div>
   );
+}
+
+function EmployeePointStateSection({ summary }: { summary: RhMeResumo }) {
+  const state = summary.estado_ponto_7_dias;
+  return (
+    <Card>
+      <CardHeader className="pb-4">
+        <CardTitle className="text-xl">Estado do ponto dos ultimos 7 dias</CardTitle>
+        <CardDescription>
+          Resumo calculado a partir do seu horario de trabalho e dos registros recentes de ponto.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!state ? (
+          <EmptyState
+            title="Resumo indisponivel"
+            description="Assim que houver horario e registros suficientes, o estado do ponto aparecera aqui."
+            icon={<MapPin className="h-10 w-10" />}
+          />
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Periodo: {formatDateOnly(state.inicio)} ate {formatDateOnly(state.fim)}
+            </p>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <PointStateMetric title="Faltas" value={state.faltas} />
+              <PointStateMetric title="Horas extras" value={formatHours(state.horas_extras)} />
+              <PointStateMetric title="Horas faltantes" value={formatHours(state.horas_faltantes)} />
+              <PointStateMetric title="Pontos inconsistentes" value={state.pontos_inconsistentes} />
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PointStateMetric({ title, value }: { title: string; value: string | number }) {
+  return (
+    <div className="rounded-md border bg-muted/30 p-4">
+      <p className="text-xs uppercase text-muted-foreground">{title}</p>
+      <p className="mt-1 text-2xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function formatHours(value: string) {
+  return `${Number(value || 0).toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} h`;
+}
+
+function formatDateOnly(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(`${value}T00:00:00`));
 }
 
 export function AuditSection({ items, loading }: { items: RhAuditLog[]; loading: boolean }) {
