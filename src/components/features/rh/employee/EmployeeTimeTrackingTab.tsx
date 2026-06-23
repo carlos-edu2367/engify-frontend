@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { getApiErrorMessage } from "@/lib/utils";
 import { rhService } from "@/services/rh.service";
-import type { RhStatusPonto } from "@/types/rh.types";
+import type { RhRegistroPonto, RhStatusPonto, RhTipoPonto } from "@/types/rh.types";
 import { Field, HistorySection, statusLabel } from "../rh-shared";
 import {
   buildDateEnd,
@@ -22,6 +23,12 @@ import {
   formatDateTime,
   getCurrentPosition,
 } from "../rh-utils";
+
+function isInconsistente(tipo: RhTipoPonto, items: RhRegistroPonto[]): boolean {
+  if (items.length === 0) return tipo === "saida";
+  const sorted = [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return sorted[0].tipo === tipo;
+}
 
 const pointStatusOptions: Array<{ value: RhStatusPonto | "all"; label: string }> = [
   { value: "all", label: "Todos os status" },
@@ -36,6 +43,7 @@ export function EmployeeTimeTrackingTab() {
   const [pointStart, setPointStart] = useState("");
   const [pointEnd, setPointEnd] = useState("");
   const [pointStatus, setPointStatus] = useState<RhStatusPonto | "all">("all");
+  const [pendingTipo, setPendingTipo] = useState<RhTipoPonto | null>(null);
 
   const meusPontosQuery = useQuery({
     queryKey: ["rh-meus-pontos", pointStatus, pointStart, pointEnd],
@@ -74,6 +82,15 @@ export function EmployeeTimeTrackingTab() {
     },
   });
 
+  const handleBaterPonto = (tipo: RhTipoPonto) => {
+    const history = meusPontosQuery.data?.items ?? [];
+    if (isInconsistente(tipo, history)) {
+      setPendingTipo(tipo);
+      return;
+    }
+    registrarPontoMutation.mutate(tipo);
+  };
+
   return (
     <div className="space-y-4">
       <Card className="overflow-hidden">
@@ -91,7 +108,7 @@ export function EmployeeTimeTrackingTab() {
             size="lg"
             className="h-16 justify-start text-left"
             disabled={registrarPontoMutation.isPending}
-            onClick={() => registrarPontoMutation.mutate("entrada")}
+            onClick={() => handleBaterPonto("entrada")}
           >
             <div>
               <div className="font-semibold">Entrada</div>
@@ -103,7 +120,7 @@ export function EmployeeTimeTrackingTab() {
             variant="outline"
             className="h-16 justify-start text-left"
             disabled={registrarPontoMutation.isPending}
-            onClick={() => registrarPontoMutation.mutate("saida")}
+            onClick={() => handleBaterPonto("saida")}
           >
             <div>
               <div className="font-semibold">Saida</div>
@@ -143,6 +160,32 @@ export function EmployeeTimeTrackingTab() {
       </Card>
 
       <HistorySection items={meusPontosQuery.data?.items ?? []} loading={meusPontosQuery.isLoading} />
+
+      <Dialog open={!!pendingTipo} onOpenChange={(open) => !open && setPendingTipo(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Inconsistencia detectada</DialogTitle>
+            <DialogDescription>
+              Detectamos uma inconsistencia nesse ponto. O ultimo registro ja e do tipo{" "}
+              <strong>{pendingTipo === "entrada" ? "entrada" : "saida"}</strong>. Deseja bater ainda assim?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingTipo(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!pendingTipo) return;
+                setPendingTipo(null);
+                registrarPontoMutation.mutate(pendingTipo);
+              }}
+            >
+              Bater mesmo assim
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

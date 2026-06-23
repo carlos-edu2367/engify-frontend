@@ -30,6 +30,20 @@ export function usePontoDiaDetalhe(funcionarioId?: string | null, data?: string 
   });
 }
 
+export function useExcluirPonto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
+      rhService.excluirPonto(id, motivo),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "ponto"] });
+      toast.success("Registro de ponto excluido.");
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+}
+
 export function useAjustePontoActions() {
   const queryClient = useQueryClient();
 

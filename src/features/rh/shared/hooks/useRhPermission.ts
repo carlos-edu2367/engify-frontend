@@ -12,6 +12,7 @@ export type RhPermission =
   | "rh.ponto.adjust"
   | "rh.ponto.approve_adjustment"
   | "rh.ponto.manage_locations"
+  | "rh.ponto.delete"
   | "rh.ferias.view"
   | "rh.ferias.approve"
   | "rh.atestados.view"
@@ -38,6 +39,7 @@ const adminPermissions: RhPermission[] = [
   "rh.ponto.adjust",
   "rh.ponto.approve_adjustment",
   "rh.ponto.manage_locations",
+  "rh.ponto.delete",
   "rh.ferias.view",
   "rh.ferias.approve",
   "rh.atestados.view",

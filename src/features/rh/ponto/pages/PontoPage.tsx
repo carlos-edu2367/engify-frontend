@@ -4,9 +4,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Clock3, ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import type { RhFuncionarioListItem, RhRegistroPonto, RhStatusPonto } from "@/types/rh.types";
 import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSelect";
 import { PermissionGate } from "../../shared/components/PermissionGate";
@@ -18,7 +20,7 @@ import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { employeeDisplay } from "../../shared/utils/display";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
-import { usePontoDiaDetalhe, usePontos } from "../hooks/usePontoOperacional";
+import { useExcluirPonto, usePontoDiaDetalhe, usePontos } from "../hooks/usePontoOperacional";
 
 const statusOptions: Array<{ value: RhStatusPonto | "all"; label: string }> = [
   { value: "all", label: "Todos os status" },
@@ -40,6 +42,9 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
   const [searchParams, setSearchParams] = useSearchParams();
   const [selected, setSelected] = useState<RhRegistroPonto | null>(null);
   const [employee, setEmployee] = useState<RhFuncionarioListItem | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteMotivo, setDeleteMotivo] = useState("");
+  const excluirPontoMutation = useExcluirPonto();
   const page = Number(searchParams.get("page") ?? "1");
   const status = (forcedStatus ?? searchParams.get("status") ?? "all") as RhStatusPonto | "all";
   const start = searchParams.get("start") ?? "";
@@ -204,10 +209,60 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
                 <Detail label="Ajustes relacionados" value={`${detalhe?.ajustes_relacionados?.length ?? 0}`} />
                 <Detail label="Impacto estimado" value={detalhe?.impacto_estimado ? `HE ${detalhe.impacto_estimado.horas_extras ?? "0"} · Faltas ${detalhe.impacto_estimado.faltas ?? "0"}` : "Nao calculado"} />
                 {detalheQuery.isError ? <p className="rounded-md border p-3 text-sm text-muted-foreground">Detalhe operacional indisponivel neste ambiente; exibindo dados da listagem.</p> : null}
+                <PermissionGate permission="rh.ponto.delete">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => { setDeleteMotivo(""); setDeleteDialogOpen(true); }}
+                  >
+                    Excluir registro
+                  </Button>
+                </PermissionGate>
               </div>
             ) : null}
           </SheetContent>
         </Sheet>
+
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Excluir registro de ponto</DialogTitle>
+              <DialogDescription>
+                Esta acao nao pode ser desfeita. O registro sera ocultado e o motivo ficara no log de auditoria.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              placeholder="Descreva o motivo da exclusao..."
+              value={deleteMotivo}
+              onChange={(e) => setDeleteMotivo(e.target.value)}
+              rows={3}
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={!deleteMotivo.trim() || excluirPontoMutation.isPending}
+                onClick={() => {
+                  if (!selected) return;
+                  excluirPontoMutation.mutate(
+                    { id: selected.id, motivo: deleteMotivo.trim() },
+                    {
+                      onSuccess: () => {
+                        setDeleteDialogOpen(false);
+                        setSelected(null);
+                      },
+                    }
+                  );
+                }}
+              >
+                {excluirPontoMutation.isPending ? "Excluindo..." : "Confirmar exclusao"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </PermissionGate>
   );
