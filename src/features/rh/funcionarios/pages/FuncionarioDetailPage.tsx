@@ -29,6 +29,7 @@ import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { formatRhCurrency, formatRhDate, maskCpf, summarizeSchedule } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
+import { FuncionarioBeneficiosTab } from "../components/FuncionarioBeneficiosTab";
 import { FuncionarioOperationalSummary } from "../components/FuncionarioOperationalSummary";
 import { LocaisPontoTab } from "../components/LocaisPontoTab";
 import { UsuarioVinculadoCard } from "../components/UsuarioVinculadoCard";
@@ -158,6 +159,7 @@ export function FuncionarioDetailPage() {
                 <TabsTrigger value="jornada">Jornada</TabsTrigger>
                 <TabsTrigger value="ponto">Ponto</TabsTrigger>
                 <TabsTrigger value="locais">Locais de ponto</TabsTrigger>
+                <TabsTrigger value="beneficios">Beneficios</TabsTrigger>
                 <TabsTrigger value="ausencias">Ferias/Atestados</TabsTrigger>
                 <TabsTrigger value="holerites">Holerites</TabsTrigger>
                 <TabsTrigger value="auditoria">Auditoria</TabsTrigger>
@@ -214,6 +216,9 @@ export function FuncionarioDetailPage() {
               </TabsContent>
               <TabsContent value="locais">
                 <LocaisPontoTab funcionarioId={funcionario.id} />
+              </TabsContent>
+              <TabsContent value="beneficios">
+                <FuncionarioBeneficiosTab funcionarioId={funcionario.id} />
               </TabsContent>
               <TabsContent value="ausencias">
                 <FuncionarioOperationalSummary funcionario={funcionario} scope="ausencias" />

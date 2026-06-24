@@ -16,6 +16,7 @@ export const rhQueryKeys = {
       [...rhQueryKeys.funcionarios.all(), "list", filters] as const,
     detail: (id: string | null) => [...rhQueryKeys.funcionarios.all(), "detail", id] as const,
     locaisPonto: (id: string | null) => [...rhQueryKeys.funcionarios.all(), "locais-ponto", id] as const,
+    beneficios: (id: string | null) => [...rhQueryKeys.funcionarios.all(), "beneficios", id] as const,
   },
   ponto: {
     list: (filters?: RhPontoFilters) => [...rhQueryKeys.all, "ponto", "list", filters ?? {}] as const,

@@ -393,6 +393,9 @@ export const rhService = {
   listBeneficioFuncionarios: (beneficioId: string) =>
     api.get(`/rh/beneficios/${beneficioId}/funcionarios`).then((r) => r.data),
 
+  listFuncionarioBeneficios: (funcionarioId: string) =>
+    api.get(`/rh/funcionarios/${funcionarioId}/beneficios`).then((r) => r.data),
+
   assignBeneficioFuncionario: (beneficioId: string, funcionarioId: string) =>
     api.post(`/rh/beneficios/${beneficioId}/funcionarios`, { funcionario_id: funcionarioId }).then((r) => r.data),
 
