@@ -533,7 +533,6 @@ export interface RhBeneficio {
 export interface RhBeneficioCreateRequest {
   nome: string;
   descricao?: string | null;
-  status?: string | null;
   valor_dia?: string;
 }
 

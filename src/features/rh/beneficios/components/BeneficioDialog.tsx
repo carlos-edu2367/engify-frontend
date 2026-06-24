@@ -10,7 +10,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { RhBeneficio, RhBeneficioCreateRequest } from "@/types/rh.types";
 
@@ -30,14 +29,12 @@ export function BeneficioDialog({
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [valorDia, setValorDia] = useState("0.00");
-  const [status, setStatus] = useState("ativo");
 
   useEffect(() => {
     if (!open) return;
     setNome(beneficio?.nome ?? "");
     setDescricao(beneficio?.descricao ?? "");
     setValorDia(beneficio?.valor_dia ?? "0.00");
-    setStatus(beneficio?.status ?? "ativo");
   }, [beneficio, open]);
 
   return (
@@ -60,23 +57,13 @@ export function BeneficioDialog({
             <span className="text-sm font-medium">Valor por dia (R$)</span>
             <Input type="number" min="0" step="0.01" value={valorDia} onChange={(event) => setValorDia(event.target.value)} placeholder="0,00" />
           </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Status</span>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ativo">Ativo</SelectItem>
-                <SelectItem value="inativo">Inativo</SelectItem>
-              </SelectContent>
-            </Select>
-          </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
           <Button
-            onClick={() => onSubmit({ nome: nome.trim(), descricao: descricao.trim() || null, status, valor_dia: valorDia || "0.00" })}
+            onClick={() => onSubmit({ nome: nome.trim(), descricao: descricao.trim() || null, valor_dia: valorDia || "0.00" })}
             disabled={loading || !nome.trim()}
           >
             <Save className="size-4" />

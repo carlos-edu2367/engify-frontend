@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { rhService } from "@/services/rh.service";
-import type { RhBeneficio } from "@/types/rh.types";
+import type { RhBeneficio, RhBeneficioCreateRequest } from "@/types/rh.types";
 import { getApiErrorMessage } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { PermissionGate } from "../../shared/components/PermissionGate";
@@ -37,7 +37,7 @@ export function BeneficiosPage() {
   });
   const invalidate = () => queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "encargos", "beneficios"] });
   const saveMutation = useMutation({
-    mutationFn: (data: { nome: string; descricao?: string | null; status?: string | null }) =>
+    mutationFn: (data: RhBeneficioCreateRequest) =>
       selected ? rhService.updateBeneficio(selected.id, data) : rhService.createBeneficio(data),
     onSuccess: () => {
       invalidate();
