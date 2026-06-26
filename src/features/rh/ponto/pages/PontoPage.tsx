@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Clock3, ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,8 @@ import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { employeeDisplay } from "../../shared/utils/display";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
-import { useExcluirPonto, usePontoDiaDetalhe, usePontos } from "../hooks/usePontoOperacional";
+import { classifyDayPunches, intervalRoles, punchRoleLabel } from "../../shared/utils/punchClassification";
+import { useAtualizarPonto, useExcluirPonto, usePontoDiaDetalhe, usePontos } from "../hooks/usePontoOperacional";
 
 const statusOptions: Array<{ value: RhStatusPonto | "all"; label: string }> = [
   { value: "all", label: "Todos os status" },
@@ -44,6 +46,9 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
   const [employee, setEmployee] = useState<RhFuncionarioListItem | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteMotivo, setDeleteMotivo] = useState("");
+  const [editTarget, setEditTarget] = useState<RhRegistroPonto | null>(null);
+  const [editTime, setEditTime] = useState("");
+  const atualizarPontoMutation = useAtualizarPonto();
   const excluirPontoMutation = useExcluirPonto();
   const page = Number(searchParams.get("page") ?? "1");
   const status = (forcedStatus ?? searchParams.get("status") ?? "all") as RhStatusPonto | "all";
@@ -62,6 +67,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
   const selectedDate = selected?.timestamp ? selected.timestamp.slice(0, 10) : null;
   const detalheQuery = usePontoDiaDetalhe(selected?.funcionario_id, selectedDate);
   const detalhe = detalheQuery.data;
+  const dayRoles = classifyDayPunches(detalhe?.registros ?? (selected ? [selected] : []));
   const selectedRegistro = detalhe?.registros.find((registro) => registro.id === selected?.id) ?? selected;
   const authorizedLocation = detalhe?.locais_autorizados?.find((local) => local.id === selectedRegistro?.local_ponto_id) ?? detalhe?.locais_autorizados?.[0] ?? null;
   const rows = pontosQuery.data?.items ?? [];
@@ -198,12 +204,35 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
                 <div className="rounded-md border p-3">
                   <p className="text-xs uppercase text-muted-foreground">Linha do tempo do dia</p>
                   <div className="mt-3 flex flex-col gap-2">
-                    {(detalhe?.registros ?? [selected]).map((registro) => (
-                      <div key={registro.id} className="flex items-center justify-between rounded-md bg-muted/40 p-2">
-                        <span>{registro.tipo === "entrada" ? "Entrada" : "Saida"}</span>
-                        <span>{new Date(registro.timestamp).toLocaleTimeString("pt-BR")}</span>
-                      </div>
-                    ))}
+                    {(detalhe?.registros ?? [selected]).map((registro) => {
+                      const role = dayRoles.get(registro.id) ?? "neutro";
+                      const label = role !== "neutro" ? punchRoleLabel[role] : registro.tipo === "entrada" ? "Entrada" : "Saida";
+                      return (
+                        <div key={registro.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/40 p-2">
+                          <span className="flex items-center gap-2">
+                            {label}
+                            {intervalRoles.has(role) ? <Badge variant="secondary">Intervalo</Badge> : null}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <span>{new Date(registro.timestamp).toLocaleTimeString("pt-BR")}</span>
+                            <PermissionGate permission="rh.ponto.adjust">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditTarget(registro);
+                                  const d = new Date(registro.timestamp);
+                                  const pad = (n: number) => String(n).padStart(2, "0");
+                                  setEditTime(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+                                }}
+                              >
+                                Editar
+                              </Button>
+                            </PermissionGate>
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <Detail label="Ajustes relacionados" value={`${detalhe?.ajustes_relacionados?.length ?? 0}`} />
@@ -259,6 +288,35 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
                 }}
               >
                 {excluirPontoMutation.isPending ? "Excluindo..." : "Confirmar exclusao"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar horario do ponto</DialogTitle>
+              <DialogDescription>
+                Corrige o horario desta batida. A acao marca o registro como ajustado e fica no log de auditoria.
+              </DialogDescription>
+            </DialogHeader>
+            <Input type="datetime-local" value={editTime} onChange={(e) => setEditTime(e.target.value)} />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditTarget(null)} disabled={atualizarPontoMutation.isPending}>
+                Cancelar
+              </Button>
+              <Button
+                disabled={!editTime || atualizarPontoMutation.isPending}
+                onClick={() => {
+                  if (!editTarget) return;
+                  atualizarPontoMutation.mutate(
+                    { id: editTarget.id, timestamp: new Date(editTime).toISOString() },
+                    { onSuccess: () => setEditTarget(null) },
+                  );
+                }}
+              >
+                {atualizarPontoMutation.isPending ? "Salvando..." : "Salvar horario"}
               </Button>
             </DialogFooter>
           </DialogContent>

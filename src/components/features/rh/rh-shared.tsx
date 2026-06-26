@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { formatCurrency } from "@/lib/utils";
+import { classifyDayPunches, intervalRoles, punchRoleLabel } from "@/features/rh/shared/utils/punchClassification";
 import type { FuncionarioFormValues } from "@/lib/schemas/rh.schemas";
 import type {
   RhAjustePonto,
@@ -350,6 +351,7 @@ function AuditPayload({ label, payload }: { label: string; payload?: Record<stri
 }
 
 export function HistorySection({ items, loading }: { items: RhRegistroPonto[]; loading: boolean }) {
+  const roles = classifyDayPunches(items);
   return (
     <Card>
       <CardHeader className="pb-4">
@@ -374,15 +376,23 @@ export function HistorySection({ items, loading }: { items: RhRegistroPonto[]; l
           />
         ) : (
           <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.id} className="flex flex-col gap-2 rounded-lg border p-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="font-medium">{item.tipo === "entrada" ? "Entrada" : "Saida"}</p>
-                  <p className="text-sm text-muted-foreground">{formatDateTime(item.timestamp)}</p>
+            {items.map((item) => {
+              const role = roles.get(item.id) ?? "neutro";
+              const isInterval = intervalRoles.has(role);
+              const label = role !== "neutro" ? punchRoleLabel[role] : item.tipo === "entrada" ? "Entrada" : "Saida";
+              return (
+                <div key={item.id} className="flex flex-col gap-2 rounded-lg border p-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="font-medium">{label}</p>
+                    <p className="text-sm text-muted-foreground">{formatDateTime(item.timestamp)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isInterval ? <Badge variant="secondary">Intervalo</Badge> : null}
+                    <Badge variant={statusBadgeVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                  </div>
                 </div>
-                <Badge variant={statusBadgeVariant(item.status)}>{statusLabel(item.status)}</Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

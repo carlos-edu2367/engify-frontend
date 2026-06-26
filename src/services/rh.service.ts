@@ -328,6 +328,11 @@ export const rhService = {
       .delete<{ message: string }>(`/rh/ponto/registros/${id}`, { data: { motivo } })
       .then((r) => r.data),
 
+  updateRegistroPonto: (id: string, timestamp: string) =>
+    api
+      .patch<RhRegistroPonto>(`/rh/ponto/registros/${id}`, { timestamp })
+      .then((r) => r.data),
+
   listRegrasEncargos: (filters?: { page?: number; limit?: number; search?: string; status?: string }) =>
     api
       .get<RhRegrasEncargosResponse>("/rh/encargos/regras", {

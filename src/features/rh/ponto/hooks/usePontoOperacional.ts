@@ -44,6 +44,20 @@ export function useExcluirPonto() {
   });
 }
 
+export function useAtualizarPonto() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, timestamp }: { id: string; timestamp: string }) =>
+      rhService.updateRegistroPonto(id, timestamp),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "ponto"] });
+      toast.success("Horario do ponto atualizado.");
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+}
+
 export function useAjustePontoActions() {
   const queryClient = useQueryClient();
 

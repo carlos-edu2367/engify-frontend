@@ -49,6 +49,11 @@ export function AjustesPontoPage() {
       { key: "data", header: "Data", render: (item) => formatRhDate(item.data_referencia) },
       { key: "entrada", header: "Entrada solicitada", render: (item) => item.hora_entrada_solicitada ? new Date(item.hora_entrada_solicitada).toLocaleTimeString("pt-BR") : "-" },
       { key: "saida", header: "Saida solicitada", render: (item) => item.hora_saida_solicitada ? new Date(item.hora_saida_solicitada).toLocaleTimeString("pt-BR") : "-" },
+      { key: "intervalo", header: "Intervalo solicitado", render: (item) =>
+        item.hora_intervalo_inicio_solicitada && item.hora_intervalo_fim_solicitada
+          ? `${new Date(item.hora_intervalo_inicio_solicitada).toLocaleTimeString("pt-BR")} - ${new Date(item.hora_intervalo_fim_solicitada).toLocaleTimeString("pt-BR")}`
+          : "-",
+      },
       { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status} /> },
       {
         key: "actions",

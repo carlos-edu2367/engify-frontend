@@ -61,9 +61,7 @@ export function FuncionarioBeneficiosTab({ funcionarioId }: { funcionarioId: str
   const allBeneficios = allBeneficiosQuery.data?.items ?? [];
 
   const assignedIds = new Set(assigned.map((v: { beneficio_id: string }) => v.beneficio_id));
-  const available = allBeneficios.filter(
-    (b: { id: string; status?: string }) => !assignedIds.has(b.id) && b.status !== "inativo"
-  );
+  const available = allBeneficios.filter((b) => !assignedIds.has(b.id) && b.status !== "inativo");
 
   return (
     <PermissionGate permission="rh.regras.view">
@@ -92,7 +90,7 @@ export function FuncionarioBeneficiosTab({ funcionarioId }: { funcionarioId: str
                       Nenhum beneficio disponivel
                     </SelectItem>
                   ) : (
-                    available.map((b: { id: string; nome: string; valor_dia: string }) => (
+                    available.map((b) => (
                       <SelectItem key={b.id} value={b.id}>
                         {b.nome} — R$ {Number(b.valor_dia ?? 0).toFixed(2)}/dia
                       </SelectItem>
@@ -126,7 +124,7 @@ export function FuncionarioBeneficiosTab({ funcionarioId }: { funcionarioId: str
           {assigned.length > 0 ? (
             <div className="flex flex-col gap-2">
               {assigned.map((vinculo: { beneficio_id: string; id: string }) => {
-                const beneficio = allBeneficios.find((b: { id: string }) => b.id === vinculo.beneficio_id);
+                const beneficio = allBeneficios.find((b) => b.id === vinculo.beneficio_id);
                 const nome = beneficio?.nome ?? vinculo.beneficio_id;
                 const valor = beneficio ? `R$ ${Number(beneficio.valor_dia ?? 0).toFixed(2)}/dia` : "";
                 return (

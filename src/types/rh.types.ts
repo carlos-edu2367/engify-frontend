@@ -125,6 +125,8 @@ export interface RhAjustePonto extends RhEmployeeDisplayFields {
   justificativa: string;
   hora_entrada_solicitada?: string | null;
   hora_saida_solicitada?: string | null;
+  hora_intervalo_inicio_solicitada?: string | null;
+  hora_intervalo_fim_solicitada?: string | null;
   status: RhStatusAjuste;
   motivo_rejeicao?: string | null;
 }
@@ -307,6 +309,8 @@ export interface RhAjustePontoCreateRequest {
   justificativa: string;
   hora_entrada_solicitada?: string | null;
   hora_saida_solicitada?: string | null;
+  hora_intervalo_inicio_solicitada?: string | null;
+  hora_intervalo_fim_solicitada?: string | null;
 }
 
 export interface RhAtestadoCreateRequest {

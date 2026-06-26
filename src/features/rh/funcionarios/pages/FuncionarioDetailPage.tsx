@@ -29,12 +29,15 @@ import { useRhPermission } from "../../shared/hooks/useRhPermission";
 import { formatRhCurrency, formatRhDate, maskCpf, summarizeSchedule } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
+import { buildScheduleFromTurnos, extractTurnos, type ScheduleRow } from "@/components/features/rh/rh-utils";
+import { ScheduleEditor as JornadaScheduleEditor } from "@/components/features/rh/rh-shared";
 import { FuncionarioBeneficiosTab } from "../components/FuncionarioBeneficiosTab";
 import { FuncionarioOperationalSummary } from "../components/FuncionarioOperationalSummary";
 import { LocaisPontoTab } from "../components/LocaisPontoTab";
 import { UsuarioVinculadoCard } from "../components/UsuarioVinculadoCard";
 import { UsuarioVinculoEditor } from "../components/UsuarioVinculoEditor";
 import { useFuncionarioDetail } from "../hooks/useFuncionarios";
+import type { RhFuncionario } from "@/types/rh.types";
 
 const weekDayLabels = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"];
 
@@ -194,22 +197,7 @@ export function FuncionarioDetailPage() {
                 </InfoCard>
               </TabsContent>
               <TabsContent value="jornada">
-                <InfoCard icon={<Clock3 className="size-5" />} title="Jornada">
-                  {funcionario.horario_trabalho?.turnos.length ? (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {funcionario.horario_trabalho.turnos.map((turno) => (
-                        <div key={turno.dia_semana} className="rounded-md border p-3">
-                          <p className="font-medium">{weekDayLabels[turno.dia_semana] ?? "Dia de trabalho"}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {turno.hora_entrada.slice(0, 5)} as {turno.hora_saida.slice(0, 5)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nenhuma jornada cadastrada.</p>
-                  )}
-                </InfoCard>
+                <JornadaTab funcionario={funcionario} />
               </TabsContent>
               <TabsContent value="ponto">
                 <FuncionarioOperationalSummary funcionario={funcionario} scope="ponto" />
@@ -319,17 +307,100 @@ function SummaryItem({ label, value }: { label: string; value: React.ReactNode }
   );
 }
 
-function InfoCard({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function InfoCard({ icon, title, children, action }: { icon: React.ReactNode; title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <Card>
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          {icon}
-          {title}
-        </CardTitle>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            {icon}
+            {title}
+          </CardTitle>
+          {action}
+        </div>
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>
+  );
+}
+
+function JornadaTab({ funcionario }: { funcionario: RhFuncionario }) {
+  const queryClient = useQueryClient();
+  const { can } = useRhPermission();
+  const canEdit = can("rh.funcionarios.update");
+  const [open, setOpen] = useState(false);
+  const [schedule, setSchedule] = useState<ScheduleRow[]>(() =>
+    buildScheduleFromTurnos(funcionario.horario_trabalho?.turnos),
+  );
+
+  const saveMutation = useMutation({
+    mutationFn: () => rhService.updateHorario(funcionario.id, { turnos: extractTurnos(schedule) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: rhQueryKeys.funcionarios.detail(funcionario.id) });
+      toast.success("Jornada atualizada.");
+      setOpen(false);
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+
+  const openEditor = () => {
+    setSchedule(buildScheduleFromTurnos(funcionario.horario_trabalho?.turnos));
+    setOpen(true);
+  };
+
+  return (
+    <InfoCard
+      icon={<Clock3 className="size-5" />}
+      title="Jornada"
+      action={
+        canEdit ? (
+          <Button variant="outline" size="sm" onClick={openEditor}>
+            Editar jornada
+          </Button>
+        ) : undefined
+      }
+    >
+      {funcionario.horario_trabalho?.turnos.length ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {funcionario.horario_trabalho.turnos.map((turno) => (
+            <div key={turno.dia_semana} className="rounded-md border p-3">
+              <p className="font-medium">{weekDayLabels[turno.dia_semana] ?? "Dia de trabalho"}</p>
+              <p className="text-sm text-muted-foreground">
+                {turno.hora_entrada.slice(0, 5)} as {turno.hora_saida.slice(0, 5)}
+              </p>
+              {turno.intervalos?.length ? (
+                turno.intervalos.map((intervalo, index) => (
+                  <p key={index} className="text-sm text-muted-foreground">
+                    Intervalo: {intervalo.hora_inicio.slice(0, 5)}-{intervalo.hora_fim.slice(0, 5)}
+                  </p>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Sem intervalo</p>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Nenhuma jornada cadastrada.</p>
+      )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Editar jornada</DialogTitle>
+          </DialogHeader>
+          <JornadaScheduleEditor schedule={schedule} onChange={setSchedule} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saveMutation.isPending}>
+              Cancelar
+            </Button>
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+              {saveMutation.isPending ? "Salvando..." : "Salvar jornada"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </InfoCard>
   );
 }
 

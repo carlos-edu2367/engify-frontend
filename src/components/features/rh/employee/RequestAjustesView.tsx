@@ -20,6 +20,8 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
     justificativa: "",
     entrada: "",
     saida: "",
+    intervaloInicio: "",
+    intervaloFim: "",
   });
 
   const meusAjustesQuery = useQuery({
@@ -44,6 +46,12 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
         hora_saida_solicitada: form.saida
           ? combineDateAndTime(form.dataReferencia, form.saida)
           : null,
+        hora_intervalo_inicio_solicitada: form.intervaloInicio
+          ? combineDateAndTime(form.dataReferencia, form.intervaloInicio)
+          : null,
+        hora_intervalo_fim_solicitada: form.intervaloFim
+          ? combineDateAndTime(form.dataReferencia, form.intervaloFim)
+          : null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rh-me-resumo"] });
@@ -54,6 +62,8 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
         justificativa: "",
         entrada: "",
         saida: "",
+        intervaloInicio: "",
+        intervaloFim: "",
       });
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
@@ -90,6 +100,20 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
               onChange={(e) => setForm({ ...form, saida: e.target.value })}
             />
           </Field>
+          <Field label="Inicio intervalo">
+            <Input
+              type="time"
+              value={form.intervaloInicio}
+              onChange={(e) => setForm({ ...form, intervaloInicio: e.target.value })}
+            />
+          </Field>
+          <Field label="Fim intervalo">
+            <Input
+              type="time"
+              value={form.intervaloFim}
+              onChange={(e) => setForm({ ...form, intervaloFim: e.target.value })}
+            />
+          </Field>
         </div>
         <Field label="Justificativa">
           <Textarea
@@ -103,4 +127,3 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
     </>
   );
 }
-
