@@ -30,7 +30,7 @@ export function classifyDayPunches(registros: RhRegistroPonto[]): Map<string, Pu
   const byDay = new Map<string, RhRegistroPonto[]>();
 
   for (const registro of registros) {
-    const key = localDayKey(registro.timestamp);
+    const key = `${registro.funcionario_id}:${localDayKey(registro.timestamp)}`;
     const bucket = byDay.get(key) ?? [];
     bucket.push(registro);
     byDay.set(key, bucket);

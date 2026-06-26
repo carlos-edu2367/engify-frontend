@@ -74,6 +74,22 @@ describe("classifyDayPunches", () => {
     expect(roles.get("d2-saida")).toBe("jornada-saida");
   });
 
+  it("separates punches by employee on the same local day", () => {
+    const roles = classifyDayPunches([
+      { ...punch("f1-a", "entrada", "2026-06-23T08:00:00"), funcionario_id: "f1" },
+      { ...punch("f2-a", "entrada", "2026-06-23T08:30:00"), funcionario_id: "f2" },
+      { ...punch("f1-b", "saida", "2026-06-23T12:00:00"), funcionario_id: "f1" },
+      { ...punch("f2-b", "saida", "2026-06-23T17:30:00"), funcionario_id: "f2" },
+      { ...punch("f1-c", "entrada", "2026-06-23T13:00:00"), funcionario_id: "f1" },
+      { ...punch("f1-d", "saida", "2026-06-23T18:00:00"), funcionario_id: "f1" },
+    ]);
+
+    expect(roles.get("f1-b")).toBe("intervalo-inicio");
+    expect(roles.get("f1-c")).toBe("intervalo-fim");
+    expect(roles.get("f2-a")).toBe("jornada-entrada");
+    expect(roles.get("f2-b")).toBe("jornada-saida");
+  });
+
   it("exposes pt-BR labels for interval roles", () => {
     expect(punchRoleLabel["intervalo-inicio"]).toBe("Saida p/ intervalo");
     expect(punchRoleLabel["intervalo-fim"]).toBe("Volta do intervalo");

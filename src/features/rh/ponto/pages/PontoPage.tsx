@@ -71,6 +71,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
   const selectedRegistro = detalhe?.registros.find((registro) => registro.id === selected?.id) ?? selected;
   const authorizedLocation = detalhe?.locais_autorizados?.find((local) => local.id === selectedRegistro?.local_ponto_id) ?? detalhe?.locais_autorizados?.[0] ?? null;
   const rows = pontosQuery.data?.items ?? [];
+  const pageRoles = useMemo(() => classifyDayPunches(rows), [rows]);
   const totalInconsistentes = rows.filter((item) => item.status === "inconsistente").length;
   const totalNegados = rows.filter((item) => item.status === "negado").length;
 
@@ -98,7 +99,20 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
         },
       },
       { key: "data", header: "Data", render: (item) => formatRhDate(item.timestamp) },
-      { key: "tipo", header: "Tipo", render: (item) => (item.tipo === "entrada" ? "Entrada" : "Saida") },
+      {
+        key: "tipo",
+        header: "Tipo",
+        render: (item) => {
+          const role = pageRoles.get(item.id) ?? "neutro";
+          const label = role !== "neutro" ? punchRoleLabel[role] : item.tipo === "entrada" ? "Entrada" : "Saida";
+          return (
+            <div className="flex flex-wrap items-center gap-2">
+              <span>{label}</span>
+              {intervalRoles.has(role) ? <Badge variant="secondary">Intervalo</Badge> : null}
+            </div>
+          );
+        },
+      },
       {
         key: "hora",
         header: "Horario",
@@ -107,7 +121,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
       { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status} /> },
       { key: "actions", header: "Detalhe", render: (item) => <Button variant="outline" size="sm" onClick={() => setSelected(item)}>Abrir</Button> },
     ],
-    []
+    [pageRoles]
   );
 
   return (
