@@ -25,6 +25,7 @@ import { MeuRhPage } from "@/pages/app/MeuRhPage";
 import { ConfiguracoesPage } from "@/pages/app/ConfiguracoesPage";
 import { PerfilPage } from "@/pages/app/PerfilPage";
 import { CalendarioPage } from "@/pages/app/CalendarioPage";
+import { ArcaikaConsentPage } from "@/pages/app/ArcaikaConsentPage";
 import { rhAdminRoutes } from "@/features/rh";
 
 const rhAdminRouteElements = [
@@ -90,6 +91,17 @@ export const router = createBrowserRouter([
 
   // Visualização pública do cliente
   { path: "/obras/:obraId/cliente", element: <ObraClientePage /> },
+
+  // Consentimento OAuth da integração Arcaika (admin autenticado, tela isolada)
+  {
+    path: "/integracoes/arcaika/consentir",
+    errorElement: <RouteErrorElement />,
+    element: (
+      <ProtectedRoute roles={["admin", "super_admin"]}>
+        <ArcaikaConsentPage />
+      </ProtectedRoute>
+    ),
+  },
 
   // Grupo autenticado
   {

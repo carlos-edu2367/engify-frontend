@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Building2, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
@@ -12,10 +12,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getApiErrorMessage } from "@/lib/utils";
+import { getApiErrorMessage, getSafeNextPath } from "@/lib/utils";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { setAuth } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
 
@@ -40,7 +41,8 @@ export function LoginPage() {
         role: data.role,
         teamId: data.team_id,
       });
-      const destino = data.role === "funcionario" ? "/meu-rh" : "/dashboard";
+      const next = getSafeNextPath(params.get("next"));
+      const destino = next ?? (data.role === "funcionario" ? "/meu-rh" : "/dashboard");
       navigate(destino, { replace: true });
     } catch (err) {
       toast.error(getApiErrorMessage(err));

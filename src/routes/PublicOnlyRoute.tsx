@@ -1,10 +1,12 @@
 import { useEffect } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useSearchParams } from "react-router-dom";
 import { useAuthStore } from "@/store/auth.store";
 import { restoreSession } from "@/services/auth-session.service";
+import { getSafeNextPath } from "@/lib/utils";
 
 export function PublicOnlyRoute() {
   const { isAuthenticated, hasBootstrapped, isBootstrapping } = useAuthStore();
+  const [params] = useSearchParams();
 
   useEffect(() => {
     if (!hasBootstrapped && !isBootstrapping) {
@@ -20,6 +22,9 @@ export function PublicOnlyRoute() {
     );
   }
 
-  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  if (isAuthenticated) {
+    const next = getSafeNextPath(params.get("next"));
+    return <Navigate to={next ?? "/dashboard"} replace />;
+  }
   return <Outlet />;
 }

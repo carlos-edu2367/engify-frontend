@@ -49,6 +49,17 @@ export function getInitials(name: string): string {
     .toUpperCase();
 }
 
+/**
+ * Valida um destino de redirect pós-login (`?next=`) vindo da URL.
+ * Aceita apenas paths internos (`/algo`) — rejeita URLs absolutas e
+ * protocol-relative (`//evil.com`) para evitar open redirect.
+ */
+export function getSafeNextPath(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+  return raw;
+}
+
 export function getApiErrorMessage(error: unknown): string {
   if (
     error &&

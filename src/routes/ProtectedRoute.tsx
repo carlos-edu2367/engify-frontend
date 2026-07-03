@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useAuthStore } from "@/store/auth.store";
 import type { Role } from "@/types/auth.types";
@@ -12,6 +12,7 @@ interface ProtectedRouteProps {
 
 export function ProtectedRoute({ roles, children }: ProtectedRouteProps) {
   const { isAuthenticated, user, isBootstrapping, hasBootstrapped } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     if (!hasBootstrapped && !isBootstrapping) {
@@ -28,7 +29,8 @@ export function ProtectedRoute({ roles, children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    const next = `${location.pathname}${location.search}`;
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />;
   }
 
   if (roles && user && !roles.includes(user.role)) {
