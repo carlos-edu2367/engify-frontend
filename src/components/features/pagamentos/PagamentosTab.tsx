@@ -19,6 +19,7 @@ import { financeiroService } from "@/services/financeiro.service";
 import { obrasService } from "@/services/obras.service";
 import { obraPagamentoSchema, type ObraPagamentoFormValues } from "@/lib/schemas/financeiro.schemas";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
 import type { PagamentoResponse } from "@/types/financeiro.types";
 
 interface PagamentosTabProps {
@@ -44,10 +45,17 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [deletePagamentoId, setDeletePagamentoId] = useState<string | null>(null);
+  const [scope, setScope] = useState<"mine" | "all">("mine");
+  const isEngenheiro = useAuthStore((s) => s.user?.role === "engenheiro");
 
   const { data, isLoading } = useQuery({
-    queryKey: ["pagamentos", { obra: obraId }],
-    queryFn: () => financeiroService.listPagamentos({ limit: 100, obra_id: obraId }),
+    queryKey: ["pagamentos", { obra: obraId, scope: isEngenheiro ? scope : "all" }],
+    queryFn: () =>
+      financeiroService.listPagamentos({
+        limit: 100,
+        obra_id: obraId,
+        scope: isEngenheiro ? scope : "all",
+      }),
   });
 
   const pagamentos: PagamentoResponse[] = data?.items ?? [];
@@ -96,16 +104,38 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm text-muted-foreground">
           {pagamentos.length} pagamento{pagamentos.length !== 1 ? "s" : ""} agendado{pagamentos.length !== 1 ? "s" : ""} nesta obra
         </p>
-        <RoleGuard roles={["admin", "engenheiro"]}>
-          <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Agendar
-          </Button>
-        </RoleGuard>
+        <div className="flex items-center gap-2">
+          {isEngenheiro && (
+            <div className="flex items-center gap-1 rounded-lg bg-muted/60 p-0.5">
+              <Button
+                size="sm"
+                variant={scope === "mine" ? "default" : "ghost"}
+                className="h-7 px-2.5 text-xs"
+                onClick={() => setScope("mine")}
+              >
+                Meus pagamentos
+              </Button>
+              <Button
+                size="sm"
+                variant={scope === "all" ? "default" : "ghost"}
+                className="h-7 px-2.5 text-xs"
+                onClick={() => setScope("all")}
+              >
+                Todos os pagamentos
+              </Button>
+            </div>
+          )}
+          <RoleGuard roles={["admin", "engenheiro"]}>
+            <Button size="sm" onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Agendar
+            </Button>
+          </RoleGuard>
+        </div>
       </div>
 
       {/* Lista */}

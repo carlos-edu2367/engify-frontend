@@ -84,6 +84,7 @@ export interface ListPagamentosParams {
   limit?: number;
   status?: PagamentoStatus | "all";
   obra_id?: string;
+  scope?: "mine" | "all";
 }
 
 export interface CreateObraPagamentoRequest {

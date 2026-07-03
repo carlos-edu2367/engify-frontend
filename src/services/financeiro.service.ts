@@ -36,8 +36,10 @@ export const financeiroService = {
     api.delete<{ message: string }>(`/financeiro/movimentacoes/${id}`).then((r) => r.data),
 
   listPagamentos: (params: ListPagamentosParams = {}) => {
+    // "all" é sentinela de "sem filtro" para status/classe, mas é um valor
+    // válido e significativo para "scope" — não deve ser removido.
     const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, v]) => v !== "all" && v !== "")
+      Object.entries(params).filter(([k, v]) => k === "scope" || (v !== "all" && v !== ""))
     );
     return api
       .get<PaginatedResponse<PagamentoResponse>>("/financeiro/pagamentos", { params: cleanParams })
