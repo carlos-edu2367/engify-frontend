@@ -142,18 +142,21 @@ export function LandingPage() {
       <div className="min-h-screen bg-background overflow-x-hidden">
         {/* Navbar */}
         <nav className="fixed top-0 w-full z-50 border-b bg-background/60 backdrop-blur-md supports-[backdrop-filter]:bg-background/40">
-          <div className="container flex h-16 items-center justify-between">
+          <div className="container flex h-16 items-center justify-between px-4 sm:px-8">
             <div className="flex items-center gap-2">
               <Building2 className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold">Engify</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               <ThemeToggle />
-              <Button variant="ghost" asChild className="hidden sm:inline-flex">
+              <Button variant="ghost" asChild size="sm" className="px-2 sm:px-4 sm:h-10">
                 <Link to="/login">Entrar</Link>
               </Button>
-              <Button asChild>
-                <Link to="/register/team">Começar grátis</Link>
+              <Button asChild size="sm" className="px-3 sm:px-6 sm:h-10">
+                <Link to="/register/team">
+                  <span className="sm:hidden">Grátis</span>
+                  <span className="hidden sm:inline">Começar grátis</span>
+                </Link>
               </Button>
             </div>
           </div>
