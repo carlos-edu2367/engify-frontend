@@ -20,6 +20,9 @@ const PontoPage = lazy(() =>
 const AjustesPontoPage = lazy(() =>
   import("./ponto/pages/AjustesPontoPage").then((module) => ({ default: module.AjustesPontoPage }))
 );
+const RhCalendarioEventosPage = lazy(() =>
+  import("./ponto/pages/RhCalendarioEventosPage").then((module) => ({ default: module.RhCalendarioEventosPage }))
+);
 const FeriasPage = lazy(() =>
   import("./ferias/pages/FeriasPage").then((module) => ({ default: module.FeriasPage }))
 );
@@ -119,6 +122,11 @@ export const rhAdminRoutes = {
   pontoAjustes: (
     <LazyRhPage>
       <AjustesPontoPage />
+    </LazyRhPage>
+  ),
+  pontoCalendario: (
+    <LazyRhPage>
+      <RhCalendarioEventosPage />
     </LazyRhPage>
   ),
   ferias: (

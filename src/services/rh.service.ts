@@ -44,6 +44,8 @@ import type {
   RhPontoFilters,
   RhPontoDiaDetalhe,
   RhEditarDiaRequest,
+  RhEventoCalendario,
+  RhEventoCalendarioCreateRequest,
   RhRegrasEncargosResponse,
   RhRegraEncargoCreateRequest,
   RhRegistrarPontoRequest,
@@ -336,6 +338,15 @@ export const rhService = {
 
   editarDiaPonto: (data: RhEditarDiaRequest) =>
     api.post<RhPontoDiaDetalhe>("/rh/ponto/dia", data).then((r) => r.data),
+
+  listCalendarioEventos: (start: string, end: string) =>
+    api.get<RhEventoCalendario[]>("/rh/calendario-eventos", { params: { start, end } }).then((r) => r.data),
+
+  createCalendarioEvento: (data: RhEventoCalendarioCreateRequest) =>
+    api.post<RhEventoCalendario>("/rh/calendario-eventos", data).then((r) => r.data),
+
+  deleteCalendarioEvento: (id: string) =>
+    api.delete<{ message: string }>(`/rh/calendario-eventos/${id}`).then((r) => r.data),
 
   listRegrasEncargos: (filters?: { page?: number; limit?: number; search?: string; status?: string }) =>
     api

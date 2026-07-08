@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/utils";
 import { rhService } from "@/services/rh.service";
-import type { RhAjusteFilters, RhEditarDiaRequest, RhPontoFilters } from "@/types/rh.types";
+import type { RhAjusteFilters, RhEditarDiaRequest, RhEventoCalendarioCreateRequest, RhPontoFilters } from "@/types/rh.types";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
 
 export function usePontos(filters: RhPontoFilters) {
@@ -67,6 +67,41 @@ export function useEditarDia() {
       queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "ponto"] });
       queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "dashboard"] });
       toast.success("Dia atualizado.");
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+}
+
+export function useCalendarioEventos(start: string, end: string) {
+  return useQuery({
+    queryKey: [...rhQueryKeys.all, "calendario", start, end],
+    queryFn: () => rhService.listCalendarioEventos(start, end),
+    enabled: !!start && !!end,
+    staleTime: 20_000,
+  });
+}
+
+export function useCriarEventoCalendario() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: RhEventoCalendarioCreateRequest) => rhService.createCalendarioEvento(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "calendario"] });
+      toast.success("Evento de calendario criado.");
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+}
+
+export function useRemoverEventoCalendario() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => rhService.deleteCalendarioEvento(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "calendario"] });
+      toast.success("Evento de calendario removido.");
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });

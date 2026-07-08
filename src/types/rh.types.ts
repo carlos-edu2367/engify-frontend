@@ -102,6 +102,26 @@ export type RhStatusAtestado = "aguardando_entrega" | "entregue" | "vencido" | "
 export type RhStatusHolerite = "rascunho" | "fechado" | "cancelado";
 export type RhTipoPonto = "entrada" | "saida";
 export type RhStatusPonto = "validado" | "negado" | "inconsistente" | "ajustado";
+export type RhTipoEventoCalendario = "feriado" | "ponto_facultativo" | "abono" | "liberacao_antecipada";
+
+export interface RhEventoCalendario {
+  id: string;
+  tipo: RhTipoEventoCalendario;
+  data: string;
+  descricao: string;
+  hora_corte?: string | null;
+  aplica_todos: boolean;
+  funcionario_ids: string[];
+}
+
+export interface RhEventoCalendarioCreateRequest {
+  tipo: RhTipoEventoCalendario;
+  data: string;
+  descricao: string;
+  hora_corte?: string | null;
+  aplica_todos: boolean;
+  funcionario_ids: string[];
+}
 
 export interface RhEmployeeDisplayFields {
   funcionario_nome?: string | null;

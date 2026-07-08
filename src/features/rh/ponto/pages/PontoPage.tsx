@@ -136,6 +136,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild><Link to={rhPaths.pontoInconsistencias}>Inconsistencias</Link></Button>
               <Button variant="outline" asChild><Link to={rhPaths.pontoAjustes}>Ajustes</Link></Button>
+              <Button variant="outline" asChild><Link to={rhPaths.pontoCalendario}>Calendario</Link></Button>
             </div>
           }
         />

@@ -43,6 +43,8 @@ const rhAdminRouteElements = [
   { path: "/app/rh/ponto/inconsistencias", element: rhAdminRoutes.pontoInconsistencias },
   { path: "/rh/ponto/ajustes", element: rhAdminRoutes.pontoAjustes },
   { path: "/app/rh/ponto/ajustes", element: rhAdminRoutes.pontoAjustes },
+  { path: "/rh/ponto/calendario", element: rhAdminRoutes.pontoCalendario },
+  { path: "/app/rh/ponto/calendario", element: rhAdminRoutes.pontoCalendario },
   { path: "/rh/ferias", element: rhAdminRoutes.ferias },
   { path: "/app/rh/ferias", element: rhAdminRoutes.ferias },
   { path: "/rh/atestados", element: rhAdminRoutes.atestados },
