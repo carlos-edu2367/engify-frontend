@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock3, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { RhAjustePonto, RhFuncionarioListItem, RhStatusAjuste } from "@/types/rh.types";
+import type { RhAjustePonto, RhFuncionarioListItem, RhPontoDiaDetalhe, RhStatusAjuste } from "@/types/rh.types";
 import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSelect";
-import { RhImpactChecklist } from "../../shared/components/RhImpactChecklist";
 import { PermissionGate } from "../../shared/components/PermissionGate";
 import { RhDataTable, type RhColumn } from "../../shared/components/RhDataTable";
 import { RhMetricCard } from "../../shared/components/RhMetricCard";
@@ -15,7 +15,8 @@ import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { employeeDisplay } from "../../shared/utils/display";
 import { formatRhDate } from "../../shared/utils/formatters";
-import { useAjustePontoActions, useAjustesPonto } from "../hooks/usePontoOperacional";
+import { classifyDayPunches, intervalRoles, punchRoleLabel, type PunchRole } from "../../shared/utils/punchClassification";
+import { useAjustePontoActions, useAjustesPonto, usePontoDiaDetalhe } from "../hooks/usePontoOperacional";
 
 const statusOptions: Array<{ value: RhStatusAjuste | "all"; label: string }> = [
   { value: "pendente", label: "Pendentes" },
@@ -42,6 +43,9 @@ export function AjustesPontoPage() {
   const ajustesQuery = useAjustesPonto(filters);
   const actions = useAjustePontoActions();
   const rows = ajustesQuery.data?.items ?? [];
+  const diaAtualQuery = usePontoDiaDetalhe(decision?.item.funcionario_id, decision?.item.data_referencia?.slice(0, 10));
+  const diaAtual = diaAtualQuery.data;
+  const dayRoles = classifyDayPunches(diaAtual?.registros ?? []);
 
   const columns = useMemo<Array<RhColumn<RhAjustePonto>>>(
     () => [
@@ -117,18 +121,18 @@ export function AjustesPontoPage() {
         </Card>
         <Dialog open={!!decision} onOpenChange={(open) => !open && closeDialog()}>
           <DialogContent>
-            {decision?.mode === "reject" ? (
+            {decision ? (
+            decision.mode === "reject" ? (
               <>
                 <DialogHeader>
                   <DialogTitle>Rejeitar ajuste</DialogTitle>
                   <DialogDescription>Motivo e obrigatorio para a decisao auditavel.</DialogDescription>
                 </DialogHeader>
-                <RhImpactChecklist
-                  items={[
-                    { id: "competencia", label: "Competencia impactada revisada", description: "Ajuste pode alterar horas extras ou faltas.", checked: true },
-                    { id: "funcionario", label: employeeDisplay(decision?.item).title, description: employeeDisplay(decision?.item).subtitle, checked: true },
-                  ]}
-                  onToggle={() => undefined}
+                <AjusteComparativo
+                  item={decision.item}
+                  diaAtual={diaAtual}
+                  dayRoles={dayRoles}
+                  loading={diaAtualQuery.isLoading}
                 />
                 <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} placeholder="Motivo da rejeicao" />
                 <DialogFooter>
@@ -148,12 +152,11 @@ export function AjustesPontoPage() {
                   <DialogTitle>Aprovar ajuste</DialogTitle>
                   <DialogDescription>Revise o impacto antes de aprovar. A aprovacao fica registrada no log de auditoria.</DialogDescription>
                 </DialogHeader>
-                <RhImpactChecklist
-                  items={[
-                    { id: "competencia", label: "Competencia impactada revisada", description: "Ajuste pode alterar horas extras ou faltas.", checked: true },
-                    { id: "funcionario", label: employeeDisplay(decision?.item).title, description: employeeDisplay(decision?.item).subtitle, checked: true },
-                  ]}
-                  onToggle={() => undefined}
+                <AjusteComparativo
+                  item={decision.item}
+                  diaAtual={diaAtual}
+                  dayRoles={dayRoles}
+                  loading={diaAtualQuery.isLoading}
                 />
                 <DialogFooter>
                   <Button variant="outline" onClick={closeDialog} disabled={actions.approve.isPending}>Cancelar</Button>
@@ -165,10 +168,87 @@ export function AjustesPontoPage() {
                   </Button>
                 </DialogFooter>
               </>
-            )}
+            )
+            ) : null}
           </DialogContent>
         </Dialog>
       </div>
     </PermissionGate>
+  );
+}
+
+function AjusteComparativo({
+  item,
+  diaAtual,
+  dayRoles,
+  loading,
+}: {
+  item: RhAjustePonto;
+  diaAtual?: RhPontoDiaDetalhe;
+  dayRoles: Map<string, PunchRole>;
+  loading: boolean;
+}) {
+  const solicitado: Array<{ label: string; value?: string | null }> = [
+    { label: "Entrada", value: item.hora_entrada_solicitada },
+    { label: "Saida p/ intervalo", value: item.hora_intervalo_inicio_solicitada },
+    { label: "Volta do intervalo", value: item.hora_intervalo_fim_solicitada },
+    { label: "Saida", value: item.hora_saida_solicitada },
+  ].filter((row) => row.value);
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      <div className="rounded-md border p-3">
+        <p className="text-xs uppercase text-muted-foreground">Registrado hoje</p>
+        {loading ? (
+          <p className="mt-2 text-sm text-muted-foreground">Carregando...</p>
+        ) : !diaAtual || diaAtual.registros.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">Nenhum registro neste dia.</p>
+        ) : (
+          <div className="mt-2 space-y-1.5">
+            {diaAtual.registros.map((registro) => {
+              const role = dayRoles.get(registro.id) ?? "neutro";
+              const label = role !== "neutro" ? punchRoleLabel[role] : registro.tipo === "entrada" ? "Entrada" : "Saida";
+              return (
+                <div key={registro.id} className="flex items-center justify-between gap-2 text-sm">
+                  <span className="flex items-center gap-2">
+                    {label}
+                    {intervalRoles.has(role) ? <Badge variant="secondary">Intervalo</Badge> : null}
+                  </span>
+                  <span>{new Date(registro.timestamp).toLocaleTimeString("pt-BR")}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div className="rounded-md border p-3">
+        <p className="text-xs uppercase text-muted-foreground">Solicitado</p>
+        {solicitado.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">Nenhum horario solicitado.</p>
+        ) : (
+          <div className="mt-2 space-y-1.5">
+            {solicitado.map((row) => (
+              <div key={row.label} className="flex items-center justify-between gap-2 text-sm">
+                <span>{row.label}</span>
+                <span>{new Date(row.value as string).toLocaleTimeString("pt-BR")}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="rounded-md border p-3 md:col-span-2">
+        <p className="text-xs uppercase text-muted-foreground">Impacto estimado (com base no registrado hoje)</p>
+        {loading ? (
+          <p className="mt-2 text-sm text-muted-foreground">Carregando...</p>
+        ) : diaAtual?.impacto_estimado ? (
+          <p className="mt-2 text-sm">
+            HE {diaAtual.impacto_estimado.horas_extras ?? "0.00"} h · Faltantes {diaAtual.impacto_estimado.horas_faltantes ?? "0.00"} h
+            {diaAtual.impacto_estimado.incompleto ? " · Dia incompleto" : ""}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">Nao calculado.</p>
+        )}
+      </div>
+    </div>
   );
 }
