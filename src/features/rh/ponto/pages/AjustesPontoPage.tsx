@@ -24,12 +24,15 @@ const statusOptions: Array<{ value: RhStatusAjuste | "all"; label: string }> = [
   { value: "rejeitado", label: "Rejeitados" },
 ];
 
+type Decision = { item: RhAjustePonto; mode: "approve" | "reject" };
+
 export function AjustesPontoPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<RhStatusAjuste | "all">("pendente");
   const [employee, setEmployee] = useState<RhFuncionarioListItem | null>(null);
-  const [reasonItem, setReasonItem] = useState<RhAjustePonto | null>(null);
+  const [decision, setDecision] = useState<Decision | null>(null);
   const [motivo, setMotivo] = useState("");
+  const closeDialog = () => { setDecision(null); setMotivo(""); };
   const filters = {
     page,
     limit: 20,
@@ -60,10 +63,10 @@ export function AjustesPontoPage() {
         header: "Acoes",
         render: (item) => (
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" disabled={item.status !== "pendente" || actions.approve.isPending} onClick={() => setReasonItem(item)}>
-              Decidir
+            <Button size="sm" disabled={item.status !== "pendente" || actions.approve.isPending} onClick={() => setDecision({ item, mode: "approve" })}>
+              Aprovar
             </Button>
-            <Button size="sm" variant="destructive" disabled={item.status !== "pendente"} onClick={() => setReasonItem(item)}>
+            <Button size="sm" variant="destructive" disabled={item.status !== "pendente"} onClick={() => setDecision({ item, mode: "reject" })}>
               Rejeitar
             </Button>
           </div>
@@ -112,36 +115,57 @@ export function AjustesPontoPage() {
             />
           </CardContent>
         </Card>
-        <Dialog open={!!reasonItem} onOpenChange={(open) => !open && setReasonItem(null)}>
+        <Dialog open={!!decision} onOpenChange={(open) => !open && closeDialog()}>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Decidir ajuste</DialogTitle>
-              <DialogDescription>Revise o impacto antes de aprovar ou rejeitar. Motivo e obrigatorio para a decisao auditavel.</DialogDescription>
-            </DialogHeader>
-            <RhImpactChecklist
-              items={[
-                { id: "competencia", label: "Competencia impactada revisada", description: "Ajuste pode alterar horas extras ou faltas.", checked: true },
-                { id: "funcionario", label: employeeDisplay(reasonItem ?? undefined).title, description: employeeDisplay(reasonItem ?? undefined).subtitle, checked: true },
-              ]}
-              onToggle={() => undefined}
-            />
-            <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} placeholder="Motivo da rejeicao" />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setReasonItem(null)} disabled={actions.reject.isPending}>Cancelar</Button>
-              <Button
-                variant="destructive"
-                disabled={!motivo.trim() || actions.reject.isPending}
-                onClick={() => reasonItem && actions.reject.mutate({ id: reasonItem.id, motivo }, { onSuccess: () => { setReasonItem(null); setMotivo(""); } })}
-              >
-                {actions.reject.isPending ? "Rejeitando..." : "Rejeitar"}
-              </Button>
-              <Button
-                disabled={!motivo.trim() || actions.approve.isPending}
-                onClick={() => reasonItem && actions.approve.mutate(reasonItem.id, { onSuccess: () => { setReasonItem(null); setMotivo(""); } })}
-              >
-                {actions.approve.isPending ? "Aprovando..." : "Aprovar"}
-              </Button>
-            </DialogFooter>
+            {decision?.mode === "reject" ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Rejeitar ajuste</DialogTitle>
+                  <DialogDescription>Motivo e obrigatorio para a decisao auditavel.</DialogDescription>
+                </DialogHeader>
+                <RhImpactChecklist
+                  items={[
+                    { id: "competencia", label: "Competencia impactada revisada", description: "Ajuste pode alterar horas extras ou faltas.", checked: true },
+                    { id: "funcionario", label: employeeDisplay(decision?.item).title, description: employeeDisplay(decision?.item).subtitle, checked: true },
+                  ]}
+                  onToggle={() => undefined}
+                />
+                <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} placeholder="Motivo da rejeicao" />
+                <DialogFooter>
+                  <Button variant="outline" onClick={closeDialog} disabled={actions.reject.isPending}>Cancelar</Button>
+                  <Button
+                    variant="destructive"
+                    disabled={!motivo.trim() || actions.reject.isPending}
+                    onClick={() => decision && actions.reject.mutate({ id: decision.item.id, motivo }, { onSuccess: closeDialog })}
+                  >
+                    {actions.reject.isPending ? "Rejeitando..." : "Rejeitar"}
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Aprovar ajuste</DialogTitle>
+                  <DialogDescription>Revise o impacto antes de aprovar. A aprovacao fica registrada no log de auditoria.</DialogDescription>
+                </DialogHeader>
+                <RhImpactChecklist
+                  items={[
+                    { id: "competencia", label: "Competencia impactada revisada", description: "Ajuste pode alterar horas extras ou faltas.", checked: true },
+                    { id: "funcionario", label: employeeDisplay(decision?.item).title, description: employeeDisplay(decision?.item).subtitle, checked: true },
+                  ]}
+                  onToggle={() => undefined}
+                />
+                <DialogFooter>
+                  <Button variant="outline" onClick={closeDialog} disabled={actions.approve.isPending}>Cancelar</Button>
+                  <Button
+                    disabled={actions.approve.isPending}
+                    onClick={() => decision && actions.approve.mutate(decision.item.id, { onSuccess: closeDialog })}
+                  >
+                    {actions.approve.isPending ? "Aprovando..." : "Aprovar"}
+                  </Button>
+                </DialogFooter>
+              </>
+            )}
           </DialogContent>
         </Dialog>
       </div>
