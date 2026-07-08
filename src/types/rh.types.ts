@@ -456,7 +456,9 @@ export interface RhPontoDiaDetalhe extends RhEmployeeDisplayFields {
   ajustes_relacionados?: RhAjustePonto[];
   impacto_estimado?: {
     horas_extras?: string | null;
+    horas_faltantes?: string | null;
     faltas?: string | null;
+    incompleto?: boolean | null;
     competencia?: string | null;
   } | null;
 }

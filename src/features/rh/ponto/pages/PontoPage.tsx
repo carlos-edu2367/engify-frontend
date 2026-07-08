@@ -250,7 +250,14 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
                   </div>
                 </div>
                 <Detail label="Ajustes relacionados" value={`${detalhe?.ajustes_relacionados?.length ?? 0}`} />
-                <Detail label="Impacto estimado" value={detalhe?.impacto_estimado ? `HE ${detalhe.impacto_estimado.horas_extras ?? "0"} · Faltas ${detalhe.impacto_estimado.faltas ?? "0"}` : "Nao calculado"} />
+                <Detail
+                  label="Impacto estimado"
+                  value={
+                    detalhe?.impacto_estimado
+                      ? `HE ${detalhe.impacto_estimado.horas_extras ?? "0"} h · Faltantes ${detalhe.impacto_estimado.horas_faltantes ?? "0"} h${detalhe.impacto_estimado.incompleto ? " · Dia incompleto" : ""}`
+                      : "Nao calculado"
+                  }
+                />
                 {detalheQuery.isError ? <p className="rounded-md border p-3 text-sm text-muted-foreground">Detalhe operacional indisponivel neste ambiente; exibindo dados da listagem.</p> : null}
                 <PermissionGate permission="rh.ponto.delete">
                   <Button
