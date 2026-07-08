@@ -43,6 +43,7 @@ import type {
   RhMeVinculo,
   RhPontoFilters,
   RhPontoDiaDetalhe,
+  RhEditarDiaRequest,
   RhRegrasEncargosResponse,
   RhRegraEncargoCreateRequest,
   RhRegistrarPontoRequest,
@@ -332,6 +333,9 @@ export const rhService = {
     api
       .patch<RhRegistroPonto>(`/rh/ponto/registros/${id}`, { timestamp })
       .then((r) => r.data),
+
+  editarDiaPonto: (data: RhEditarDiaRequest) =>
+    api.post<RhPontoDiaDetalhe>("/rh/ponto/dia", data).then((r) => r.data),
 
   listRegrasEncargos: (filters?: { page?: number; limit?: number; search?: string; status?: string }) =>
     api

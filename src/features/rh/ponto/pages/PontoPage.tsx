@@ -22,6 +22,7 @@ import { employeeDisplay } from "../../shared/utils/display";
 import { formatRhDate } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { classifyDayPunches, intervalRoles, punchRoleLabel } from "../../shared/utils/punchClassification";
+import { DayEditorDialog } from "../components/DayEditorDialog";
 import { useAtualizarPonto, useExcluirPonto, usePontoDiaDetalhe, usePontos } from "../hooks/usePontoOperacional";
 
 const statusOptions: Array<{ value: RhStatusPonto | "all"; label: string }> = [
@@ -48,6 +49,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
   const [deleteMotivo, setDeleteMotivo] = useState("");
   const [editTarget, setEditTarget] = useState<RhRegistroPonto | null>(null);
   const [editTime, setEditTime] = useState("");
+  const [dayEditorOpen, setDayEditorOpen] = useState(false);
   const atualizarPontoMutation = useAtualizarPonto();
   const excluirPontoMutation = useExcluirPonto();
   const page = Number(searchParams.get("page") ?? "1");
@@ -259,6 +261,11 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
                   }
                 />
                 {detalheQuery.isError ? <p className="rounded-md border p-3 text-sm text-muted-foreground">Detalhe operacional indisponivel neste ambiente; exibindo dados da listagem.</p> : null}
+                <PermissionGate permission="rh.ponto.adjust">
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => setDayEditorOpen(true)}>
+                    Editar dia
+                  </Button>
+                </PermissionGate>
                 <PermissionGate permission="rh.ponto.delete">
                   <Button
                     variant="destructive"
@@ -273,6 +280,13 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
             ) : null}
           </SheetContent>
         </Sheet>
+
+        <DayEditorDialog
+          open={dayEditorOpen}
+          onOpenChange={setDayEditorOpen}
+          funcionarioId={selected?.funcionario_id ?? null}
+          data={selectedDate}
+        />
 
         <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <DialogContent>

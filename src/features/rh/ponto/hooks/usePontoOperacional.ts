@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getApiErrorMessage } from "@/lib/utils";
 import { rhService } from "@/services/rh.service";
-import type { RhAjusteFilters, RhPontoFilters } from "@/types/rh.types";
+import type { RhAjusteFilters, RhEditarDiaRequest, RhPontoFilters } from "@/types/rh.types";
 import { rhQueryKeys } from "../../shared/utils/queryKeys";
 
 export function usePontos(filters: RhPontoFilters) {
@@ -53,6 +53,20 @@ export function useAtualizarPonto() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "ponto"] });
       toast.success("Horario do ponto atualizado.");
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error)),
+  });
+}
+
+export function useEditarDia() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: RhEditarDiaRequest) => rhService.editarDiaPonto(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "ponto"] });
+      queryClient.invalidateQueries({ queryKey: [...rhQueryKeys.all, "dashboard"] });
+      toast.success("Dia atualizado.");
     },
     onError: (error) => toast.error(getApiErrorMessage(error)),
   });

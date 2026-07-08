@@ -313,6 +313,18 @@ export interface RhAjustePontoCreateRequest {
   hora_intervalo_fim_solicitada?: string | null;
 }
 
+export interface RhBatidaDiaRequest {
+  tipo: RhTipoPonto;
+  hora: string;
+}
+
+export interface RhEditarDiaRequest {
+  funcionario_id: string;
+  data: string;
+  batidas: RhBatidaDiaRequest[];
+  motivo: string;
+}
+
 export interface RhAtestadoCreateRequest {
   funcionario_id?: string | null;
   tipo_atestado_id: string;
