@@ -25,7 +25,7 @@ export const pagamentoSchema = z.object({
   classe: z.enum(["diarista", "servico", "contrato", "material", "fixo", "operacional"]),
   data_agendada: z.string().min(1, "Data e obrigatoria"),
   payment_cod: z.string().optional(),
-  obra_id: z.string().optional(),
+  obra_id: z.string().nullish(),
 });
 
 export const obraPagamentoSchema = z.object({

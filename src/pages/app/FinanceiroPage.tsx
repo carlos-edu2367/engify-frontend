@@ -588,7 +588,7 @@ export function FinanceiroPage() {
       classe: payment.classe,
       data_agendada: payment.data_agendada ? format(parseISO(payment.data_agendada), "yyyy-MM-dd") : "",
       payment_cod: payment.payment_cod ?? "",
-      obra_id: payment.obra_id,
+      obra_id: payment.obra_id ?? undefined,
     });
   }
 
