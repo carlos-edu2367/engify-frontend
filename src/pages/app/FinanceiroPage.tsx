@@ -565,6 +565,7 @@ export function FinanceiroPage() {
     register: registerPag,
     handleSubmit: handleSubmitPag,
     setValue: setValuePag,
+    watch: watchPag,
     reset: resetPag,
     formState: { errors: errorsPag },
   } = useForm<PagamentoFormValues>({ resolver: zodResolver(pagamentoSchema) });
@@ -994,7 +995,12 @@ export function FinanceiroPage() {
       <Dialog open={createPagOpen} onOpenChange={(open) => { if (!open) closePagamentoDialog(); else setCreatePagOpen(true); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingPag ? "Editar Pagamento" : "Novo Pagamento"}</DialogTitle></DialogHeader>
-          <form onSubmit={handleSubmitPag(submitPagamento)} className="space-y-4">
+          <form
+            onSubmit={handleSubmitPag(submitPagamento, () =>
+              toast.error("Verifique os campos destacados.")
+            )}
+            className="space-y-4"
+          >
             <div className="space-y-1.5">
               <Label>Título *</Label>
               <Input placeholder="Ex: Aluguel do escritório" {...registerPag("title")} />
@@ -1012,7 +1018,10 @@ export function FinanceiroPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Classe *</Label>
-                <Select onValueChange={(v) => setValuePag("classe", v as MovClass)}>
+                <Select
+                  value={watchPag("classe") ?? ""}
+                  onValueChange={(v) => setValuePag("classe", v as MovClass, { shouldValidate: true })}
+                >
                   <SelectTrigger><SelectValue placeholder="Classe..." /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(classeLabels).map(([k, v]) => (
@@ -1020,6 +1029,7 @@ export function FinanceiroPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {errorsPag.classe && <p className="text-xs text-destructive">Classe e obrigatoria</p>}
               </div>
             </div>
             <div className="space-y-1.5">
