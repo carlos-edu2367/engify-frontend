@@ -26,7 +26,7 @@ import {
 } from "@/lib/schemas/financeiro.schemas";
 import { formatISO, parseISO, format, isToday, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
+import { formatCurrency, formatDate, formatLocalDateTime, getApiErrorMessage } from "@/lib/utils";
 import type { MovClass, MovimentacaoResponse, PagamentoResponse, PagamentoStatus } from "@/types/financeiro.types";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
@@ -62,7 +62,7 @@ function DueBadge({ status }: { status: "today" | "overdue" }) {
   );
 }
 
-function PaymentCreatorMeta({ payment }: { payment: PagamentoResponse }) {
+export function PaymentCreatorMeta({ payment }: { payment: PagamentoResponse }) {
   const createdBy = payment.created_by_name || payment.created_by_user_id || "Sistema/legado";
 
   return (
@@ -73,7 +73,7 @@ function PaymentCreatorMeta({ payment }: { payment: PagamentoResponse }) {
         </Badge>
       )}
       <span>Criado por: {createdBy}</span>
-      {payment.created_at && <span>Criado em: {formatDate(payment.created_at)}</span>}
+      {payment.created_at && <span>Criado em: {formatLocalDateTime(payment.created_at)}</span>}
     </div>
   );
 }
