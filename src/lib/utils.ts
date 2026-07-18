@@ -23,6 +23,10 @@ export function formatDate(dateStr: string, fmt = "dd/MM/yyyy"): string {
   }
 }
 
+export function formatLocalDateTime(dateStr: string): string {
+  return formatDate(dateStr, "dd/MM/yyyy 'às' HH:mm");
+}
+
 export function formatCPF(cpf: string): string {
   return cpf
     .replace(/\D/g, "")

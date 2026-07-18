@@ -18,7 +18,7 @@ import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock"
 import { financeiroService } from "@/services/financeiro.service";
 import { obrasService } from "@/services/obras.service";
 import { obraPagamentoSchema, type ObraPagamentoFormValues } from "@/lib/schemas/financeiro.schemas";
-import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
+import { formatCurrency, formatDate, formatLocalDateTime, getApiErrorMessage } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import type { PagamentoResponse } from "@/types/financeiro.types";
 
@@ -36,7 +36,7 @@ function PaymentCreatorMeta({ payment }: { payment: PagamentoResponse }) {
         </Badge>
       )}
       <span>Criado por: {createdBy}</span>
-      {payment.created_at && <span>Criado em: {formatDate(payment.created_at)}</span>}
+      {payment.created_at && <span>Criado em: {formatLocalDateTime(payment.created_at)}</span>}
     </div>
   );
 }
