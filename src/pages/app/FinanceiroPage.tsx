@@ -31,7 +31,14 @@ import type { MovClass, MovimentacaoResponse, PagamentoResponse, PagamentoStatus
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
+import { AttachmentManager } from "@/components/features/financeiro/AttachmentManager";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
+import { storageService } from "@/services/storage.service";
+import {
+  usePagamentoAttachments,
+  useCreatePagamentoAttachment,
+  useDeletePagamentoAttachment,
+} from "@/hooks/useFinanceiro";
 import { RelatoriosFinanceirosTab } from "@/components/features/financeiro/RelatoriosFinanceirosTab";
 import { FluxoCaixaTab } from "@/components/features/financeiro/FluxoCaixaTab";
 import { buildPixPayload } from "@/lib/pix";
@@ -403,6 +410,8 @@ export function FinanceiroPage() {
   const [deletePagId, setDeletePagId] = useState<string | null>(null);
   const [movFormObraId, setMovFormObraId] = useState<string>("");
   const [pagFormObraId, setPagFormObraId] = useState<string>("");
+  const [pagFiles, setPagFiles] = useState<File[]>([]);
+  const [isUploadingPagAttachment, setIsUploadingPagAttachment] = useState(false);
 
   // Filtros de Movimentações
   const [movPeriodo, setMovPeriodo] = useState<{ start: string; end: string }>({ start: "", end: "" });
@@ -458,17 +467,28 @@ export function FinanceiroPage() {
   });
 
   const createPagMutation = useMutation({
-    mutationFn: (v: PagamentoFormValues) =>
-      financeiroService.createPagamento({
+    mutationFn: async (v: PagamentoFormValues) => {
+      const pag = await financeiroService.createPagamento({
         ...v,
         data_agendada: formatISO(parseISO(v.data_agendada)),
         obra_id: v.obra_id || undefined,
-      }),
+      });
+      if (pagFiles.length) {
+        const uploads = await storageService.uploadBatch("pagamento", pag.id, pagFiles);
+        for (const u of uploads) {
+          await financeiroService.createPagamentoAttachment(pag.id, {
+            file_path: u.path, file_name: u.file_name, content_type: u.content_type,
+          });
+        }
+      }
+      return pag;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success("Pagamento agendado!");
       setCreatePagOpen(false);
       setPagFormObraId("");
+      setPagFiles([]);
       resetPag();
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
@@ -570,10 +590,34 @@ export function FinanceiroPage() {
     formState: { errors: errorsPag },
   } = useForm<PagamentoFormValues>({ resolver: zodResolver(pagamentoSchema) });
 
+  const pagAttachmentsQuery = usePagamentoAttachments(editingPag?.id ?? null);
+  const pagAttachments = pagAttachmentsQuery.data ?? [];
+  const createPagAttachment = useCreatePagamentoAttachment(editingPag?.id ?? "");
+  const deletePagAttachment = useDeletePagamentoAttachment(editingPag?.id ?? "");
+
+  async function handleUploadPagAttachments(files: File[]) {
+    if (!editingPag) return;
+    setIsUploadingPagAttachment(true);
+    try {
+      const uploads = await storageService.uploadBatch("pagamento", editingPag.id, files);
+      for (const u of uploads) {
+        await createPagAttachment.mutateAsync({
+          file_path: u.path, file_name: u.file_name, content_type: u.content_type,
+        });
+      }
+      toast.success(`${files.length} anexo${files.length > 1 ? "s" : ""} adicionado${files.length > 1 ? "s" : ""}!`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setIsUploadingPagAttachment(false);
+    }
+  }
+
   function closePagamentoDialog() {
     setCreatePagOpen(false);
     setEditingPag(null);
     setPagFormObraId("");
+    setPagFiles([]);
     resetPag();
   }
 
@@ -1051,6 +1095,39 @@ export function FinanceiroPage() {
               <Label>Código de pagamento (opcional)</Label>
               <Input placeholder="PIX copia e cola, código de barras..." {...registerPag("payment_cod")} />
             </div>
+
+            {!editingPag && (
+              <div className="space-y-1.5">
+                <Label>Anexos (opcional)</Label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={(e) => setPagFiles(Array.from(e.target.files ?? []))}
+                  className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-muted/80"
+                />
+                {pagFiles.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {pagFiles.length} arquivo(s) selecionado(s)
+                  </p>
+                )}
+              </div>
+            )}
+
+            {editingPag && (
+              <AttachmentManager
+                attachments={pagAttachments}
+                isLoading={pagAttachmentsQuery.isLoading}
+                isUploading={isUploadingPagAttachment}
+                onUploadFiles={handleUploadPagAttachments}
+                onDeleteAttachment={(id) => deletePagAttachment.mutateAsync(id)}
+                disabled={editingPag.status === "pago"}
+                label="Anexos"
+                emptyTitle="Nenhum anexo"
+                emptyHint="Clique para adicionar notas de serviço, boletos etc."
+              />
+            )}
+
             <DialogFooter>
               <Button variant="outline" type="button" onClick={closePagamentoDialog}>Cancelar</Button>
               <Button type="submit" disabled={createPagMutation.isPending || updatePagMutation.isPending}>
