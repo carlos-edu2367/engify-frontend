@@ -1,21 +1,13 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  Paperclip,
-  Upload,
   Trash2,
-  FileText,
-  ImageIcon,
   ExternalLink,
   Building2,
   Receipt,
-  X,
-  ZoomIn,
-  Loader2,
-  Download,
   CalendarClock,
   Tag,
   Banknote,
@@ -36,8 +28,9 @@ import { storageService } from "@/services/storage.service";
 import { obrasService } from "@/services/obras.service";
 import { formatCurrency, formatDate, getApiErrorMessage } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import type { MovimentacaoResponse, MovimentacaoAttachmentResponse } from "@/types/financeiro.types";
+import type { MovimentacaoResponse } from "@/types/financeiro.types";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
+import { AttachmentManager } from "@/components/features/financeiro/AttachmentManager";
 
 const classeLabels: Record<string, string> = {
   diarista: "Diarista",
@@ -48,146 +41,6 @@ const classeLabels: Record<string, string> = {
   operacional: "Operacional",
 };
 
-// ─── Lightbox ──────────────────────────────────────────────────────────────────
-function Lightbox({ url, name, onClose }: { url: string; name: string; onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <img
-        src={url}
-        alt={name}
-        className="max-h-full max-w-full rounded-lg shadow-2xl object-contain"
-        onClick={(e) => e.stopPropagation()}
-      />
-      <button
-        className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
-        onClick={onClose}
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-// ─── Attachment Item ───────────────────────────────────────────────────────────
-function AttachmentItem({
-  att,
-  movId,
-}: {
-  att: MovimentacaoAttachmentResponse;
-  movId: string;
-}) {
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [loadingUrl, setLoadingUrl] = useState(false);
-  const deleteMutation = useDeleteMovimentacaoAttachment(movId);
-
-  const isImage = att.content_type.startsWith("image/");
-  const isPdf = att.content_type === "application/pdf";
-
-  async function handleView() {
-    setLoadingUrl(true);
-    try {
-      const { download_url } = await storageService.getDownloadUrl(att.file_path);
-      if (isImage) {
-        setLightboxUrl(download_url);
-      } else {
-        window.open(download_url, "_blank");
-      }
-    } catch {
-      toast.error("Erro ao abrir o arquivo.");
-    } finally {
-      setLoadingUrl(false);
-    }
-  }
-
-  async function handleDownload() {
-    setLoadingUrl(true);
-    try {
-      const { download_url } = await storageService.getDownloadUrl(att.file_path);
-      const a = document.createElement("a");
-      a.href = download_url;
-      a.download = att.file_name;
-      a.click();
-    } catch {
-      toast.error("Erro ao baixar o arquivo.");
-    } finally {
-      setLoadingUrl(false);
-    }
-  }
-
-  function handleDelete() {
-    deleteMutation.mutate(att.id, {
-      onSuccess: () => toast.success("Comprovante removido."),
-      onError: (err) => toast.error(getApiErrorMessage(err)),
-    });
-  }
-
-  return (
-    <>
-      {lightboxUrl && (
-        <Lightbox url={lightboxUrl} name={att.file_name} onClose={() => setLightboxUrl(null)} />
-      )}
-      <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 p-3 group">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background">
-          {isImage ? (
-            <ImageIcon className="h-4 w-4 text-primary/70" />
-          ) : (
-            <FileText className="h-4 w-4 text-destructive/70" />
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium" title={att.file_name}>
-            {att.file_name}
-          </p>
-          <p className="text-[11px] text-muted-foreground">
-            {isPdf ? "PDF" : isImage ? "Imagem" : att.content_type} · {formatDate(att.created_at)}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={handleView}
-            disabled={loadingUrl}
-            title={isImage ? "Visualizar" : "Abrir"}
-          >
-            {loadingUrl ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <ZoomIn className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={handleDownload}
-            disabled={loadingUrl}
-            title="Baixar"
-          >
-            <Download className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-            title="Remover"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ─── Main Sheet ────────────────────────────────────────────────────────────────
 interface MovimentacaoDetailSheetProps {
   mov: MovimentacaoResponse | null;
@@ -197,7 +50,6 @@ interface MovimentacaoDetailSheetProps {
 
 export function MovimentacaoDetailSheet({ mov, onClose, onDeleted }: MovimentacaoDetailSheetProps) {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -207,6 +59,7 @@ export function MovimentacaoDetailSheet({ mov, onClose, onDeleted }: Movimentaca
   // Attachments
   const { data: attachments = [], isLoading: attLoading } = useMovimentacaoAttachments(movId);
   const createAttachment = useCreateMovimentacaoAttachment(movId ?? "");
+  const deleteAttachment = useDeleteMovimentacaoAttachment(movId ?? "");
 
   // Obra lookup
   const { data: obra } = useQuery({
@@ -224,10 +77,8 @@ export function MovimentacaoDetailSheet({ mov, onClose, onDeleted }: Movimentaca
     staleTime: 5 * 60 * 1000,
   });
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUploadFiles(files: File[]) {
     if (!mov) return;
-    const files = Array.from(e.target.files ?? []);
-    if (!files.length) return;
     setIsUploading(true);
     try {
       for (const file of files) {
@@ -243,7 +94,6 @@ export function MovimentacaoDetailSheet({ mov, onClose, onDeleted }: Movimentaca
       toast.error(getApiErrorMessage(err));
     } finally {
       setIsUploading(false);
-      e.target.value = "";
     }
   }
 
@@ -430,76 +280,13 @@ export function MovimentacaoDetailSheet({ mov, onClose, onDeleted }: Movimentaca
 
               <Separator />
 
-              {/* Comprovantes */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Paperclip className="h-4 w-4 text-muted-foreground" />
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Comprovantes
-                    </p>
-                    {attachments.length > 0 && (
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4">
-                        {attachments.length}
-                      </Badge>
-                    )}
-                  </div>
-                  <div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept="image/jpeg,image/png,image/webp,application/pdf"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs gap-1.5"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                    >
-                      {isUploading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Upload className="h-3.5 w-3.5" />
-                      )}
-                      {isUploading ? "Enviando..." : "Anexar"}
-                    </Button>
-                  </div>
-                </div>
-
-                {attLoading ? (
-                  <div className="space-y-2">
-                    {[1, 2].map((i) => (
-                      <Skeleton key={i} className="h-14 rounded-lg" />
-                    ))}
-                  </div>
-                ) : attachments.length === 0 ? (
-                  <button
-                    className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/50 py-8 text-center transition-colors hover:border-primary/40 hover:bg-primary/5"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/60">
-                      <Paperclip className="h-5 w-5 text-muted-foreground/60" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Nenhum comprovante anexado</p>
-                      <p className="text-xs text-muted-foreground/60 mt-0.5">
-                        Clique para adicionar imagens ou PDFs
-                      </p>
-                    </div>
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    {attachments.map((att) => (
-                      <AttachmentItem key={att.id} att={att} movId={mov.id} />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <AttachmentManager
+                attachments={attachments}
+                isLoading={attLoading}
+                isUploading={isUploading}
+                onUploadFiles={handleUploadFiles}
+                onDeleteAttachment={(id) => deleteAttachment.mutateAsync(id)}
+              />
             </div>
           </>
         )}
