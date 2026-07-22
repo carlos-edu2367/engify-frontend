@@ -9,6 +9,8 @@ import type {
   ListPagamentosParams,
   MovimentacaoAttachmentResponse,
   CreateMovimentacaoAttachmentRequest,
+  PagamentoAttachmentResponse,
+  CreatePagamentoAttachmentRequest,
   BaixaLoteRequest,
   BaixaLoteResponse,
   CreateCommissionReportRequest,
@@ -73,6 +75,19 @@ export const financeiroService = {
 
   deleteAttachment: (movId: string, attId: string) =>
     api.delete(`/financeiro/movimentacoes/${movId}/attachments/${attId}`).then((r) => r.data),
+
+  listPagamentoAttachments: (pagId: string) =>
+    api
+      .get<PagamentoAttachmentResponse[]>(`/financeiro/pagamentos/${pagId}/attachments`)
+      .then((r) => r.data),
+
+  createPagamentoAttachment: (pagId: string, data: CreatePagamentoAttachmentRequest) =>
+    api
+      .post<PagamentoAttachmentResponse>(`/financeiro/pagamentos/${pagId}/attachments`, data)
+      .then((r) => r.data),
+
+  deletePagamentoAttachment: (pagId: string, attId: string) =>
+    api.delete(`/financeiro/pagamentos/${pagId}/attachments/${attId}`).then((r) => r.data),
 
   baixaLotePagamentos: (data: BaixaLoteRequest) =>
     api.post<BaixaLoteResponse>("/financeiro/pagamentos/baixa-lote", data).then((r) => r.data),

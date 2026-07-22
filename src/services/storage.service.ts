@@ -1,6 +1,6 @@
 import { api } from "@/lib/axios";
 
-type ResourceType = "obra" | "item" | "financeiro" | "mural";
+type ResourceType = "obra" | "item" | "financeiro" | "mural" | "pagamento";
 
 type UploadUrlEntry = { upload_url: string; path: string; expires_in: number };
 

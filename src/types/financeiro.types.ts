@@ -110,6 +110,21 @@ export interface CreateMovimentacaoAttachmentRequest {
   content_type: string;
 }
 
+export interface PagamentoAttachmentResponse {
+  id: string;
+  pagamento_id: string;
+  file_path: string;
+  file_name: string;
+  content_type: string;
+  created_at: string;
+}
+
+export interface CreatePagamentoAttachmentRequest {
+  file_path: string;
+  file_name: string;
+  content_type: string;
+}
+
 export interface BaixaLoteRequest {
   pagamento_ids: string[];
 }

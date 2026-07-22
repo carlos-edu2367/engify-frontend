@@ -5,6 +5,7 @@ import type {
   CreatePagamentoRequest,
   UpdatePagamentoRequest,
   CreateMovimentacaoAttachmentRequest,
+  CreatePagamentoAttachmentRequest,
   BaixaLoteRequest,
 } from "@/types/financeiro.types";
 
@@ -106,6 +107,38 @@ export function useDeleteMovimentacaoAttachment(movId: string) {
     onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: ["financeiro", "movimentacoes", movId, "attachments"],
+      }),
+  });
+}
+
+export function usePagamentoAttachments(pagId: string | null) {
+  return useQuery({
+    queryKey: ["financeiro", "pagamentos", pagId, "attachments"],
+    queryFn: () => financeiroService.listPagamentoAttachments(pagId!),
+    enabled: !!pagId,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useCreatePagamentoAttachment(pagId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreatePagamentoAttachmentRequest) =>
+      financeiroService.createPagamentoAttachment(pagId, data),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "pagamentos", pagId, "attachments"],
+      }),
+  });
+}
+
+export function useDeletePagamentoAttachment(pagId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (attId: string) => financeiroService.deletePagamentoAttachment(pagId, attId),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: ["financeiro", "pagamentos", pagId, "attachments"],
       }),
   });
 }
