@@ -1037,7 +1037,7 @@ export function FinanceiroPage() {
 
       {/* Dialog criar pagamento */}
       <Dialog open={createPagOpen} onOpenChange={(open) => { if (!open) closePagamentoDialog(); else setCreatePagOpen(true); }}>
-        <DialogContent>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader><DialogTitle>{editingPag ? "Editar Pagamento" : "Novo Pagamento"}</DialogTitle></DialogHeader>
           <form
             onSubmit={handleSubmitPag(submitPagamento, () =>

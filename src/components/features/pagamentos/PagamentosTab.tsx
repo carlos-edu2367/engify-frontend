@@ -249,7 +249,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
         open={createOpen}
         onOpenChange={(o) => { setCreateOpen(o); if (!o) { reset(); setPagFiles([]); } }}
       >
-        <DialogContent>
+        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Agendar Pagamento</DialogTitle>
           </DialogHeader>
