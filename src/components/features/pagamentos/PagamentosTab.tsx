@@ -17,6 +17,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { financeiroService } from "@/services/financeiro.service";
 import { obrasService } from "@/services/obras.service";
+import { storageService } from "@/services/storage.service";
 import { obraPagamentoSchema, type ObraPagamentoFormValues } from "@/lib/schemas/financeiro.schemas";
 import { formatCurrency, formatDate, formatLocalDateTime, getApiErrorMessage } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
@@ -46,6 +47,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const [deletePagamentoId, setDeletePagamentoId] = useState<string | null>(null);
   const [scope, setScope] = useState<"mine" | "all">("mine");
+  const [pagFiles, setPagFiles] = useState<File[]>([]);
   const isEngenheiro = useAuthStore((s) => s.user?.role === "engenheiro");
 
   const { data, isLoading } = useQuery({
@@ -70,15 +72,26 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
   });
 
   const createMutation = useMutation({
-    mutationFn: (values: ObraPagamentoFormValues) =>
-      obrasService.createPagamento(obraId, {
+    mutationFn: async (values: ObraPagamentoFormValues) => {
+      const pag = await obrasService.createPagamento(obraId, {
         ...values,
         data_agendada: formatISO(parseISO(values.data_agendada)),
-      }),
+      });
+      if (pagFiles.length) {
+        const uploads = await storageService.uploadBatch("pagamento", pag.id, pagFiles);
+        for (const u of uploads) {
+          await financeiroService.createPagamentoAttachment(pag.id, {
+            file_path: u.path, file_name: u.file_name, content_type: u.content_type,
+          });
+        }
+      }
+      return pag;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
       toast.success("Pagamento agendado!");
       setCreateOpen(false);
+      setPagFiles([]);
       reset();
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
@@ -232,7 +245,10 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
       )}
 
       {/* Modal criar */}
-      <Dialog open={createOpen} onOpenChange={(o) => { setCreateOpen(o); if (!o) reset(); }}>
+      <Dialog
+        open={createOpen}
+        onOpenChange={(o) => { setCreateOpen(o); if (!o) { reset(); setPagFiles([]); } }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Agendar Pagamento</DialogTitle>
@@ -270,6 +286,22 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
               <Input placeholder="Cole o código PIX aqui" {...register("payment_cod")} />
               {errors.payment_cod && (
                 <p className="text-xs text-destructive">{errors.payment_cod.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Anexos (opcional)</Label>
+              <input
+                type="file"
+                multiple
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={(e) => setPagFiles(Array.from(e.target.files ?? []))}
+                className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-muted/80"
+              />
+              {pagFiles.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {pagFiles.length} arquivo(s) selecionado(s)
+                </p>
               )}
             </div>
 
