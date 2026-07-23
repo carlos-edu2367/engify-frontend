@@ -420,6 +420,7 @@ export function FinanceiroPage() {
 
   // Filtros de Pagamentos
   const [pagStatus, setPagStatus] = useState<PagamentoStatus | "all">("all");
+  const [pagScope, setPagScope] = useState<"mine" | "all">("mine");
 
   // Obras para o filtro
   const { data: obrasData } = useQuery({
@@ -450,8 +451,13 @@ export function FinanceiroPage() {
   });
 
   const { data: pagsData, isLoading: pagsLoading } = useQuery({
-    queryKey: ["financeiro", "pagamentos", { status: pagStatus }],
-    queryFn: () => financeiroService.listPagamentos({ limit: 50, status: pagStatus }),
+    queryKey: ["financeiro", "pagamentos", { status: pagStatus, scope: isEngineerOnly ? pagScope : "all" }],
+    queryFn: () =>
+      financeiroService.listPagamentos({
+        limit: 50,
+        status: pagStatus,
+        scope: isEngineerOnly ? pagScope : "all",
+      }),
   });
 
   const createMovMutation = useMutation({
@@ -899,15 +905,38 @@ export function FinanceiroPage() {
           {/* Pagamentos */}
           <TabsContent value="pagamentos" className="mt-4 space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
-              <div className="flex sm:w-48">
-                <Select value={pagStatus} onValueChange={(v) => setPagStatus(v as PagamentoStatus | "all")}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="aguardando">Pendentes</SelectItem>
-                    <SelectItem value="pago">Pagos</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex sm:w-48">
+                  <Select value={pagStatus} onValueChange={(v) => setPagStatus(v as PagamentoStatus | "all")}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="aguardando">Pendentes</SelectItem>
+                      <SelectItem value="pago">Pagos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {isEngineerOnly && (
+                  <div className="flex items-center gap-1 rounded-lg bg-muted/60 p-0.5">
+                    <Button
+                      size="sm"
+                      variant={pagScope === "mine" ? "default" : "ghost"}
+                      className="h-7 px-2.5 text-xs"
+                      onClick={() => setPagScope("mine")}
+                    >
+                      Meus pagamentos
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={pagScope === "all" ? "default" : "ghost"}
+                      className="h-7 px-2.5 text-xs"
+                      onClick={() => setPagScope("all")}
+                    >
+                      Todos os pagamentos
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <Button size="sm" onClick={() => setCreatePagOpen(true)} className="shrink-0">
