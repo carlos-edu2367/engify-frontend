@@ -282,7 +282,31 @@ function SinglePaymentCard({
   canEdit: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const navigate = useNavigate();
+
+  const { data: attachments = [], isLoading: attLoading } = usePagamentoAttachments(
+    expanded ? payment.id : null
+  );
+  const createAttachment = useCreatePagamentoAttachment(payment.id);
+  const deleteAttachment = useDeletePagamentoAttachment(payment.id);
+
+  async function handleUploadFiles(files: File[]) {
+    setIsUploadingAttachment(true);
+    try {
+      const uploads = await storageService.uploadBatch("pagamento", payment.id, files);
+      for (const u of uploads) {
+        await createAttachment.mutateAsync({
+          file_path: u.path, file_name: u.file_name, content_type: u.content_type,
+        });
+      }
+      toast.success(`${files.length} anexo${files.length > 1 ? "s" : ""} adicionado${files.length > 1 ? "s" : ""}!`);
+    } catch (err) {
+      toast.error(getApiErrorMessage(err));
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  }
 
   const dueStatus = getDueStatus(payment.data_agendada, payment.status);
   const borderClass = dueStatus === "overdue"
@@ -388,6 +412,18 @@ function SinglePaymentCard({
                 <PixQrCodeBlock payload={payment.pix_copy_and_past} originalCode={payment.payment_cod} compact />
               ) : null
             )}
+
+            <AttachmentManager
+              attachments={attachments}
+              isLoading={attLoading}
+              isUploading={isUploadingAttachment}
+              onUploadFiles={handleUploadFiles}
+              onDeleteAttachment={(id) => deleteAttachment.mutateAsync(id)}
+              disabled={!canEdit || payment.status === "pago"}
+              label="Anexos"
+              emptyTitle="Nenhum anexo"
+              emptyHint="Clique para adicionar notas de serviço, boletos etc."
+            />
           </div>
         )}
       </CardContent>
