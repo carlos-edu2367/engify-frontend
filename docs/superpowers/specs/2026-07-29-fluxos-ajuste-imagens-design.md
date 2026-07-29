@@ -33,3 +33,7 @@ Representar a triagem na aba “Ajustes” da área de solicitações: filtros d
 - Abrir os dois HTMLs em navegador/renderizador local em viewport de 1080 px.
 - Conferir que nenhum painel, botão ou chamada explicativa foi cortado.
 - Conferir que os PNGs têm exatamente 1080 px de largura e são legíveis em visualização vertical.
+
+## Revisão mobile do fluxo do funcionário
+
+A arte do funcionário deve ser apresentada em telas independentes dentro de molduras mobile, sem a sidebar desktop. Cada tela deve representar uma etapa real do layout responsivo, com cabeçalho contendo menu, título, notificações e avatar, abas horizontais e campos empilhados. A sequência deve explicar: abrir Solicitações/Ajustes, escolher o dia, marcar o horário, preencher a justificativa e acompanhar o status Pendente.
