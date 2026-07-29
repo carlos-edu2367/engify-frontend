@@ -25,7 +25,8 @@ export function isTechnicalIdentifier(value?: string | null) {
 export function employeeDisplay(
   item?: Partial<RhEmployeeDisplayFields & RhFuncionarioListItem> | null
 ) {
-  const title = item?.funcionario_nome ?? item?.nome ?? "Funcionario nao identificado";
+  const preferredName = item?.funcionario_nome?.trim() || item?.nome?.trim();
+  const title = preferredName || "Funcionário não identificado";
   const role = item?.funcionario_cargo ?? item?.cargo;
   const cpf = item?.funcionario_cpf_mascarado ?? item?.cpf_mascarado;
   const subtitle = [role, cpf].filter(Boolean).join(" · ");

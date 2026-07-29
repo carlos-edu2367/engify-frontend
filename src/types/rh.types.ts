@@ -141,6 +141,9 @@ export interface RhFerias extends RhEmployeeDisplayFields {
 export interface RhAjustePonto extends RhEmployeeDisplayFields {
   id: string;
   funcionario_id: string;
+  funcionario_nome?: string | null;
+  funcionario_cargo?: string | null;
+  funcionario_cpf_mascarado?: string | null;
   data_referencia: string;
   justificativa: string;
   hora_entrada_solicitada?: string | null;
