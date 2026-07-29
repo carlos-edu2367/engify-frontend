@@ -7,6 +7,7 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 const DEV = import.meta.env.DEV;
+export const AUTH_REQUEST_TIMEOUT_MS = 12_000;
 
 function devLog(msg: string, extra?: unknown) {
   if (DEV) {
@@ -53,7 +54,11 @@ export async function refreshAccessToken(): Promise<string> {
   if (!refreshPromise) {
     devLog("POST /auth/refresh — withCredentials:true, cookie será enviado pelo browser");
     refreshPromise = axios
-      .post<{ access_token: string }>(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true })
+      .post<{ access_token: string }>(
+        `${API_BASE_URL}/auth/refresh`,
+        {},
+        { withCredentials: true, timeout: AUTH_REQUEST_TIMEOUT_MS }
+      )
       .then(({ data }) => {
         devLog("refresh OK — novo access token recebido");
         useAuthStore.getState().setAccessToken(data.access_token);
@@ -82,6 +87,7 @@ function redirectToLogin() {
 export const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
   headers: { "Content-Type": "application/json" },
 });
 

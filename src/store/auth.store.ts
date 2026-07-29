@@ -17,11 +17,12 @@ interface AuthState {
   isAuthenticated: boolean;
   isBootstrapping: boolean;
   hasBootstrapped: boolean;
+  bootstrapError: string | null;
   setAuth: (token: string, user: AuthUser) => void;
   setAccessToken: (token: string) => void;
   setUser: (user: AuthUser) => void;
   startBootstrap: () => void;
-  finishBootstrap: () => void;
+  finishBootstrap: (error?: string | null) => void;
   clearAuth: () => void;
   logout: () => void;
 }
@@ -39,6 +40,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       isBootstrapping: false,
       hasBootstrapped: false,
+      bootstrapError: null,
 
       setAuth: (token, user) => {
         saveSessionAccessToken(token);
@@ -52,10 +54,10 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => set({ user }),
 
-      startBootstrap: () => set({ isBootstrapping: true }),
+      startBootstrap: () => set({ isBootstrapping: true, bootstrapError: null }),
 
-      finishBootstrap: () =>
-        set({ isBootstrapping: false, hasBootstrapped: true }),
+      finishBootstrap: (error = null) =>
+        set({ isBootstrapping: false, hasBootstrapped: true, bootstrapError: error }),
 
       clearAuth: () => {
         clearSessionAccessToken();

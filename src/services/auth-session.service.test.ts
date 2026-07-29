@@ -11,6 +11,7 @@ vi.mock("axios", () => ({
 }));
 
 vi.mock("@/lib/axios", () => ({
+  AUTH_REQUEST_TIMEOUT_MS: 12000,
   refreshAccessToken,
 }));
 
@@ -78,8 +79,23 @@ describe("restoreSession", () => {
 
     expect(axiosGet).toHaveBeenCalledWith("https://api.example.com/api/v1/auth/me", {
       headers: { Authorization: `Bearer ${token}` },
+      timeout: 12000,
     });
     expect(refreshAccessToken).not.toHaveBeenCalled();
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
+  });
+
+  it("exposes a recoverable bootstrap error when session restoration fails", async () => {
+    refreshAccessToken.mockRejectedValueOnce(new Error("network timeout"));
+
+    const { restoreSession } = await import("./auth-session.service");
+    const { useAuthStore } = await import("@/store/auth.store");
+
+    await restoreSession();
+
+    expect(useAuthStore.getState().hasBootstrapped).toBe(true);
+    expect(useAuthStore.getState().bootstrapError).toBe(
+      "Não foi possível conectar ao servidor."
+    );
   });
 });

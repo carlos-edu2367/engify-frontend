@@ -8,29 +8,22 @@ import { queryClient } from "@/lib/query-client";
 import { AppErrorBoundary } from "@/components/layout/AppErrorBoundary";
 import { clearChunkReloadMarker } from "@/lib/chunk-reload";
 import { initTheme } from "@/store/theme.store";
-import { restoreSession } from "@/services/auth-session.service";
 import "./index.css";
 
 // Aplica o tema antes de montar o React para evitar flash
 initTheme();
 clearChunkReloadMarker();
 
-async function bootstrap() {
-  await restoreSession();
-
-  ReactDOM.createRoot(document.getElementById("root")!).render(
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <AppErrorBoundary>
-          <RouterProvider router={router} />
-        </AppErrorBoundary>
-        <Toaster richColors position="top-right" closeButton />
-      </QueryClientProvider>
-    </React.StrictMode>
-  );
-}
-
-void bootstrap();
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <AppErrorBoundary>
+        <RouterProvider router={router} />
+      </AppErrorBoundary>
+      <Toaster richColors position="top-right" closeButton />
+    </QueryClientProvider>
+  </React.StrictMode>
+);
 
 if ("serviceWorker" in navigator && !import.meta.env.DEV) {
   window.addEventListener("load", () => {
@@ -38,6 +31,7 @@ if ("serviceWorker" in navigator && !import.meta.env.DEV) {
       .register("/sw.js")
       .then((reg) => {
         console.log("Service Worker registrado com sucesso:", reg);
+        void reg.update();
       })
       .catch((err) => {
         console.error("Falha ao registrar Service Worker:", err);

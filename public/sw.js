@@ -1,4 +1,4 @@
-const CACHE_NAME = "engify-cache-v1";
+const CACHE_NAME = "engify-cache-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
@@ -86,7 +86,25 @@ self.addEventListener("fetch", (event) => {
         })
     );
   } else {
-    // Cache-First para arquivos estáticos (JS, CSS, Imagens, Fontes) com atualização silenciosa
+    const isCodeAsset = event.request.destination === "script" || event.request.destination === "style";
+
+    if (isCodeAsset) {
+      // Network-First para JS/CSS: evita que uma versão antiga do app fique presa no celular.
+      event.respondWith(
+        fetch(event.request)
+          .then((response) => {
+            if (response.ok) {
+              const responseClone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+            }
+            return response;
+          })
+          .catch(() => caches.match(event.request))
+      );
+      return;
+    }
+
+    // Cache-First para imagens, fontes e demais arquivos estáticos.
     event.respondWith(
       caches.match(event.request).then((cachedResponse) => {
         if (cachedResponse) {

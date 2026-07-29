@@ -1,5 +1,5 @@
 import axios from "axios";
-import { refreshAccessToken } from "@/lib/axios";
+import { AUTH_REQUEST_TIMEOUT_MS, refreshAccessToken } from "@/lib/axios";
 import { loadSessionAccessToken } from "@/services/auth-session-token";
 import { useAuthStore } from "@/store/auth.store";
 import type { MeResponse } from "@/types/auth.types";
@@ -30,6 +30,7 @@ function mapUser(me: MeResponse) {
 async function rawMe(token: string): Promise<MeResponse> {
   const { data } = await axios.get<MeResponse>(`${BASE}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
+    timeout: AUTH_REQUEST_TIMEOUT_MS,
   });
   return data;
 }
@@ -73,6 +74,24 @@ export function restoreSession() {
       const isAxiosErr = axios.isAxiosError(err);
       const status = isAxiosErr ? err.response?.status : undefined;
       const isNetworkError = isAxiosErr && !err.response;
+      const bootstrapError = isNetworkError
+        ? "A conexão está demorando. Verifique sua internet e tente novamente."
+        : "Não foi possível conectar ao servidor.";
+      const browserNavigator = typeof navigator !== "undefined" ? navigator : undefined;
+      const connection = (
+        browserNavigator as (Navigator & {
+          connection?: { effectiveType?: string; downlink?: number; rtt?: number };
+        }) | undefined
+      )?.connection;
+
+      console.warn("[Auth] falha ao restaurar sessão", {
+        status,
+        online: browserNavigator?.onLine,
+        effectiveType: connection?.effectiveType,
+        downlink: connection?.downlink,
+        rtt: connection?.rtt,
+        message: err instanceof Error ? err.message : String(err),
+      });
 
       if (isNetworkError) {
         // Erro de rede (sem resposta): cookie pode estar ok, problema é conectividade.
@@ -83,8 +102,12 @@ export function restoreSession() {
       }
 
       useAuthStore.getState().clearAuth();
+      useAuthStore.getState().finishBootstrap(bootstrapError);
+      return;
     } finally {
-      useAuthStore.getState().finishBootstrap();
+      if (useAuthStore.getState().isBootstrapping) {
+        useAuthStore.getState().finishBootstrap();
+      }
       restoreSessionPromise = null;
     }
   })();

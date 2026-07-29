@@ -46,7 +46,7 @@ describe("refreshAccessToken", () => {
     expect(axios.post).toHaveBeenCalledWith(
       "https://api.example.com/api/v1/auth/refresh",
       {},
-      { withCredentials: true }
+      { withCredentials: true, timeout: 12000 }
     );
     expect(setAccessToken).toHaveBeenCalledWith("new-access-token");
   });
