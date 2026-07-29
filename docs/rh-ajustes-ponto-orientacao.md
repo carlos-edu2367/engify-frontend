@@ -18,13 +18,13 @@ Na tela do RH, o nome do funcionário aparece primeiro, com cargo e CPF mascarad
 2. Compare o que foi registrado com o que foi pedido em `Entrada`, `Intervalo` e `Saída`.
 3. Leia a justificativa com atenção.
 4. Veja se a correção faz sentido para aquele dia e se pode afetar a folha que ainda está em rascunho.
-5. Só depois decida entre `Aprovar` ou `Rejeitar`.
+5. Só depois decida entre `Aprovar ajuste` ou `Rejeitar`.
 
 ## Como aprovar
 
 Aprovar é o caminho certo quando a correção está coerente com o que aconteceu no dia e a justificativa ajuda a entender o pedido.
 
-Ao clicar em `Aprovar`, o ponto daquele dia é atualizado. Se existir uma folha aberta em rascunho, a mudança pode aparecer nela também.
+Ao clicar em `Aprovar ajuste`, o ponto daquele dia é atualizado. Se existir uma folha aberta em rascunho, a mudança pode aparecer nela também.
 
 ## Como rejeitar
 

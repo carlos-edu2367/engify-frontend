@@ -141,8 +141,7 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
     value: form[field],
   }));
 
-  const getScheduleButtonLabel = (field: ScheduleField) => {
-    const label = fieldLabels[field];
+  const getScheduleButtonLabel = (label: string, field: ScheduleField) => {
     const selected = isFieldSelected(field);
 
     if (field === "intervaloInicio" || field === "intervaloFim") {
@@ -245,7 +244,7 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
                       key={option.label}
                       type="button"
                       aria-pressed={selected}
-                      aria-label={getScheduleButtonLabel(option.fields[0])}
+                      aria-label={getScheduleButtonLabel(option.label, option.fields[0])}
                       onClick={() => toggleField(option.fields[0])}
                       className={`rounded-lg border p-4 text-left transition-colors ${
                         selected ? "border-primary bg-primary/5" : "hover:bg-muted/40"
@@ -279,7 +278,7 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
                         key={option.label}
                         type="button"
                         aria-pressed={selected}
-                        aria-label={getScheduleButtonLabel(option.fields[0])}
+                        aria-label={getScheduleButtonLabel(option.label, option.fields[0])}
                         onClick={() => toggleField(option.fields[0])}
                         className={`rounded-lg border p-4 text-left transition-colors ${
                           selected ? "border-primary bg-primary/5" : "bg-background hover:bg-muted/40"

@@ -70,7 +70,7 @@ export function AjustesPontoPage() {
         render: (item) => (
           <div className="flex min-w-[172px] flex-wrap justify-end gap-2">
             <Button size="sm" disabled={item.status !== "pendente" || actions.approve.isPending} onClick={() => setDecision({ item, mode: "approve" })}>
-              Aprovar
+              Aprovar ajuste
             </Button>
             <Button size="sm" variant="destructive" disabled={item.status !== "pendente"} onClick={() => setDecision({ item, mode: "reject" })}>
               Rejeitar
@@ -156,23 +156,27 @@ export function AjustesPontoPage() {
           </DialogContent>
         </Dialog>
         <Dialog open={!!decision} onOpenChange={(open) => !open && closeDialog()}>
-          <DialogContent>
+          <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-3xl flex-col gap-0 overflow-hidden p-0">
             {decision ? (
             decision.mode === "reject" ? (
               <>
-                <DialogHeader>
+                <DialogHeader className="shrink-0 px-6 pb-4 pt-6">
                   <DialogTitle>Rejeitar ajuste</DialogTitle>
                   <DialogDescription>Revise as informações abaixo e explique com clareza por que a correção não pode ser aprovada.</DialogDescription>
                 </DialogHeader>
-                <AjusteComparativo
-                  item={decision.item}
-                  diaAtual={diaAtual}
-                  dayRoles={dayRoles}
-                  loading={diaAtualQuery.isLoading}
-                  mode={decision.mode}
-                />
-                <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} placeholder="Explique por que o ajuste não pode ser aprovado." />
-                <DialogFooter>
+                <div className="flex-1 overflow-y-auto px-6 pb-4">
+                  <div className="space-y-4">
+                    <AjusteComparativo
+                      item={decision.item}
+                      diaAtual={diaAtual}
+                      dayRoles={dayRoles}
+                      loading={diaAtualQuery.isLoading}
+                      mode={decision.mode}
+                    />
+                    <Textarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} placeholder="Explique por que o ajuste não pode ser aprovado." />
+                  </div>
+                </div>
+                <DialogFooter className="shrink-0 border-t px-6 py-4">
                   <Button variant="outline" onClick={closeDialog} disabled={actions.reject.isPending}>Cancelar</Button>
                   <Button
                     variant="destructive"
@@ -185,24 +189,26 @@ export function AjustesPontoPage() {
               </>
             ) : (
               <>
-                <DialogHeader>
+                <DialogHeader className="shrink-0 px-6 pb-4 pt-6">
                   <DialogTitle>Aprovar ajuste</DialogTitle>
                   <DialogDescription>Revise as informações abaixo antes de confirmar a alteração deste dia.</DialogDescription>
                 </DialogHeader>
-                <AjusteComparativo
-                  item={decision.item}
-                  diaAtual={diaAtual}
-                  dayRoles={dayRoles}
-                  loading={diaAtualQuery.isLoading}
-                  mode={decision.mode}
-                />
-                <DialogFooter>
+                <div className="flex-1 overflow-y-auto px-6 pb-4">
+                  <AjusteComparativo
+                    item={decision.item}
+                    diaAtual={diaAtual}
+                    dayRoles={dayRoles}
+                    loading={diaAtualQuery.isLoading}
+                    mode={decision.mode}
+                  />
+                </div>
+                <DialogFooter className="shrink-0 border-t px-6 py-4">
                   <Button variant="outline" onClick={closeDialog} disabled={actions.approve.isPending}>Cancelar</Button>
                   <Button
                     disabled={actions.approve.isPending}
                     onClick={() => decision && actions.approve.mutate(decision.item.id, { onSuccess: closeDialog })}
                   >
-                    {actions.approve.isPending ? "Aprovando..." : "Aprovar"}
+                    {actions.approve.isPending ? "Aprovando..." : "Aprovar ajuste"}
                   </Button>
                 </DialogFooter>
               </>
