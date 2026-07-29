@@ -455,6 +455,7 @@ export function EmployeeRequestCard({
   actionLabel,
   actionDisabled,
   onSubmit,
+  footer,
 }: {
   title: string;
   description: string;
@@ -462,6 +463,7 @@ export function EmployeeRequestCard({
   actionLabel: string;
   actionDisabled: boolean;
   onSubmit: () => void;
+  footer?: ReactNode;
 }) {
   return (
     <Card className="mb-4">
@@ -471,9 +473,11 @@ export function EmployeeRequestCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {children}
-        <Button onClick={onSubmit} disabled={actionDisabled}>
-          {actionLabel}
-        </Button>
+        {footer ?? (
+          <Button onClick={onSubmit} disabled={actionDisabled}>
+            {actionLabel}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
