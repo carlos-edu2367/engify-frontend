@@ -35,6 +35,9 @@ const fieldLabels: Record<ScheduleField, string> = {
   saida: "Saída",
 };
 
+const intervalHelperTitle = "Intervalo: saída e volta juntas";
+const intervalHelperDescription = "As duas partes serão solicitadas juntas";
+
 const emptyForm = {
   dataReferencia: "",
   justificativa: "",
@@ -138,6 +141,19 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
     value: form[field],
   }));
 
+  const getScheduleButtonLabel = (field: ScheduleField) => {
+    const label = fieldLabels[field];
+    const selected = isFieldSelected(field);
+
+    if (field === "intervaloInicio" || field === "intervaloFim") {
+      return `${label}. ${intervalHelperTitle}. ${intervalHelperDescription}. ${
+        selected ? "Selecionado" : "Não selecionado"
+      }.`;
+    }
+
+    return `${label}. ${selected ? "Selecionado" : "Não selecionado"}.`;
+  };
+
   const handleNext = () => {
     if (!isCurrentStepValid || step === 3) {
       return;
@@ -221,14 +237,15 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
             <div className="space-y-3">
               <p className="text-sm font-medium">Quais horários precisam ser corrigidos?</p>
               <div className="grid gap-3 md:grid-cols-2">
-                {AJUSTE_HORARIO_OPTIONS.map((option) => {
-                  const intervalOption = option.fields.some((field) => field === "intervaloInicio");
+                {AJUSTE_HORARIO_OPTIONS.filter((option) => option.label === "Entrada" || option.label === "Saída").map((option) => {
                   const selected = option.fields.some(isFieldSelected);
 
                   return (
                     <button
                       key={option.label}
                       type="button"
+                      aria-pressed={selected}
+                      aria-label={getScheduleButtonLabel(option.fields[0])}
                       onClick={() => toggleField(option.fields[0])}
                       className={`rounded-lg border p-4 text-left transition-colors ${
                         selected ? "border-primary bg-primary/5" : "hover:bg-muted/40"
@@ -238,7 +255,7 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
                         <div>
                           <p className="font-medium">{option.label}</p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {intervalOption ? "Informe saída e volta do intervalo." : "Preencha somente se este horário estiver incorreto."}
+                            Preencha somente se este horário estiver incorreto.
                           </p>
                         </div>
                         <Badge variant={selected ? "default" : "secondary"}>{selected ? "Selecionado" : "Opcional"}</Badge>
@@ -246,6 +263,39 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
                     </button>
                   );
                 })}
+              </div>
+
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <div className="mb-3">
+                  <p className="text-sm font-medium">{intervalHelperTitle}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{intervalHelperDescription}</p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {AJUSTE_HORARIO_OPTIONS.filter((option) => option.label === "Saída para intervalo" || option.label === "Volta do intervalo").map((option) => {
+                    const selected = option.fields.some(isFieldSelected);
+
+                    return (
+                      <button
+                        key={option.label}
+                        type="button"
+                        aria-pressed={selected}
+                        aria-label={getScheduleButtonLabel(option.fields[0])}
+                        onClick={() => toggleField(option.fields[0])}
+                        className={`rounded-lg border p-4 text-left transition-colors ${
+                          selected ? "border-primary bg-primary/5" : "bg-background hover:bg-muted/40"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium">{option.label}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{intervalHelperDescription}</p>
+                          </div>
+                          <Badge variant={selected ? "default" : "secondary"}>{selected ? "Selecionado" : "Opcional"}</Badge>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 Você pode corrigir apenas um horário. Se for o intervalo, informe a saída e a volta.
