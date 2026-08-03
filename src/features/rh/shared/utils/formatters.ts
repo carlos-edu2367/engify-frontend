@@ -90,3 +90,28 @@ export function summarizeSchedule(turnos?: RhTurnoHorario[] | null) {
   }
   return `${count} dias/semana`;
 }
+
+/**
+ * Converte minutos em texto que o funcionario le sem traduzir na cabeca.
+ * O painel do ponto mostrava "1,50 h"; agora mostra "1 hora e 30 minutos".
+ */
+export function formatDuracao(minutos: number): string {
+  if (!Number.isFinite(minutos)) {
+    return "nenhuma";
+  }
+  const total = Math.max(0, Math.round(minutos));
+  if (total === 0) {
+    return "nenhuma";
+  }
+  const horas = Math.floor(total / 60);
+  const resto = total % 60;
+  const parteHoras = horas === 1 ? "1 hora" : `${horas} horas`;
+  const parteMinutos = resto === 1 ? "1 minuto" : `${resto} minutos`;
+  if (horas === 0) {
+    return parteMinutos;
+  }
+  if (resto === 0) {
+    return parteHoras;
+  }
+  return `${parteHoras} e ${parteMinutos}`;
+}

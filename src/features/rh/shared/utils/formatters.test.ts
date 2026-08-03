@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatCompetence,
+  formatDuracao,
   formatRhDate,
   maskCpf,
   statusBadgeVariant,
@@ -119,5 +120,21 @@ describe("rh formatters", () => {
         intervalo_fim: "14:00",
       }),
     ]);
+  });
+
+  it("escreve duracoes em horas e minutos", () => {
+    expect(formatDuracao(0)).toBe("nenhuma");
+    expect(formatDuracao(1)).toBe("1 minuto");
+    expect(formatDuracao(45)).toBe("45 minutos");
+    expect(formatDuracao(60)).toBe("1 hora");
+    expect(formatDuracao(90)).toBe("1 hora e 30 minutos");
+    expect(formatDuracao(120)).toBe("2 horas");
+    expect(formatDuracao(135)).toBe("2 horas e 15 minutos");
+    expect(formatDuracao(61)).toBe("1 hora e 1 minuto");
+  });
+
+  it("trata entradas invalidas de duracao sem quebrar", () => {
+    expect(formatDuracao(-5)).toBe("nenhuma");
+    expect(formatDuracao(Number.NaN)).toBe("nenhuma");
   });
 });
