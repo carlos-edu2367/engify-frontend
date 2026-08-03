@@ -277,6 +277,24 @@ export interface RhUltimoHoleriteResumo {
   status: RhStatusHolerite;
 }
 
+export type RhSituacaoDia =
+  | "sem_expediente"
+  | "abonado"
+  | "falta"
+  | "incompleto"
+  | "parcial"
+  | "completo"
+  | "extra";
+
+export interface RhResumoDiaPonto {
+  data: string;
+  situacao: RhSituacaoDia;
+  minutos_esperados: number;
+  minutos_trabalhados: number;
+  minutos_extras: number;
+  minutos_faltantes: number;
+}
+
 export interface RhEstadoPonto7Dias {
   inicio: string;
   fim: string;
@@ -284,6 +302,21 @@ export interface RhEstadoPonto7Dias {
   horas_extras: string;
   horas_faltantes: string;
   pontos_inconsistentes: number;
+  dias: RhResumoDiaPonto[];
+}
+
+export interface RhBatidaHoje {
+  timestamp: string;
+  tipo: RhTipoPonto;
+  status: RhStatusPonto;
+}
+
+export interface RhPontoHoje {
+  data: string;
+  tem_expediente: boolean;
+  jornada_aberta: boolean;
+  minutos_trabalhados?: number | null;
+  batidas: RhBatidaHoje[];
 }
 
 export interface RhMeResumo {
@@ -293,6 +326,7 @@ export interface RhMeResumo {
   atestados_pendentes: number;
   ultimo_holerite_fechado?: RhUltimoHoleriteResumo | null;
   estado_ponto_7_dias?: RhEstadoPonto7Dias | null;
+  ponto_hoje?: RhPontoHoje | null;
 }
 
 export interface RhMeVinculo {
