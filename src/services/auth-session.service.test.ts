@@ -2,13 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const axiosGet = vi.hoisted(() => vi.fn());
 const refreshAccessToken = vi.hoisted(() => vi.fn());
+const isAxiosError = vi.hoisted(() => vi.fn(() => false));
 
 vi.mock("axios", () => ({
   default: {
     get: axiosGet,
-    isAxiosError: vi.fn(() => false),
+    isAxiosError,
   },
 }));
+
+function axiosErrorWithStatus(status: number) {
+  return Object.assign(new Error(`request failed with status ${status}`), {
+    isAxiosError: true,
+    response: { status },
+  });
+}
+
+function axiosErrorWithoutResponse() {
+  return Object.assign(new Error("Network Error"), { isAxiosError: true, response: undefined });
+}
 
 vi.mock("@/lib/axios", () => ({
   AUTH_REQUEST_TIMEOUT_MS: 12000,
@@ -57,6 +69,8 @@ describe("restoreSession", () => {
     });
     axiosGet.mockReset();
     refreshAccessToken.mockReset();
+    isAxiosError.mockReset();
+    isAxiosError.mockImplementation(() => false);
   });
 
   it("validates a session access token before attempting refresh", async () => {
@@ -97,5 +111,88 @@ describe("restoreSession", () => {
     expect(useAuthStore.getState().bootstrapError).toBe(
       "Não foi possível conectar ao servidor."
     );
+  });
+
+  it("treats a 401 from /auth/refresh as 'no session' instead of a server error", async () => {
+    isAxiosError.mockImplementation(() => true);
+    refreshAccessToken.mockRejectedValue(axiosErrorWithStatus(401));
+
+    const { restoreSession } = await import("./auth-session.service");
+    const { useAuthStore } = await import("@/store/auth.store");
+
+    await restoreSession();
+
+    // Sem bootstrapError, ProtectedRoute redireciona para /login em vez de
+    // mostrar "Não foi possível abrir o aplicativo".
+    expect(useAuthStore.getState().bootstrapError).toBeNull();
+    expect(useAuthStore.getState().hasBootstrapped).toBe(true);
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(refreshAccessToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries transient failures until the session is restored", async () => {
+    isAxiosError.mockImplementation(() => true);
+    refreshAccessToken
+      .mockRejectedValueOnce(axiosErrorWithStatus(503))
+      .mockRejectedValueOnce(axiosErrorWithoutResponse())
+      .mockResolvedValueOnce("fresh-token");
+    axiosGet.mockResolvedValueOnce({
+      data: {
+        id: "user-1",
+        nome: "User",
+        email: "user@example.com",
+        role: "admin",
+        team_id: "team-1",
+      },
+    });
+
+    const { restoreSession } = await import("./auth-session.service");
+    const { useAuthStore } = await import("@/store/auth.store");
+
+    await restoreSession();
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(3);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(useAuthStore.getState().bootstrapError).toBeNull();
+  });
+
+  it("surfaces a connectivity message after exhausting the transient retries", async () => {
+    isAxiosError.mockImplementation(() => true);
+    refreshAccessToken.mockRejectedValue(axiosErrorWithoutResponse());
+
+    const { restoreSession } = await import("./auth-session.service");
+    const { useAuthStore } = await import("@/store/auth.store");
+
+    await restoreSession();
+
+    expect(refreshAccessToken).toHaveBeenCalledTimes(4);
+    expect(useAuthStore.getState().bootstrapError).toBe(
+      "A conexão está demorando. Verifique sua internet e tente novamente."
+    );
+    // O backoff completo (600 + 1800 + 4000ms + jitter) estoura o timeout padrão.
+  }, 15_000);
+
+  it("does not burn a refresh rotation when /auth/me fails transiently", async () => {
+    const token = unsignedJwt(Math.floor(Date.now() / 1000) + 60);
+    session.setItem("engify-auth:access-token", token);
+    isAxiosError.mockImplementation(() => true);
+    axiosGet.mockRejectedValueOnce(axiosErrorWithStatus(502));
+    axiosGet.mockResolvedValueOnce({
+      data: {
+        id: "user-1",
+        nome: "User",
+        email: "user@example.com",
+        role: "admin",
+        team_id: "team-1",
+      },
+    });
+
+    const { restoreSession } = await import("./auth-session.service");
+    const { useAuthStore } = await import("@/store/auth.store");
+
+    await restoreSession();
+
+    expect(refreshAccessToken).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
   });
 });
