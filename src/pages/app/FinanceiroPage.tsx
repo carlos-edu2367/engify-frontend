@@ -34,6 +34,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
 import { AttachmentManager } from "@/components/features/financeiro/AttachmentManager";
+import { ComprovanteDialog } from "@/components/features/financeiro/ComprovanteDialog";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { storageService } from "@/services/storage.service";
 import {
@@ -359,6 +360,11 @@ function SinglePaymentCard({
                   {payment.parcela_numero}/{payment.parcela_total}
                 </Badge>
               ) : null}
+              {payment.status === "pago" && payment.requires_receipt && !payment.receipt_attached ? (
+                <Badge variant="warning" className="text-[10px]">
+                  Comprovante pendente
+                </Badge>
+              ) : null}
             </div>
             <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
               {payment.data_agendada && <span>Vencimento: {formatDate(payment.data_agendada)}</span>}
@@ -478,6 +484,8 @@ export function FinanceiroPage() {
   const [isUploadingPagAttachment, setIsUploadingPagAttachment] = useState(false);
   const [parcelaCods, setParcelaCods] = useState<string[]>([]);
   const [pendingEdit, setPendingEdit] = useState<{ id: string; values: PagamentoFormValues } | null>(null);
+  const [comprovanteAlvo, setComprovanteAlvo] = useState<{ id: string; description: string } | null>(null);
+  const [soComprovantePendente, setSoComprovantePendente] = useState(false);
 
   // Filtros de Movimentações
   const [movPeriodo, setMovPeriodo] = useState<{ start: string; end: string }>({ start: "", end: "" });
@@ -535,7 +543,10 @@ export function FinanceiroPage() {
     queryKey: [
       "financeiro",
       "pagamentos",
-      { status: pagStatus, scope: isEngineerOnly ? pagScope : "all", mes: pagMes },
+      {
+        status: pagStatus, scope: isEngineerOnly ? pagScope : "all", mes: pagMes,
+        comprovantePendente: soComprovantePendente,
+      },
     ],
     queryFn: () =>
       financeiroService.listPagamentos({
@@ -544,6 +555,7 @@ export function FinanceiroPage() {
         scope: isEngineerOnly ? pagScope : "all",
         period_start: pagPeriodo ? new Date(pagPeriodo.start + "T00:00:00").toISOString() : undefined,
         period_end: pagPeriodo ? new Date(pagPeriodo.end + "T23:59:59").toISOString() : undefined,
+        ...(soComprovantePendente ? { comprovante_pendente: true } : {}),
       }),
   });
 
@@ -572,6 +584,7 @@ export function FinanceiroPage() {
           parcelas,
           payment_cods: Array.from({ length: parcelas }, (_, i) => parcelaCods[i]?.trim() || null),
           obra_id: v.obra_id || undefined,
+          requires_receipt: v.requires_receipt,
         });
         if (pagFiles.length) {
           const primeira = criadas[0];
@@ -596,6 +609,7 @@ export function FinanceiroPage() {
         data_agendada: formatISO(parseISO(v.data_agendada)),
         payment_cod: v.payment_cod,
         obra_id: v.obra_id || undefined,
+        requires_receipt: v.requires_receipt,
       });
       if (pagFiles.length) {
         const uploads = await storageService.uploadBatch("pagamento", pag.id, pagFiles);
@@ -629,6 +643,7 @@ export function FinanceiroPage() {
         data_agendada: formatISO(parseISO(values.data_agendada)),
         payment_cod: values.payment_cod,
         obra_id: values.obra_id || undefined,
+        requires_receipt: values.requires_receipt,
         apply_to: applyTo ?? "self",
       }),
     onSuccess: () => {
@@ -644,10 +659,16 @@ export function FinanceiroPage() {
 
   const payMutation = useMutation({
     mutationFn: (id: string) => financeiroService.payPagamento(id),
-    onSuccess: () => {
+    onSuccess: (mov) => {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success("Pagamento efetuado!");
       setConfirmPayId(null);
+      if (mov.requires_receipt) {
+        setComprovanteAlvo({
+          id: mov.id,
+          description: "Este pagamento pede comprovante. Anexe agora ou deixe para depois.",
+        });
+      }
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -658,6 +679,12 @@ export function FinanceiroPage() {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       toast.success(`${result.quantidade} pagamentos marcados como pagos — ${formatCurrency(result.valor_total.toString())}`);
       setPayAllPreview(null);
+      if (result.comprovante_pendente_count > 0) {
+        setComprovanteAlvo({
+          id: result.movimentacao_id,
+          description: `${result.comprovante_pendente_count} pagamento(s) deste lote pedem comprovante. Anexe agora ou deixe para depois.`,
+        });
+      }
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
@@ -775,6 +802,7 @@ export function FinanceiroPage() {
       data_agendada: payment.data_agendada ? format(parseISO(payment.data_agendada), "yyyy-MM-dd") : "",
       payment_cod: payment.payment_cod ?? "",
       obra_id: payment.obra_id ?? undefined,
+      requires_receipt: payment.requires_receipt ?? false,
     });
   }
 
@@ -1110,6 +1138,17 @@ export function FinanceiroPage() {
                     </Button>
                   </div>
                 )}
+
+                {canManageFinancials && (
+                  <Button
+                    size="sm"
+                    variant={soComprovantePendente ? "default" : "outline"}
+                    className="h-9 px-2.5 text-xs"
+                    onClick={() => setSoComprovantePendente((v) => !v)}
+                  >
+                    Comprovante pendente
+                  </Button>
+                )}
               </div>
 
               <Button size="sm" onClick={() => setCreatePagOpen(true)} className="shrink-0">
@@ -1298,6 +1337,16 @@ export function FinanceiroPage() {
               <Input placeholder="PIX copia e cola, código de barras..." {...registerPag("payment_cod")} />
             </div>
 
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="h-4 w-4 rounded border-border" {...registerPag("requires_receipt")} />
+                Necessita de comprovante
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Ao marcar como pago, sugerimos anexar o comprovante a movimentacao. Nao e obrigatorio.
+              </p>
+            </div>
+
             {!editingPag && (
               <div className="space-y-1.5">
                 <Label>Parcelar em</Label>
@@ -1479,6 +1528,12 @@ export function FinanceiroPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ComprovanteDialog
+        movimentacaoId={comprovanteAlvo?.id ?? null}
+        description={comprovanteAlvo?.description ?? ""}
+        onClose={() => setComprovanteAlvo(null)}
+      />
 
       {/* Confirmar pagamento */}
       <ConfirmDialog

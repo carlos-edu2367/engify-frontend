@@ -3,6 +3,7 @@ import type {
   MovimentacaoResponse,
   CreateMovimentacaoRequest,
   PagamentoResponse,
+  PayPagamentoResponse,
   CreatePagamentoRequest,
   CreatePagamentoParceladoRequest,
   UpdatePagamentoRequest,
@@ -67,7 +68,7 @@ export const financeiroService = {
       .then((r) => r.data),
 
   payPagamento: (id: string) =>
-    api.patch<MovimentacaoResponse>(`/financeiro/pagamentos/${id}/pay`).then((r) => r.data),
+    api.patch<PayPagamentoResponse>(`/financeiro/pagamentos/${id}/pay`).then((r) => r.data),
 
   listAttachments: (movId: string) =>
     api

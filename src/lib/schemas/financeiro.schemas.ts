@@ -35,6 +35,7 @@ export const pagamentoSchema = z.object({
   obra_id: z.string().nullish(),
   parcelas: parcelasField,
   payment_cods: z.array(z.string().nullish()).optional(),
+  requires_receipt: z.boolean().default(false),
 });
 
 export const obraPagamentoSchema = z
@@ -46,6 +47,7 @@ export const obraPagamentoSchema = z
     payment_cod: z.string().optional(),
     parcelas: parcelasField,
     payment_cods: z.array(z.string().nullish()).optional(),
+    requires_receipt: z.boolean().default(false),
   })
   .refine((v) => (v.payment_cod ?? "").trim().length >= 3, {
     message: "Codigo PIX e obrigatorio",

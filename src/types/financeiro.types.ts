@@ -9,6 +9,8 @@ export type MovClass =
 export type MovNatureza = "manual" | "open_finance";
 export type PagamentoStatus = "aguardando" | "pago";
 
+export type AttachmentKind = "documento" | "comprovante";
+
 export interface MovimentacaoResponse {
   id: string;
   title: string;
@@ -19,6 +21,11 @@ export interface MovimentacaoResponse {
   obra_id?: string;
   pagamento_id?: string;
   data_movimentacao: string;
+}
+
+export interface PayPagamentoResponse extends MovimentacaoResponse {
+  pagamento_id: string;
+  requires_receipt: boolean;
 }
 
 export interface CreateMovimentacaoRequest {
@@ -50,6 +57,8 @@ export interface PagamentoResponse {
   parcelamento_id?: string;
   parcela_numero?: number;
   parcela_total?: number;
+  requires_receipt?: boolean;
+  receipt_attached?: boolean;
 }
 
 export interface CreatePagamentoRequest {
@@ -61,6 +70,7 @@ export interface CreatePagamentoRequest {
   payment_cod?: string;
   obra_id?: string;
   diarist_id?: string;
+  requires_receipt?: boolean;
 }
 
 export interface CreatePagamentoParceladoRequest {
@@ -73,6 +83,7 @@ export interface CreatePagamentoParceladoRequest {
   payment_cods?: (string | null)[];
   obra_id?: string;
   diarist_id?: string;
+  requires_receipt?: boolean;
 }
 
 export interface CreateObraPagamentoParceladoRequest {
@@ -82,6 +93,7 @@ export interface CreateObraPagamentoParceladoRequest {
   data_agendada: string;
   parcelas: number;
   payment_cods: (string | null)[];
+  requires_receipt?: boolean;
 }
 
 export interface UpdatePagamentoRequest {
@@ -92,6 +104,7 @@ export interface UpdatePagamentoRequest {
   data_agendada?: string;
   payment_cod?: string;
   obra_id?: string;
+  requires_receipt?: boolean;
   apply_to?: "self" | "future";
 }
 
@@ -113,6 +126,7 @@ export interface ListPagamentosParams {
   /** Recorte por data de vencimento (data_agendada), em ISO8601. */
   period_start?: string;
   period_end?: string;
+  comprovante_pendente?: boolean;
 }
 
 export interface CreateObraPagamentoRequest {
@@ -121,6 +135,7 @@ export interface CreateObraPagamentoRequest {
   valor: string;
   data_agendada: string;
   payment_cod: string;
+  requires_receipt?: boolean;
 }
 
 export interface MovimentacaoAttachmentResponse {
@@ -130,12 +145,15 @@ export interface MovimentacaoAttachmentResponse {
   file_name: string;
   content_type: string;
   created_at: string;
+  kind: AttachmentKind;
+  origem_pagamento_id?: string;
 }
 
 export interface CreateMovimentacaoAttachmentRequest {
   file_path: string;
   file_name: string;
   content_type: string;
+  kind?: AttachmentKind;
 }
 
 export interface PagamentoAttachmentResponse {
@@ -162,6 +180,7 @@ export interface BaixaLoteResponse {
   quantidade: number;
   valor_total: number;
   movimentacao_id: string;
+  comprovante_pendente_count: number;
 }
 
 export type CommissionReportJobStatus = "pending" | "processing" | "completed" | "failed";

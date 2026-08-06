@@ -103,6 +103,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
           payment_cods: Array.from({ length: parcelas }, (_, i) =>
             i === 0 ? values.payment_cod ?? null : parcelaCods[i]?.trim() || null,
           ),
+          requires_receipt: values.requires_receipt,
         });
         if (pagFiles.length) {
           const primeira = criadas[0];
@@ -248,6 +249,11 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
                         {p.parcela_numero}/{p.parcela_total}
                       </Badge>
                     ) : null}
+                    {p.status === "pago" && p.requires_receipt && !p.receipt_attached ? (
+                      <Badge variant="warning" className="text-xs">
+                        Comprovante pendente
+                      </Badge>
+                    ) : null}
                   </div>
 
                   {p.details && (
@@ -343,6 +349,16 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
               {errors.payment_cod && (
                 <p className="text-xs text-destructive">{errors.payment_cod.message}</p>
               )}
+            </div>
+
+            <div className="space-y-1">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="h-4 w-4 rounded border-border" {...register("requires_receipt")} />
+                Necessita de comprovante
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Ao marcar como pago, sugerimos anexar o comprovante a movimentacao. Nao e obrigatorio.
+              </p>
             </div>
 
             <div className="space-y-1.5">
