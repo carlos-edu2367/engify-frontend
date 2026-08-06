@@ -101,7 +101,14 @@ export function ArkyActionCard({
               className="flex items-start justify-between gap-2 rounded-md border border-border/60 bg-muted/40 px-2.5 py-1.5"
             >
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-foreground">{item.title}</p>
+                <p className="flex items-center gap-1.5 truncate text-xs font-medium text-foreground">
+                  {item.title}
+                  {item.parcelas && item.parcelas > 1 ? (
+                    <span className="shrink-0 rounded-full border border-border/60 px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
+                      {item.parcelas}x
+                    </span>
+                  ) : null}
+                </p>
                 <p className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
                   <span className="capitalize">{item.classe}</span>
                   {formatData(item.data_agendada) && <span>· {formatData(item.data_agendada)}</span>}

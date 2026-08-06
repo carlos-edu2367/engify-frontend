@@ -34,6 +34,7 @@ export interface ArkyPagamentoPreviewItem {
   payment_cod?: string | null;
   obra_title?: string | null;
   diarist_nome?: string | null;
+  parcelas?: number;
 }
 
 export interface ArkyCardData {
