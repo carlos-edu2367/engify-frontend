@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Copy, CalendarClock, CheckCircle2, Clock, Trash2 } from "lucide-react";
@@ -13,13 +13,14 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoleGuard } from "@/components/shared/RoleGuard";
-import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { financeiroService } from "@/services/financeiro.service";
 import { obrasService } from "@/services/obras.service";
 import { storageService } from "@/services/storage.service";
 import { obraPagamentoSchema, type ObraPagamentoFormValues } from "@/lib/schemas/financeiro.schemas";
 import { formatCurrency, formatDate, formatLocalDateTime, getApiErrorMessage } from "@/lib/utils";
+import { buildParcelasPreview } from "@/lib/parcelamento";
+import { parseHumanCurrencyToDecimalString } from "@/lib/money-input";
 import { useAuthStore } from "@/store/auth.store";
 import type { PagamentoResponse } from "@/types/financeiro.types";
 
@@ -48,6 +49,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
   const [deletePagamentoId, setDeletePagamentoId] = useState<string | null>(null);
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [pagFiles, setPagFiles] = useState<File[]>([]);
+  const [parcelaCods, setParcelaCods] = useState<string[]>([]);
   const isEngenheiro = useAuthStore((s) => s.user?.role === "engenheiro");
 
   const { data, isLoading } = useQuery({
@@ -66,17 +68,61 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<ObraPagamentoFormValues>({
     resolver: zodResolver(obraPagamentoSchema),
   });
 
+  const parcelasWatch = Number(watch("parcelas") ?? 1);
+  const valorWatch = watch("valor");
+  const dataWatch = watch("data_agendada");
+  const parcelasPreview = useMemo(() => {
+    if (!parcelasWatch || parcelasWatch < 2) return [];
+    let decimal: string;
+    try {
+      decimal = parseHumanCurrencyToDecimalString(String(valorWatch ?? ""));
+    } catch {
+      return [];
+    }
+    return buildParcelasPreview(decimal, parcelasWatch, String(dataWatch ?? ""));
+  }, [parcelasWatch, valorWatch, dataWatch]);
+
   const createMutation = useMutation({
     mutationFn: async (values: ObraPagamentoFormValues) => {
+      const parcelas = Number(values.parcelas ?? 1);
+      const data_agendada = formatISO(parseISO(values.data_agendada));
+
+      if (parcelas >= 2) {
+        const criadas = await obrasService.createPagamentoParcelado(obraId, {
+          title: values.title,
+          details: values.details,
+          valor: values.valor,
+          data_agendada,
+          parcelas,
+          payment_cods: Array.from({ length: parcelas }, (_, i) =>
+            i === 0 ? values.payment_cod ?? null : parcelaCods[i]?.trim() || null,
+          ),
+        });
+        if (pagFiles.length) {
+          const primeira = criadas[0];
+          const uploads = await storageService.uploadBatch("pagamento", primeira.id, pagFiles);
+          for (const u of uploads) {
+            await financeiroService.createPagamentoAttachment(primeira.id, {
+              file_path: u.path,
+              file_name: u.file_name,
+              content_type: u.content_type,
+              replicate_parcelamento: true,
+            });
+          }
+        }
+        return criadas[0];
+      }
+
       const pag = await obrasService.createPagamento(obraId, {
         ...values,
         payment_cod: values.payment_cod ?? "",
-        data_agendada: formatISO(parseISO(values.data_agendada)),
+        data_agendada,
       });
       if (pagFiles.length) {
         const uploads = await storageService.uploadBatch("pagamento", pag.id, pagFiles);
@@ -93,13 +139,15 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
       toast.success("Pagamento agendado!");
       setCreateOpen(false);
       setPagFiles([]);
+      setParcelaCods([]);
       reset();
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => financeiroService.deletePagamento(id),
+    mutationFn: ({ id, scope }: { id: string; scope: "self" | "parcelamento" }) =>
+      financeiroService.deletePagamento(id, scope),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
@@ -109,6 +157,8 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
+
+  const pagamentoParaExcluir = pagamentos.find((p) => p.id === deletePagamentoId) ?? null;
 
   function handleCopyPix(cod: string) {
     navigator.clipboard.writeText(cod);
@@ -193,6 +243,11 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
                         <><Clock className="h-3 w-3 mr-1" />Aguardando</>
                       )}
                     </Badge>
+                    {p.parcela_total ? (
+                      <Badge variant="outline" className="text-xs">
+                        {p.parcela_numero}/{p.parcela_total}
+                      </Badge>
+                    ) : null}
                   </div>
 
                   {p.details && (
@@ -248,7 +303,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
       {/* Modal criar */}
       <Dialog
         open={createOpen}
-        onOpenChange={(o) => { setCreateOpen(o); if (!o) { reset(); setPagFiles([]); } }}
+        onOpenChange={(o) => { setCreateOpen(o); if (!o) { reset(); setPagFiles([]); setParcelaCods([]); } }}
       >
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
@@ -291,6 +346,51 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
             </div>
 
             <div className="space-y-1.5">
+              <Label>Parcelar em</Label>
+              <Input type="number" min={1} max={36} {...register("parcelas")} />
+              {errors.parcelas && <p className="text-xs text-destructive">{errors.parcelas.message}</p>}
+              <p className="text-xs text-muted-foreground">
+                1 = pagamento avulso. A partir de 2, o valor informado é o TOTAL.
+              </p>
+            </div>
+
+            {parcelasPreview.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Parcelas
+                </p>
+                {parcelasPreview.map((parcela, i) => (
+                  <div key={parcela.numero} className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-xs text-muted-foreground">
+                      {parcela.numero}/{parcelasPreview.length}
+                    </span>
+                    <span className="w-24 shrink-0 text-sm font-medium">
+                      {formatCurrency(parcela.valor)}
+                    </span>
+                    <span className="w-24 shrink-0 text-xs text-muted-foreground">
+                      {formatDate(parcela.data)}
+                    </span>
+                    {i > 0 && (
+                      <Input
+                        className="h-8 text-xs"
+                        placeholder="Codigo (opcional)"
+                        value={parcelaCods[i] ?? ""}
+                        onChange={(e) => {
+                          const next = [...parcelaCods];
+                          next[i] = e.target.value;
+                          setParcelaCods(next);
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+                <p className="text-[11px] text-muted-foreground">
+                  O codigo PIX informado acima e o da 1a parcela.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-1.5">
               <Label>Anexos (opcional)</Label>
               <input
                 type="file"
@@ -318,16 +418,43 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
-        open={!!deletePagamentoId}
-        onOpenChange={(open) => !open && setDeletePagamentoId(null)}
-        title="Excluir pagamento"
-        description="Esta acao remove o pagamento agendado. Pagamentos ja pagos nao podem ser removidos."
-        confirmLabel="Excluir"
-        variant="destructive"
-        onConfirm={() => deletePagamentoId && deleteMutation.mutate(deletePagamentoId)}
-        loading={deleteMutation.isPending}
-      />
+      <Dialog open={!!deletePagamentoId} onOpenChange={(o) => !o && setDeletePagamentoId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir pagamento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {pagamentoParaExcluir?.parcela_total
+              ? `Esta e a parcela ${pagamentoParaExcluir.parcela_numero}/${pagamentoParaExcluir.parcela_total} de um parcelamento. Parcelas ja pagas nunca sao removidas.`
+              : "Esta acao remove o pagamento agendado. Pagamentos ja pagos nao podem ser removidos."}
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeletePagamentoId(null)}>
+              Cancelar
+            </Button>
+            {pagamentoParaExcluir?.parcela_total ? (
+              <Button
+                variant="destructive"
+                onClick={() =>
+                  deletePagamentoId &&
+                  deleteMutation.mutate({ id: deletePagamentoId, scope: "parcelamento" })
+                }
+              >
+                Excluir todas as parcelas aguardando
+              </Button>
+            ) : null}
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deletePagamentoId && deleteMutation.mutate({ id: deletePagamentoId, scope: "self" })
+              }
+              disabled={deleteMutation.isPending}
+            >
+              {pagamentoParaExcluir?.parcela_total ? "So esta parcela" : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
