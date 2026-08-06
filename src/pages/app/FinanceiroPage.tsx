@@ -36,6 +36,7 @@ import { MovimentacaoDetailSheet } from "@/components/features/financeiro/Movime
 import { AttachmentManager } from "@/components/features/financeiro/AttachmentManager";
 import { ComprovanteDialog } from "@/components/features/financeiro/ComprovanteDialog";
 import { MovimentacaoGeradaSection } from "@/components/features/financeiro/MovimentacaoGeradaSection";
+import { MonthYearFilter } from "@/components/features/financeiro/MonthYearFilter";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { storageService } from "@/services/storage.service";
 import {
@@ -967,14 +968,7 @@ export function FinanceiroPage() {
           <TabsContent value="movimentacoes" className="mt-4 space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Input
-                  type="month"
-                  value={movMes}
-                  onChange={(e) => handleMovMesChange(e.target.value)}
-                  className="h-9 w-40 text-xs"
-                  title="Filtrar por mês"
-                  aria-label="Mês da movimentação"
-                />
+                <MonthYearFilter value={movMes} onChange={handleMovMesChange} />
 
                 <div className="flex items-center gap-2">
                   <Input
@@ -1091,26 +1085,7 @@ export function FinanceiroPage() {
           <TabsContent value="pagamentos" className="mt-4 space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="month"
-                    value={pagMes}
-                    onChange={(e) => setPagMes(e.target.value)}
-                    className="h-9 w-40 text-xs"
-                    title="Filtrar por mês de vencimento"
-                    aria-label="Mês de vencimento"
-                  />
-                  {pagMes && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-9 px-2 text-xs text-muted-foreground"
-                      onClick={() => setPagMes("")}
-                    >
-                      Limpar mês
-                    </Button>
-                  )}
-                </div>
+                <MonthYearFilter value={pagMes} onChange={setPagMes} />
 
                 <div className="flex sm:w-48">
                   <Select value={pagStatus} onValueChange={(v) => setPagStatus(v as PagamentoStatus | "all")}>
