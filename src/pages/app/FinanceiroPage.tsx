@@ -27,6 +27,8 @@ import {
 import { formatISO, parseISO, format, isToday, isBefore, startOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency, formatDate, formatLocalDateTime, getApiErrorMessage } from "@/lib/utils";
+import { buildParcelasPreview } from "@/lib/parcelamento";
+import { parseHumanCurrencyToDecimalString } from "@/lib/money-input";
 import type { MovClass, MovimentacaoResponse, PagamentoResponse, PagamentoStatus } from "@/types/financeiro.types";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { obrasService } from "@/services/obras.service";
@@ -352,6 +354,11 @@ function SinglePaymentCard({
               )}
               {dueStatus && <DueBadge status={dueStatus} />}
               {payment.status === "pago" && <Badge variant="success">Pago</Badge>}
+              {payment.parcela_total ? (
+                <Badge variant="outline" className="text-[10px]">
+                  {payment.parcela_numero}/{payment.parcela_total}
+                </Badge>
+              ) : null}
             </div>
             <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
               {payment.data_agendada && <span>Vencimento: {formatDate(payment.data_agendada)}</span>}
@@ -469,6 +476,8 @@ export function FinanceiroPage() {
   const [pagFormObraId, setPagFormObraId] = useState<string>("");
   const [pagFiles, setPagFiles] = useState<File[]>([]);
   const [isUploadingPagAttachment, setIsUploadingPagAttachment] = useState(false);
+  const [parcelaCods, setParcelaCods] = useState<string[]>([]);
+  const [pendingEdit, setPendingEdit] = useState<{ id: string; values: PagamentoFormValues } | null>(null);
 
   // Filtros de Movimentações
   const [movPeriodo, setMovPeriodo] = useState<{ start: string; end: string }>({ start: "", end: "" });
@@ -552,9 +561,40 @@ export function FinanceiroPage() {
 
   const createPagMutation = useMutation({
     mutationFn: async (v: PagamentoFormValues) => {
+      const parcelas = Number(v.parcelas ?? 1);
+      if (parcelas >= 2) {
+        const criadas = await financeiroService.createPagamentoParcelado({
+          title: v.title,
+          details: v.details ?? "",
+          valor: v.valor,
+          classe: v.classe,
+          data_agendada: formatISO(parseISO(v.data_agendada)),
+          parcelas,
+          payment_cods: Array.from({ length: parcelas }, (_, i) => parcelaCods[i]?.trim() || null),
+          obra_id: v.obra_id || undefined,
+        });
+        if (pagFiles.length) {
+          const primeira = criadas[0];
+          const uploads = await storageService.uploadBatch("pagamento", primeira.id, pagFiles);
+          for (const u of uploads) {
+            await financeiroService.createPagamentoAttachment(primeira.id, {
+              file_path: u.path,
+              file_name: u.file_name,
+              content_type: u.content_type,
+              replicate_parcelamento: true,
+            });
+          }
+        }
+        return criadas[0];
+      }
+
       const pag = await financeiroService.createPagamento({
-        ...v,
+        title: v.title,
+        details: v.details,
+        valor: v.valor,
+        classe: v.classe,
         data_agendada: formatISO(parseISO(v.data_agendada)),
+        payment_cod: v.payment_cod,
         obra_id: v.obra_id || undefined,
       });
       if (pagFiles.length) {
@@ -573,13 +613,14 @@ export function FinanceiroPage() {
       setCreatePagOpen(false);
       setPagFormObraId("");
       setPagFiles([]);
+      setParcelaCods([]);
       resetPag();
     },
     onError: (err) => toast.error(getApiErrorMessage(err)),
   });
 
   const updatePagMutation = useMutation({
-    mutationFn: ({ id, values }: { id: string; values: PagamentoFormValues }) =>
+    mutationFn: ({ id, values, applyTo }: { id: string; values: PagamentoFormValues; applyTo?: "self" | "future" }) =>
       financeiroService.updatePagamento(id, {
         title: values.title,
         details: values.details,
@@ -588,6 +629,7 @@ export function FinanceiroPage() {
         data_agendada: formatISO(parseISO(values.data_agendada)),
         payment_cod: values.payment_cod,
         obra_id: values.obra_id || undefined,
+        apply_to: applyTo ?? "self",
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
@@ -621,7 +663,8 @@ export function FinanceiroPage() {
   });
 
   const deletePagMutation = useMutation({
-    mutationFn: (id: string) => financeiroService.deletePagamento(id),
+    mutationFn: ({ id, scope }: { id: string; scope: "self" | "parcelamento" }) =>
+      financeiroService.deletePagamento(id, scope),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
@@ -674,6 +717,20 @@ export function FinanceiroPage() {
     formState: { errors: errorsPag },
   } = useForm<PagamentoFormValues>({ resolver: zodResolver(pagamentoSchema) });
 
+  const parcelasWatch = Number(watchPag("parcelas") ?? 1);
+  const valorWatch = watchPag("valor");
+  const dataWatch = watchPag("data_agendada");
+  const parcelasPreview = useMemo(() => {
+    if (!parcelasWatch || parcelasWatch < 2) return [];
+    let decimal: string;
+    try {
+      decimal = parseHumanCurrencyToDecimalString(String(valorWatch ?? ""));
+    } catch {
+      return [];
+    }
+    return buildParcelasPreview(decimal, parcelasWatch, String(dataWatch ?? ""));
+  }, [parcelasWatch, valorWatch, dataWatch]);
+
   const pagAttachmentsQuery = usePagamentoAttachments(editingPag?.id ?? null);
   const pagAttachments = pagAttachmentsQuery.data ?? [];
   const createPagAttachment = useCreatePagamentoAttachment(editingPag?.id ?? "");
@@ -702,6 +759,7 @@ export function FinanceiroPage() {
     setEditingPag(null);
     setPagFormObraId("");
     setPagFiles([]);
+    setParcelaCods([]);
     resetPag();
   }
 
@@ -721,11 +779,17 @@ export function FinanceiroPage() {
   }
 
   function submitPagamento(values: PagamentoFormValues) {
-    if (isEngineerOnly && !values.payment_cod?.trim()) {
+    const parcelas = Number(values.parcelas ?? 1);
+    const primeiroCod = parcelas >= 2 ? parcelaCods[0] : values.payment_cod;
+    if (isEngineerOnly && !primeiroCod?.trim()) {
       toast.error("Codigo de pagamento e obrigatorio para engenheiros.");
       return;
     }
     if (editingPag) {
+      if (editingPag.parcelamento_id) {
+        setPendingEdit({ id: editingPag.id, values });
+        return;
+      }
       updatePagMutation.mutate({ id: editingPag.id, values });
       return;
     }
@@ -734,6 +798,7 @@ export function FinanceiroPage() {
 
   const movs = movsData?.items ?? [];
   const pags = pagsData?.items ?? [];
+  const pagamentoParaExcluir = pags.find((p) => p.id === deletePagId) ?? null;
   const totalEntradas = movs.filter((m) => m.type === "entrada").reduce((s, m) => s + parseFloat(m.valor), 0);
   const totalSaidas = movs.filter((m) => m.type === "saida").reduce((s, m) => s + parseFloat(m.valor), 0);
   const pendentes = pags.filter((p) => p.status === "aguardando");
@@ -1235,6 +1300,50 @@ export function FinanceiroPage() {
 
             {!editingPag && (
               <div className="space-y-1.5">
+                <Label>Parcelar em</Label>
+                <Input type="number" min={1} max={36} {...registerPag("parcelas")} />
+                {errorsPag.parcelas && (
+                  <p className="text-xs text-destructive">{errorsPag.parcelas.message}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  1 = pagamento avulso. A partir de 2, o valor informado é o TOTAL e será dividido.
+                </p>
+              </div>
+            )}
+
+            {!editingPag && parcelasPreview.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Parcelas
+                </p>
+                {parcelasPreview.map((parcela, i) => (
+                  <div key={parcela.numero} className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-xs text-muted-foreground">
+                      {parcela.numero}/{parcelasPreview.length}
+                    </span>
+                    <span className="w-24 shrink-0 text-sm font-medium">
+                      {formatCurrency(parcela.valor)}
+                    </span>
+                    <span className="w-24 shrink-0 text-xs text-muted-foreground">
+                      {formatDate(parcela.data)}
+                    </span>
+                    <Input
+                      className="h-8 text-xs"
+                      placeholder={i === 0 ? "Codigo (obrigatorio p/ engenheiro)" : "Codigo (opcional)"}
+                      value={parcelaCods[i] ?? ""}
+                      onChange={(e) => {
+                        const next = [...parcelaCods];
+                        next[i] = e.target.value;
+                        setParcelaCods(next);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!editingPag && (
+              <div className="space-y-1.5">
                 <Label>Anexos (opcional)</Label>
                 <input
                   type="file"
@@ -1300,16 +1409,76 @@ export function FinanceiroPage() {
         loading={deleteMovMutation.isPending}
       />
 
-      <ConfirmDialog
-        open={!!deletePagId}
-        onOpenChange={(o) => !o && setDeletePagId(null)}
-        title="Excluir pagamento"
-        description="Esta acao remove o pagamento agendado. Pagamentos ja pagos nao podem ser removidos."
-        confirmLabel="Excluir"
-        variant="destructive"
-        onConfirm={() => deletePagId && deletePagMutation.mutate(deletePagId)}
-        loading={deletePagMutation.isPending}
-      />
+      <Dialog open={!!deletePagId} onOpenChange={(o) => !o && setDeletePagId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Excluir pagamento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {pagamentoParaExcluir?.parcela_total
+              ? `Esta e a parcela ${pagamentoParaExcluir.parcela_numero}/${pagamentoParaExcluir.parcela_total} de um parcelamento. Parcelas ja pagas nunca sao removidas.`
+              : "Esta acao remove o pagamento agendado. Pagamentos ja pagos nao podem ser removidos."}
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDeletePagId(null)}>
+              Cancelar
+            </Button>
+            {pagamentoParaExcluir?.parcela_total ? (
+              <Button
+                variant="destructive"
+                onClick={() =>
+                  deletePagId &&
+                  deletePagMutation.mutate({ id: deletePagId, scope: "parcelamento" })
+                }
+              >
+                Excluir todas as parcelas aguardando
+              </Button>
+            ) : null}
+            <Button
+              variant="destructive"
+              onClick={() =>
+                deletePagId && deletePagMutation.mutate({ id: deletePagId, scope: "self" })
+              }
+              disabled={deletePagMutation.isPending}
+            >
+              {pagamentoParaExcluir?.parcela_total ? "So esta parcela" : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!pendingEdit} onOpenChange={(o) => !o && setPendingEdit(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Aplicar alteracao</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Este pagamento faz parte de um parcelamento. Vencimento e codigo de pagamento
+            sao sempre alterados so nesta parcela.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!pendingEdit) return;
+                updatePagMutation.mutate({ ...pendingEdit, applyTo: "self" });
+                setPendingEdit(null);
+              }}
+            >
+              So esta parcela
+            </Button>
+            <Button
+              onClick={() => {
+                if (!pendingEdit) return;
+                updatePagMutation.mutate({ ...pendingEdit, applyTo: "future" });
+                setPendingEdit(null);
+              }}
+            >
+              Esta e as futuras
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmar pagamento */}
       <ConfirmDialog
