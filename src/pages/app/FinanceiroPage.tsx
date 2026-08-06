@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,7 +24,7 @@ import {
   type MovimentacaoFormValues,
   type PagamentoFormValues,
 } from "@/lib/schemas/financeiro.schemas";
-import { formatISO, parseISO, format, isToday, isBefore, startOfDay } from "date-fns";
+import { formatISO, parseISO, format, isToday, isBefore, startOfDay, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency, formatDate, formatLocalDateTime, getApiErrorMessage } from "@/lib/utils";
 import type { MovClass, MovimentacaoResponse, PagamentoResponse, PagamentoStatus } from "@/types/financeiro.types";
@@ -45,6 +45,27 @@ import { buildPixPayload } from "@/lib/pix";
 import { teamsService } from "@/services/teams.service";
 import type { DiaristResponse } from "@/types/team.types";
 import { useAuthStore } from "@/store/auth.store";
+
+/** Converte "2026-03" nos limites do mês em "yyyy-MM-dd" (primeiro e último dia). */
+export function getMonthBounds(month: string): { start: string; end: string } {
+  const first = startOfMonth(parseISO(`${month}-01`));
+  return {
+    start: format(first, "yyyy-MM-dd"),
+    end: format(endOfMonth(first), "yyyy-MM-dd"),
+  };
+}
+
+/**
+ * Devolve o mês ("yyyy-MM") quando o período selecionado cobre exatamente um mês
+ * cheio; caso contrário "" — assim o seletor de mês fica vazio se o usuário
+ * ajustar as datas manualmente para um intervalo qualquer.
+ */
+export function getMonthFromRange(start: string, end: string): string {
+  if (!start || !end) return "";
+  const month = start.slice(0, 7);
+  const bounds = getMonthBounds(month);
+  return bounds.start === start && bounds.end === end ? month : "";
+}
 
 function getDueStatus(dataAgendada: string | undefined, status: string): "today" | "overdue" | null {
   if (!dataAgendada || status !== "aguardando") return null;
@@ -457,6 +478,19 @@ export function FinanceiroPage() {
   // Filtros de Pagamentos
   const [pagStatus, setPagStatus] = useState<PagamentoStatus | "all">("all");
   const [pagScope, setPagScope] = useState<"mine" | "all">("mine");
+  // Mês de vencimento ("yyyy-MM"); vazio = todos os meses.
+  const [pagMes, setPagMes] = useState<string>("");
+
+  // Mês selecionado nas Movimentações, derivado do período (nao e estado proprio
+  // para nao dessincronizar quando o usuario mexe nas datas na mao).
+  const movMes = useMemo(
+    () => getMonthFromRange(movPeriodo.start, movPeriodo.end),
+    [movPeriodo.start, movPeriodo.end]
+  );
+
+  function handleMovMesChange(month: string) {
+    setMovPeriodo(month ? getMonthBounds(month) : { start: "", end: "" });
+  }
 
   // Obras para o filtro
   const { data: obrasData } = useQuery({
@@ -486,13 +520,21 @@ export function FinanceiroPage() {
     enabled: canManageFinancials,
   });
 
+  const pagPeriodo = pagMes ? getMonthBounds(pagMes) : null;
+
   const { data: pagsData, isLoading: pagsLoading } = useQuery({
-    queryKey: ["financeiro", "pagamentos", { status: pagStatus, scope: isEngineerOnly ? pagScope : "all" }],
+    queryKey: [
+      "financeiro",
+      "pagamentos",
+      { status: pagStatus, scope: isEngineerOnly ? pagScope : "all", mes: pagMes },
+    ],
     queryFn: () =>
       financeiroService.listPagamentos({
         limit: 50,
         status: pagStatus,
         scope: isEngineerOnly ? pagScope : "all",
+        period_start: pagPeriodo ? new Date(pagPeriodo.start + "T00:00:00").toISOString() : undefined,
+        period_end: pagPeriodo ? new Date(pagPeriodo.end + "T23:59:59").toISOString() : undefined,
       }),
   });
 
@@ -827,10 +869,19 @@ export function FinanceiroPage() {
           <TabsContent value="movimentacoes" className="mt-4 space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Input
+                  type="month"
+                  value={movMes}
+                  onChange={(e) => handleMovMesChange(e.target.value)}
+                  className="h-9 w-40 text-xs"
+                  title="Filtrar por mês"
+                  aria-label="Mês da movimentação"
+                />
+
                 <div className="flex items-center gap-2">
-                  <Input 
-                    type="date" 
-                    value={movPeriodo.start} 
+                  <Input
+                    type="date"
+                    value={movPeriodo.start}
                     onChange={(e) => setMovPeriodo(prev => ({ ...prev, start: e.target.value }))}
                     className="h-9 w-36 text-xs" 
                     title="Data Inicial"
@@ -942,6 +993,27 @@ export function FinanceiroPage() {
           <TabsContent value="pagamentos" className="mt-4 space-y-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="month"
+                    value={pagMes}
+                    onChange={(e) => setPagMes(e.target.value)}
+                    className="h-9 w-40 text-xs"
+                    title="Filtrar por mês de vencimento"
+                    aria-label="Mês de vencimento"
+                  />
+                  {pagMes && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-9 px-2 text-xs text-muted-foreground"
+                      onClick={() => setPagMes("")}
+                    >
+                      Limpar mês
+                    </Button>
+                  )}
+                </div>
+
                 <div className="flex sm:w-48">
                   <Select value={pagStatus} onValueChange={(v) => setPagStatus(v as PagamentoStatus | "all")}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="Status" /></SelectTrigger>

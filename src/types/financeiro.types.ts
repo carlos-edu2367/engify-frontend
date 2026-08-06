@@ -85,6 +85,9 @@ export interface ListPagamentosParams {
   status?: PagamentoStatus | "all";
   obra_id?: string;
   scope?: "mine" | "all";
+  /** Recorte por data de vencimento (data_agendada), em ISO8601. */
+  period_start?: string;
+  period_end?: string;
 }
 
 export interface CreateObraPagamentoRequest {
