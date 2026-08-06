@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RoleGuard } from "@/components/shared/RoleGuard";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
+import { MovimentacaoGeradaSection } from "@/components/features/financeiro/MovimentacaoGeradaSection";
 import { financeiroService } from "@/services/financeiro.service";
 import { obrasService } from "@/services/obras.service";
 import { storageService } from "@/services/storage.service";
@@ -50,6 +51,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [pagFiles, setPagFiles] = useState<File[]>([]);
   const [parcelaCods, setParcelaCods] = useState<string[]>([]);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const isEngenheiro = useAuthStore((s) => s.user?.role === "engenheiro");
 
   const { data, isLoading } = useQuery({
@@ -284,6 +286,22 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
                         originalCode={p.payment_cod}
                         compact
                       />
+                    </div>
+                  )}
+
+                  {p.status === "pago" && (
+                    <div className="pt-2 space-y-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setExpandedId(expandedId === p.id ? null : p.id)}
+                      >
+                        {expandedId === p.id ? "Ocultar comprovacao" : "Ver comprovacao"}
+                      </Button>
+                      {expandedId === p.id && (
+                        <MovimentacaoGeradaSection pagamentoId={p.id} enabled />
+                      )}
                     </div>
                   )}
                 </div>

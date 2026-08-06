@@ -202,6 +202,28 @@ export interface CommissionReportJobStatusResponse {
   error_message?: string | null;
 }
 
+export interface ComprovacaoAttachmentResponse {
+  id: string;
+  file_path: string;
+  file_name: string;
+  content_type: string;
+  kind: AttachmentKind;
+  created_at: string;
+}
+
+export interface ComprovacaoMovimentacaoResponse {
+  id: string;
+  title: string;
+  valor: string;
+  data_movimentacao: string;
+  is_lote: boolean;
+}
+
+export interface ComprovacaoResponse {
+  movimentacao: ComprovacaoMovimentacaoResponse | null;
+  attachments: ComprovacaoAttachmentResponse[];
+}
+
 export interface FluxoCaixaItemResponse {
   mes: string;
   total_entradas: number;

@@ -35,6 +35,7 @@ import { obrasService } from "@/services/obras.service";
 import { MovimentacaoDetailSheet } from "@/components/features/financeiro/MovimentacaoDetailSheet";
 import { AttachmentManager } from "@/components/features/financeiro/AttachmentManager";
 import { ComprovanteDialog } from "@/components/features/financeiro/ComprovanteDialog";
+import { MovimentacaoGeradaSection } from "@/components/features/financeiro/MovimentacaoGeradaSection";
 import { PixQrCodeBlock } from "@/components/features/financeiro/PixQrCodeBlock";
 import { storageService } from "@/services/storage.service";
 import {
@@ -458,6 +459,10 @@ function SinglePaymentCard({
               emptyTitle="Nenhum anexo"
               emptyHint="Clique para adicionar notas de serviço, boletos etc."
             />
+
+            {payment.status === "pago" && (
+              <MovimentacaoGeradaSection pagamentoId={payment.id} enabled={expanded} />
+            )}
           </div>
         )}
       </CardContent>

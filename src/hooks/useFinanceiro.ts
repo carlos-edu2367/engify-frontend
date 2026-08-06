@@ -164,3 +164,12 @@ export function useBaixaLotePagamentos() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["financeiro"] }),
   });
 }
+
+export function usePagamentoComprovacao(pagId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["financeiro", "pagamentos", pagId, "comprovacao"],
+    queryFn: () => financeiroService.getPagamentoComprovacao(pagId!),
+    enabled: !!pagId && enabled,
+    staleTime: 60 * 1000,
+  });
+}
