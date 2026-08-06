@@ -15,6 +15,7 @@ import type {
   PagamentoResponse, CreateObraPagamentoRequest, CreateObraPagamentoParceladoRequest,
 } from "@/types/financeiro.types";
 import type { ObraImageResponse, CreateAttachmentRequest } from "@/types/attachment.types";
+import type { ObraFinanceiroResumo } from "@/types/obra-financeiro.types";
 
 export const obrasService = {
   list: (params: { page?: number; limit?: number; status?: ObraStatus | "all"; search?: string } = {}) => {
@@ -80,5 +81,10 @@ export const obrasService = {
   listEntradas: (obraId: string, params: { page?: number; limit?: number } = {}) =>
     api
       .get<PaginatedResponse<ObraEntradaResponse>>(`/obras/${obraId}/entradas`, { params })
+      .then((r) => r.data),
+
+  getFinanceiroResumo: (obraId: string) =>
+    api
+      .get<ObraFinanceiroResumo>(`/obras/${obraId}/financeiro/resumo`)
       .then((r) => r.data),
 };

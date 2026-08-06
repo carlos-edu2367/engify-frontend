@@ -25,6 +25,7 @@ import { RoleGuard } from "@/components/shared/RoleGuard";
 import { obrasService } from "@/services/obras.service";
 import { useRegistrarRecebimento, useObraEntradas } from "@/hooks/useObras";
 import { EntradaAnexosSheet } from "@/components/features/financeiro/EntradaAnexosSheet";
+import { ObraFinanceiroTab } from "@/components/features/obra-financeiro/ObraFinanceiroTab";
 import type { ObraEntradaResponse } from "@/types/obra.types";
 import { itemsService } from "@/services/items.service";
 import { usersService } from "@/services/users.service";
@@ -53,10 +54,19 @@ export function ObraDetailPage() {
   const { obraId } = useParams<{ obraId: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") ?? "kanban";
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const canEdit = user?.role === "admin" || user?.role === "engenheiro";
+  const canViewFinanceiro = user?.role === "admin" || user?.role === "financeiro";
+
+  const validTabs = [
+    "kanban", "mural", "diarias", "imagens", "pagamentos", "recebimentos",
+    ...(canViewFinanceiro ? ["financeiro"] : []),
+  ];
+  const requestedTab = searchParams.get("tab") ?? "kanban";
+  const [activeTab, setActiveTab] = useState(
+    validTabs.includes(requestedTab) ? requestedTab : "kanban"
+  );
   const [editOpen, setEditOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -312,7 +322,7 @@ export function ObraDetailPage() {
           </div>
         )}
 
-        <Tabs defaultValue={initialTab}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="overflow-x-auto whitespace-nowrap">
             <TabsTrigger value="kanban">Kanban</TabsTrigger>
             <TabsTrigger value="mural">Mural</TabsTrigger>
@@ -320,6 +330,9 @@ export function ObraDetailPage() {
             <TabsTrigger value="imagens">Imagens</TabsTrigger>
             <TabsTrigger value="pagamentos">Pagamentos</TabsTrigger>
             <TabsTrigger value="recebimentos">Recebimentos</TabsTrigger>
+            <RoleGuard roles={["admin", "financeiro"]}>
+              <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
+            </RoleGuard>
           </TabsList>
 
           <TabsContent value="kanban" className="mt-4">
@@ -413,6 +426,16 @@ export function ObraDetailPage() {
               )}
             </div>
           </TabsContent>
+
+          <RoleGuard roles={["admin", "financeiro"]}>
+            <TabsContent value="financeiro" className="mt-4">
+              <ObraFinanceiroTab
+                obraId={obraId!}
+                onDefinirContrato={openEdit}
+                onIrParaRecebimentos={() => setActiveTab("recebimentos")}
+              />
+            </TabsContent>
+          </RoleGuard>
         </Tabs>
       </div>
 

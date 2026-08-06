@@ -54,6 +54,13 @@ export const obraPagamentoSchema = z
     path: ["payment_cod"],
   });
 
+export const registrarSaidaSchema = movimentacaoSchema.pick({
+  title: true,
+  valor: true,
+  classe: true,
+});
+
 export type MovimentacaoFormValues = z.infer<typeof movimentacaoSchema>;
+export type RegistrarSaidaFormValues = z.infer<typeof registrarSaidaSchema>;
 export type PagamentoFormValues = z.infer<typeof pagamentoSchema>;
 export type ObraPagamentoFormValues = z.infer<typeof obraPagamentoSchema>;
