@@ -11,7 +11,9 @@ import type {
   ObraEntradaResponse,
 } from "@/types/obra.types";
 import type { PaginatedResponse } from "@/types/api.types";
-import type { PagamentoResponse, CreateObraPagamentoRequest } from "@/types/financeiro.types";
+import type {
+  PagamentoResponse, CreateObraPagamentoRequest, CreateObraPagamentoParceladoRequest,
+} from "@/types/financeiro.types";
 import type { ObraImageResponse, CreateAttachmentRequest } from "@/types/attachment.types";
 
 export const obrasService = {
@@ -51,6 +53,11 @@ export const obrasService = {
 
   createPagamento: (obraId: string, data: CreateObraPagamentoRequest) =>
     api.post<PagamentoResponse>(`/obras/${obraId}/pagamentos`, data).then((r) => r.data),
+
+  createPagamentoParcelado: (obraId: string, data: CreateObraPagamentoParceladoRequest) =>
+    api
+      .post<PagamentoResponse[]>(`/obras/${obraId}/pagamentos/parcelado`, data)
+      .then((r) => r.data),
 
   addImage: (obraId: string, data: CreateAttachmentRequest) =>
     api

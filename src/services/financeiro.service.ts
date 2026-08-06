@@ -4,6 +4,7 @@ import type {
   CreateMovimentacaoRequest,
   PagamentoResponse,
   CreatePagamentoRequest,
+  CreatePagamentoParceladoRequest,
   UpdatePagamentoRequest,
   ListMovimentacoesParams,
   ListPagamentosParams,
@@ -54,11 +55,16 @@ export const financeiroService = {
   createPagamento: (data: CreatePagamentoRequest) =>
     api.post<PagamentoResponse>("/financeiro/pagamentos", data).then((r) => r.data),
 
+  createPagamentoParcelado: (data: CreatePagamentoParceladoRequest) =>
+    api.post<PagamentoResponse[]>("/financeiro/pagamentos/parcelado", data).then((r) => r.data),
+
   updatePagamento: (id: string, data: UpdatePagamentoRequest) =>
     api.put<PagamentoResponse>(`/financeiro/pagamentos/${id}`, data).then((r) => r.data),
 
-  deletePagamento: (id: string) =>
-    api.delete<{ message: string }>(`/financeiro/pagamentos/${id}`).then((r) => r.data),
+  deletePagamento: (id: string, scope: "self" | "parcelamento" = "self") =>
+    api
+      .delete<{ message: string }>(`/financeiro/pagamentos/${id}`, { params: { scope } })
+      .then((r) => r.data),
 
   payPagamento: (id: string) =>
     api.patch<MovimentacaoResponse>(`/financeiro/pagamentos/${id}/pay`).then((r) => r.data),

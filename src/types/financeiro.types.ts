@@ -47,6 +47,9 @@ export interface PagamentoResponse {
   created_by_name?: string;
   created_by_engineer: boolean;
   created_at?: string;
+  parcelamento_id?: string;
+  parcela_numero?: number;
+  parcela_total?: number;
 }
 
 export interface CreatePagamentoRequest {
@@ -60,6 +63,27 @@ export interface CreatePagamentoRequest {
   diarist_id?: string;
 }
 
+export interface CreatePagamentoParceladoRequest {
+  title: string;
+  details: string;
+  valor: string;
+  classe: MovClass;
+  data_agendada: string;
+  parcelas: number;
+  payment_cods?: (string | null)[];
+  obra_id?: string;
+  diarist_id?: string;
+}
+
+export interface CreateObraPagamentoParceladoRequest {
+  title: string;
+  details: string;
+  valor: string;
+  data_agendada: string;
+  parcelas: number;
+  payment_cods: (string | null)[];
+}
+
 export interface UpdatePagamentoRequest {
   title?: string;
   details?: string;
@@ -68,6 +92,7 @@ export interface UpdatePagamentoRequest {
   data_agendada?: string;
   payment_cod?: string;
   obra_id?: string;
+  apply_to?: "self" | "future";
 }
 
 export interface ListMovimentacoesParams {
@@ -126,6 +151,7 @@ export interface CreatePagamentoAttachmentRequest {
   file_path: string;
   file_name: string;
   content_type: string;
+  replicate_parcelamento?: boolean;
 }
 
 export interface BaixaLoteRequest {

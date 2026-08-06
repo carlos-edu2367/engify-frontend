@@ -18,6 +18,13 @@ export const movimentacaoSchema = z.object({
   obra_id: z.string().optional(),
 });
 
+const parcelasField = z.coerce
+  .number()
+  .int("Informe um numero inteiro de parcelas")
+  .min(1, "Minimo 1")
+  .max(36, "Maximo 36 parcelas")
+  .default(1);
+
 export const pagamentoSchema = z.object({
   title: z.string().min(3, "Titulo e obrigatorio"),
   details: z.string().optional(),
@@ -26,15 +33,24 @@ export const pagamentoSchema = z.object({
   data_agendada: z.string().min(1, "Data e obrigatoria"),
   payment_cod: z.string().optional(),
   obra_id: z.string().nullish(),
+  parcelas: parcelasField,
+  payment_cods: z.array(z.string().nullish()).optional(),
 });
 
-export const obraPagamentoSchema = z.object({
-  title: z.string().min(3, "Titulo e obrigatorio"),
-  details: z.string().min(3, "Detalhes sao obrigatorios"),
-  valor: moneyValue,
-  data_agendada: z.string().min(1, "Data e obrigatoria"),
-  payment_cod: z.string().min(3, "Codigo PIX e obrigatorio"),
-});
+export const obraPagamentoSchema = z
+  .object({
+    title: z.string().min(3, "Titulo e obrigatorio"),
+    details: z.string().min(3, "Detalhes sao obrigatorios"),
+    valor: moneyValue,
+    data_agendada: z.string().min(1, "Data e obrigatoria"),
+    payment_cod: z.string().optional(),
+    parcelas: parcelasField,
+    payment_cods: z.array(z.string().nullish()).optional(),
+  })
+  .refine((v) => (v.payment_cod ?? "").trim().length >= 3, {
+    message: "Codigo PIX e obrigatorio",
+    path: ["payment_cod"],
+  });
 
 export type MovimentacaoFormValues = z.infer<typeof movimentacaoSchema>;
 export type PagamentoFormValues = z.infer<typeof pagamentoSchema>;

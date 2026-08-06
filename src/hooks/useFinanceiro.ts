@@ -3,6 +3,7 @@ import { financeiroService } from "@/services/financeiro.service";
 import type {
   CreateMovimentacaoRequest,
   CreatePagamentoRequest,
+  CreatePagamentoParceladoRequest,
   UpdatePagamentoRequest,
   CreateMovimentacaoAttachmentRequest,
   CreatePagamentoAttachmentRequest,
@@ -50,6 +51,18 @@ export function useCreatePagamento() {
   });
 }
 
+export function useCreatePagamentoParcelado() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreatePagamentoParceladoRequest) =>
+      financeiroService.createPagamentoParcelado(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financeiro"] });
+      queryClient.invalidateQueries({ queryKey: ["pagamentos"] });
+    },
+  });
+}
+
 export function useUpdatePagamento() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -62,7 +75,8 @@ export function useUpdatePagamento() {
 export function useDeletePagamento() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => financeiroService.deletePagamento(id),
+    mutationFn: ({ id, scope }: { id: string; scope?: "self" | "parcelamento" }) =>
+      financeiroService.deletePagamento(id, scope ?? "self"),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financeiro"] });
       queryClient.invalidateQueries({ queryKey: ["pagamentos"] });

@@ -75,6 +75,7 @@ export function PagamentosTab({ obraId }: PagamentosTabProps) {
     mutationFn: async (values: ObraPagamentoFormValues) => {
       const pag = await obrasService.createPagamento(obraId, {
         ...values,
+        payment_cod: values.payment_cod ?? "",
         data_agendada: formatISO(parseISO(values.data_agendada)),
       });
       if (pagFiles.length) {
