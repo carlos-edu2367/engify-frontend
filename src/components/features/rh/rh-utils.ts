@@ -107,16 +107,42 @@ export function buildEmptyEmployeeForms(): EmployeeFormsState {
   };
 }
 
+/**
+ * As tres funcoes abaixo traduzem o que o funcionario digita — uma data e uma
+ * hora de parede, no fuso do dispositivo dele — para o instante UTC que o
+ * backend persiste. Anexar "Z" direto na string, como era feito antes,
+ * carimbava a hora local como UTC e fazia o painel do RH exibir tres horas a
+ * menos e, na data de referencia, o dia anterior.
+ */
 export function buildDateStart(value: string) {
-  return `${value}T00:00:00.000Z`;
+  return new Date(`${value}T00:00:00`).toISOString();
 }
 
 export function buildDateEnd(value: string) {
-  return `${value}T23:59:59.000Z`;
+  return new Date(`${value}T23:59:59.999`).toISOString();
 }
 
 export function combineDateAndTime(date: string, time: string) {
-  return `${date}T${time}:00.000Z`;
+  return new Date(`${date}T${time}:00`).toISOString();
+}
+
+/** "seg., 10/08/2026 às 17:48" — data e hora sempre juntas, para nao restar ambiguidade. */
+export function formatDataHora(iso: string) {
+  const data = new Date(iso);
+  if (Number.isNaN(data.getTime())) {
+    return iso;
+  }
+  const dia = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(data);
+  const hora = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(data);
+  return `${dia} às ${hora}`;
 }
 
 export function getCurrentPosition(): Promise<GeolocationPosition> {
