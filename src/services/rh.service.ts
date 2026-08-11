@@ -326,6 +326,23 @@ export const rhService = {
       })
       .then((r) => r.data),
 
+  exportarCartoesPonto: (params: { start: string; end: string; funcionario_id?: string }) =>
+    api
+      .get("/rh/ponto/export", {
+        params: {
+          start: params.start,
+          end: params.end,
+          ...(params.funcionario_id ? { funcionario_id: params.funcionario_id } : {}),
+        },
+        responseType: "blob",
+      })
+      .then((r) => ({
+        blob: r.data as Blob,
+        filename:
+          /filename="([^"]+)"/.exec(String(r.headers["content-disposition"] ?? ""))?.[1] ??
+          `cartoes-ponto-${params.start}-a-${params.end}.xlsx`,
+      })),
+
   excluirPonto: (id: string, motivo: string) =>
     api
       .delete<{ message: string }>(`/rh/ponto/registros/${id}`, { data: { motivo } })

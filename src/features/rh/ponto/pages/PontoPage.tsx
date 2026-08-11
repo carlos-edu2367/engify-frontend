@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { AlertTriangle, Clock3, ListFilter } from "lucide-react";
+import { AlertTriangle, Clock3, Download, ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { formatRhDate } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { classifyDayPunches, intervalRoles, punchRoleLabel } from "../../shared/utils/punchClassification";
 import { DayEditorDialog } from "../components/DayEditorDialog";
+import { ExportarCartoesDialog } from "../components/ExportarCartoesDialog";
 import { useAtualizarPonto, useExcluirPonto, usePontoDiaDetalhe, usePontos } from "../hooks/usePontoOperacional";
 
 const statusOptions: Array<{ value: RhStatusPonto | "all"; label: string }> = [
@@ -50,6 +51,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
   const [editTarget, setEditTarget] = useState<RhRegistroPonto | null>(null);
   const [editTime, setEditTime] = useState("");
   const [dayEditorOpen, setDayEditorOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const atualizarPontoMutation = useAtualizarPonto();
   const excluirPontoMutation = useExcluirPonto();
   const page = Number(searchParams.get("page") ?? "1");
@@ -137,6 +139,10 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
               <Button variant="outline" asChild><Link to={rhPaths.pontoInconsistencias}>Inconsistencias</Link></Button>
               <Button variant="outline" asChild><Link to={rhPaths.pontoAjustes}>Ajustes</Link></Button>
               <Button variant="outline" asChild><Link to={rhPaths.pontoCalendario}>Calendario</Link></Button>
+              <Button type="button" onClick={() => setExportOpen(true)}>
+                <Download className="mr-2 size-4" />
+                Exportar XLSX
+              </Button>
             </div>
           }
         />
@@ -357,6 +363,14 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        <ExportarCartoesDialog
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          funcionarioId={employee?.id}
+          funcionarioNome={employee?.nome}
+          startInicial={start || undefined}
+          endInicial={end || undefined}
+        />
       </div>
     </PermissionGate>
   );
