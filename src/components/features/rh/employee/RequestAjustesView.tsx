@@ -7,10 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { getApiErrorMessage } from "@/lib/utils";
 import { rhService } from "@/services/rh.service";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmployeeRequestCard, EmployeeTimeline, Field } from "../rh-shared";
-import { buildDateEnd, buildDateStart, combineDateAndTime } from "../rh-utils";
+import { buildDateEnd, buildDateStart, formatDataHora } from "../rh-utils";
 import {
   AJUSTE_HORARIO_OPTIONS,
+  buildAjustePayload,
   getSelectedScheduleFields,
   getWizardError,
   isWizardStepValid,
@@ -52,6 +54,7 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedScheduleFields, setSelectedScheduleFields] = useState<ScheduleField[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const meusAjustesQuery = useQuery({
     queryKey: ["rh-meus-ajustes", startDate, endDate],
@@ -65,24 +68,9 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
   });
 
   const createAjusteMutation = useMutation({
-    mutationFn: () =>
-      rhService.createAjuste({
-        data_referencia: buildDateStart(form.dataReferencia),
-        justificativa: form.justificativa,
-        hora_entrada_solicitada: form.entrada
-          ? combineDateAndTime(form.dataReferencia, form.entrada)
-          : null,
-        hora_saida_solicitada: form.saida
-          ? combineDateAndTime(form.dataReferencia, form.saida)
-          : null,
-        hora_intervalo_inicio_solicitada: form.intervaloInicio
-          ? combineDateAndTime(form.dataReferencia, form.intervaloInicio)
-          : null,
-        hora_intervalo_fim_solicitada: form.intervaloFim
-          ? combineDateAndTime(form.dataReferencia, form.intervaloFim)
-          : null,
-      }),
+    mutationFn: () => rhService.createAjuste(buildAjustePayload(form)),
     onSuccess: () => {
+      setConfirmOpen(false);
       queryClient.invalidateQueries({ queryKey: ["rh-me-resumo"] });
       queryClient.invalidateQueries({ queryKey: ["rh-meus-ajustes"] });
       toast.success("Solicitação enviada. O RH irá analisar o pedido.");
@@ -136,10 +124,19 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const reviewItems = selectedFields.map((field) => ({
-    label: fieldLabels[field],
-    value: form[field],
-  }));
+  const payload = useMemo(() => buildAjustePayload(form), [form]);
+  const payloadPorCampo: Record<ScheduleField, string | null> = {
+    entrada: payload.hora_entrada_solicitada,
+    intervaloInicio: payload.hora_intervalo_inicio_solicitada,
+    intervaloFim: payload.hora_intervalo_fim_solicitada,
+    saida: payload.hora_saida_solicitada,
+  };
+  const reviewItems = selectedFields
+    .map((field) => ({ label: fieldLabels[field], iso: payloadPorCampo[field] }))
+    .filter((item): item is { label: string; iso: string } => !!item.iso);
+  const diaRevisado = form.dataReferencia
+    ? formatDataHora(payload.data_referencia).split(" às ")[0]
+    : "Não informado";
 
   const getScheduleButtonLabel = (label: string, field: ScheduleField) => {
     const selected = isFieldSelected(field);
@@ -176,7 +173,7 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
         description={currentStep.description}
         actionLabel={createAjusteMutation.isPending ? "Enviando..." : "Enviar ajuste"}
         actionDisabled={createAjusteMutation.isPending || !canReview}
-        onSubmit={() => createAjusteMutation.mutate()}
+        onSubmit={() => setConfirmOpen(true)}
         footer={
           <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -192,7 +189,7 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
                   {step === 2 ? "Revisar solicitação" : "Continuar"}
                 </Button>
               ) : (
-                <Button onClick={() => createAjusteMutation.mutate()} disabled={!canReview || createAjusteMutation.isPending}>
+                <Button onClick={() => setConfirmOpen(true)} disabled={!canReview || createAjusteMutation.isPending}>
                   {createAjusteMutation.isPending ? "Enviando..." : "Enviar solicitação"}
                 </Button>
               )}
@@ -348,36 +345,73 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
 
             <div className="rounded-lg border bg-muted/20 p-4">
               <p className="text-sm font-semibold">Revisão da solicitação</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                É exatamente isto que o RH vai receber.
+              </p>
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase text-muted-foreground">Dia</p>
-                  <p className="mt-1 text-sm font-medium">
-                    {form.dataReferencia
-                      ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
-                          new Date(`${form.dataReferencia}T00:00:00`)
-                        )
-                      : "Não informado"}
-                  </p>
+                  <p className="mt-1 text-sm font-medium">{diaRevisado}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase text-muted-foreground">Horários selecionados</p>
+                  <p className="text-xs uppercase text-muted-foreground">Horários solicitados</p>
                   <div className="mt-1 space-y-1 text-sm">
-                    {reviewItems.map((item) => (
-                      <p key={item.label}>
-                        <span className="font-medium">{item.label}:</span> {item.value}
-                      </p>
-                    ))}
+                    {reviewItems.length === 0 ? (
+                      <p className="text-muted-foreground">Nenhum horário informado</p>
+                    ) : (
+                      reviewItems.map((item) => (
+                        <p key={item.label}>
+                          <span className="font-medium">{item.label}:</span> {formatDataHora(item.iso)}
+                        </p>
+                      ))
+                    )}
                   </div>
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-xs uppercase text-muted-foreground">Justificativa</p>
-                  <p className="mt-1 text-sm">{form.justificativa || "Não informada"}</p>
+                  <p className="mt-1 text-sm">{payload.justificativa || "Não informada"}</p>
                 </div>
               </div>
             </div>
           </div>
         ) : null}
       </EmployeeRequestCard>
+      <Dialog open={confirmOpen} onOpenChange={(open) => !open && setConfirmOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar solicitação</DialogTitle>
+            <DialogDescription>
+              O RH vai analisar exatamente os valores abaixo. Confira antes de enviar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">Dia</p>
+              <p className="font-medium">{diaRevisado}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">Horários</p>
+              {reviewItems.map((item) => (
+                <p key={item.label}>
+                  <span className="font-medium">{item.label}:</span> {formatDataHora(item.iso)}
+                </p>
+              ))}
+            </div>
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">Justificativa</p>
+              <p>{payload.justificativa}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={createAjusteMutation.isPending}>
+              Voltar e corrigir
+            </Button>
+            <Button onClick={() => createAjusteMutation.mutate()} disabled={createAjusteMutation.isPending}>
+              {createAjusteMutation.isPending ? "Enviando..." : "Confirmar e enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <EmployeeTimeline items={meusAjustesQuery.data?.items ?? []} loading={meusAjustesQuery.isLoading} type="ajuste" />
     </>
   );

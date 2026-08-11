@@ -1,3 +1,5 @@
+import { buildDateStart, combineDateAndTime } from "../rh-utils";
+
 export type RequestAjustesWizardValues = {
   dataReferencia?: string;
   justificativa?: string;
@@ -89,4 +91,34 @@ export function getWizardError(step: 1 | 2 | 3, values: RequestAjustesWizardValu
   }
 
   return null;
+}
+
+export type AjustePayload = {
+  data_referencia: string;
+  justificativa: string;
+  hora_entrada_solicitada: string | null;
+  hora_saida_solicitada: string | null;
+  hora_intervalo_inicio_solicitada: string | null;
+  hora_intervalo_fim_solicitada: string | null;
+};
+
+/**
+ * Fonte unica do que sera enviado ao backend. A revisao e o dialogo de
+ * confirmacao leem daqui, e nao dos campos crus do formulario: era exatamente
+ * essa diferenca que fazia a tela mostrar 17:48 enquanto o payload dizia
+ * outra coisa.
+ */
+export function buildAjustePayload(values: RequestAjustesWizardValues): AjustePayload {
+  const data = values.dataReferencia ?? "";
+  const hora = (value: string | undefined) =>
+    hasText(value) ? combineDateAndTime(data, (value as string).trim()) : null;
+
+  return {
+    data_referencia: buildDateStart(data),
+    justificativa: (values.justificativa ?? "").trim(),
+    hora_entrada_solicitada: hora(values.entrada),
+    hora_saida_solicitada: hora(values.saida),
+    hora_intervalo_inicio_solicitada: hora(values.intervaloInicio),
+    hora_intervalo_fim_solicitada: hora(values.intervaloFim),
+  };
 }

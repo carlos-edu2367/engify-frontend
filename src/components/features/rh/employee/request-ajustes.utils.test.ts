@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   AJUSTE_HORARIO_OPTIONS,
+  buildAjustePayload,
   getSelectedScheduleFields,
   getWizardError,
   hasSelectedSchedule,
@@ -46,5 +47,33 @@ describe("request-ajustes wizard utilities", () => {
       "Volta do intervalo",
       "Saída",
     ]);
+  });
+});
+
+describe("buildAjustePayload", () => {
+  it("monta o payload com instantes UTC derivados da hora local", () => {
+    const payload = buildAjustePayload({
+      dataReferencia: "2026-08-10",
+      justificativa: "Esqueci de registrar a saida.",
+      saida: "17:48",
+    });
+
+    expect(payload.data_referencia).toBe("2026-08-10T03:00:00.000Z");
+    expect(payload.hora_saida_solicitada).toBe("2026-08-10T20:48:00.000Z");
+    expect(payload.hora_entrada_solicitada).toBeNull();
+    expect(payload.hora_intervalo_inicio_solicitada).toBeNull();
+    expect(payload.hora_intervalo_fim_solicitada).toBeNull();
+  });
+
+  it("preenche o par do intervalo quando informado", () => {
+    const payload = buildAjustePayload({
+      dataReferencia: "2026-08-10",
+      justificativa: "Intervalo errado.",
+      intervaloInicio: "12:00",
+      intervaloFim: "13:00",
+    });
+
+    expect(payload.hora_intervalo_inicio_solicitada).toBe("2026-08-10T15:00:00.000Z");
+    expect(payload.hora_intervalo_fim_solicitada).toBe("2026-08-10T16:00:00.000Z");
   });
 });

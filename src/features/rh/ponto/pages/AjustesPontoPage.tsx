@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatDataHora } from "@/components/features/rh/rh-utils";
 import type { RhAjustePonto, RhFuncionarioListItem, RhPontoDiaDetalhe, RhStatusAjuste } from "@/types/rh.types";
 import { EmployeeSearchSelect } from "../../shared/components/EmployeeSearchSelect";
 import { PermissionGate } from "../../shared/components/PermissionGate";
@@ -55,13 +56,13 @@ export function AjustesPontoPage() {
         return <div className="min-w-[220px]"><p className="font-medium">{display.title}</p><p className="text-xs text-muted-foreground">{display.subtitle}</p></div>;
       } },
       { key: "data", header: "Dia", render: (item) => formatRhDate(item.data_referencia) },
-      { key: "entrada", header: "Entrada", render: (item) => item.hora_entrada_solicitada ? new Date(item.hora_entrada_solicitada).toLocaleTimeString("pt-BR") : "-" },
+      { key: "entrada", header: "Entrada", render: (item) => item.hora_entrada_solicitada ? formatDataHora(item.hora_entrada_solicitada) : "-" },
       { key: "intervalo", header: "Intervalo", render: (item) =>
         item.hora_intervalo_inicio_solicitada && item.hora_intervalo_fim_solicitada
-          ? `${new Date(item.hora_intervalo_inicio_solicitada).toLocaleTimeString("pt-BR")} - ${new Date(item.hora_intervalo_fim_solicitada).toLocaleTimeString("pt-BR")}`
+          ? `${formatDataHora(item.hora_intervalo_inicio_solicitada)} - ${formatDataHora(item.hora_intervalo_fim_solicitada)}`
           : "-",
       },
-      { key: "saida", header: "Saída", render: (item) => item.hora_saida_solicitada ? new Date(item.hora_saida_solicitada).toLocaleTimeString("pt-BR") : "-" },
+      { key: "saida", header: "Saída", render: (item) => item.hora_saida_solicitada ? formatDataHora(item.hora_saida_solicitada) : "-" },
       { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status} /> },
       {
         key: "actions",
@@ -277,7 +278,7 @@ function AjusteComparativo({
             {solicitado.map((row) => (
               <div key={row.label} className="flex items-center justify-between gap-2 text-sm">
                 <span>{row.label}</span>
-                <span>{new Date(row.value as string).toLocaleTimeString("pt-BR")}</span>
+                <span>{formatDataHora(row.value as string)}</span>
               </div>
             ))}
           </div>
