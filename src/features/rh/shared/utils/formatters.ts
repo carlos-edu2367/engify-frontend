@@ -52,6 +52,19 @@ export function formatRhDate(value?: string | null) {
   }).format(date);
 }
 
+export function formatRhTime(value?: string | null) {
+  if (!value) {
+    return "--:--";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "--:--";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
 export function maskCpf(value?: string | null) {
   const digits = (value ?? "").replace(/\D/g, "");
   if (digits.length < 11) {

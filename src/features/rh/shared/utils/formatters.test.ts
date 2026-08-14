@@ -3,6 +3,7 @@ import {
   formatCompetence,
   formatDuracao,
   formatRhDate,
+  formatRhTime,
   maskCpf,
   statusBadgeVariant,
   statusLabel,
@@ -43,6 +44,15 @@ describe("rh formatters", () => {
 
   it("keeps invalid dates visible instead of throwing", () => {
     expect(formatRhDate("sem-data")).toBe("sem-data");
+  });
+
+  it("formats a valid timestamp as hour and minute", () => {
+    expect(formatRhTime("2026-08-13T14:30:00Z")).toMatch(/\d{2}:\d{2}/);
+  });
+
+  it("falls back instead of throwing when the timestamp is missing or invalid", () => {
+    expect(formatRhTime(undefined)).toBe("--:--");
+    expect(formatRhTime("sem-data")).toBe("--:--");
   });
 
   it("builds the default weekday schedule from 08:00 to 18:00 with lunch break", () => {

@@ -44,8 +44,24 @@ function descreverDia(dia: RhResumoDiaPonto): string {
   }
 }
 
-function formatDiaSemana(value: string): string {
+/**
+ * Datas do resumo chegam como "AAAA-MM-DD". Se vier vazia ou fora do padrao, o
+ * Intl lanca RangeError durante o render e a rota /meu-rh inteira cai no
+ * errorElement — por isso o parse e checado antes de formatar.
+ */
+function parseDiaLocal(value: string | null | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
   const data = new Date(`${value}T00:00:00`);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function formatDiaSemana(value: string): string {
+  const data = parseDiaLocal(value);
+  if (!data) {
+    return value || "Data indisponivel";
+  }
   const rotulo = new Intl.DateTimeFormat("pt-BR", {
     weekday: "short",
     day: "2-digit",
@@ -55,7 +71,20 @@ function formatDiaSemana(value: string): string {
 }
 
 function formatPeriodo(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date(`${value}T00:00:00`));
+  const data = parseDiaLocal(value);
+  if (!data) {
+    return value || "--/--/----";
+  }
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(data);
+}
+
+/**
+ * Novas situacoes de dia podem chegar antes desta tela conhecer o rotulo delas.
+ * Sem esse fallback, `situacaoBadge[desconhecida]` e undefined e ler `.variant`
+ * derruba o card inteiro.
+ */
+export function resolveSituacaoBadge(situacao: RhSituacaoDia): { label: string; variant: BadgeVariant } {
+  return situacaoBadge[situacao] ?? { label: String(situacao ?? "Sem informacao"), variant: "secondary" };
 }
 
 function contar(valor: number, singular: string, plural: string): string {
@@ -68,7 +97,7 @@ function horasParaMinutos(valor: string): number {
 }
 
 function DayRow({ dia }: { dia: RhResumoDiaPonto }) {
-  const badge = situacaoBadge[dia.situacao];
+  const badge = resolveSituacaoBadge(dia.situacao);
   return (
     <div className="flex flex-col gap-1 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
       <div className="flex items-center gap-2">

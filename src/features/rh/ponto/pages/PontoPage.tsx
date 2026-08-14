@@ -19,7 +19,7 @@ import { RhMapPreview } from "../../shared/components/RhMapPreview";
 import { RhPageHeader } from "../../shared/components/RhPageHeader";
 import { RhStatusBadge } from "../../shared/components/RhStatusBadge";
 import { employeeDisplay } from "../../shared/utils/display";
-import { formatRhDate } from "../../shared/utils/formatters";
+import { formatRhDate, formatRhTime } from "../../shared/utils/formatters";
 import { rhPaths } from "../../shared/utils/paths";
 import { classifyDayPunches, intervalRoles, punchRoleLabel } from "../../shared/utils/punchClassification";
 import { DayEditorDialog } from "../components/DayEditorDialog";
@@ -120,7 +120,7 @@ export function PontoPage({ forcedStatus, title = "Ponto" }: { forcedStatus?: Rh
       {
         key: "hora",
         header: "Horario",
-        render: (item) => new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.timestamp)),
+        render: (item) => formatRhTime(item.timestamp),
       },
       { key: "status", header: "Status", render: (item) => <RhStatusBadge status={item.status} /> },
       { key: "actions", header: "Detalhe", render: (item) => <Button variant="outline" size="sm" onClick={() => setSelected(item)}>Abrir</Button> },

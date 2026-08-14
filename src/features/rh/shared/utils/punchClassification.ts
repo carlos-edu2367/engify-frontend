@@ -29,6 +29,12 @@ export function classifyDayPunches(registros: RhRegistroPonto[]): Map<string, Pu
   const roles = new Map<string, PunchRole>();
   const byDay = new Map<string, RhRegistroPonto[]>();
 
+  // Roda no render do historico de ponto: um payload fora do formato esperado
+  // nao pode derrubar a rota inteira.
+  if (!Array.isArray(registros)) {
+    return roles;
+  }
+
   for (const registro of registros) {
     const key = `${registro.funcionario_id}:${localDayKey(registro.timestamp)}`;
     const bucket = byDay.get(key) ?? [];

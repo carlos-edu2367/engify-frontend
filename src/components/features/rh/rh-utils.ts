@@ -114,16 +114,26 @@ export function buildEmptyEmployeeForms(): EmployeeFormsState {
  * carimbava a hora local como UTC e fazia o painel do RH exibir tres horas a
  * menos e, na data de referencia, o dia anterior.
  */
+/**
+ * toISOString lanca RangeError em data invalida, e o payload do ajuste e
+ * remontado a cada render — inclusive com o formulario ainda vazio. Devolver
+ * string vazia mantem a tela de pe; o envio so acontece com o passo validado.
+ */
+function toInstant(local: string) {
+  const data = new Date(local);
+  return Number.isNaN(data.getTime()) ? "" : data.toISOString();
+}
+
 export function buildDateStart(value: string) {
-  return new Date(`${value}T00:00:00`).toISOString();
+  return toInstant(`${value}T00:00:00`);
 }
 
 export function buildDateEnd(value: string) {
-  return new Date(`${value}T23:59:59.999`).toISOString();
+  return toInstant(`${value}T23:59:59.999`);
 }
 
 export function combineDateAndTime(date: string, time: string) {
-  return new Date(`${date}T${time}:00`).toISOString();
+  return toInstant(`${date}T${time}:00`);
 }
 
 /** "seg., 10/08/2026 às 17:48" — data e hora sempre juntas, para nao restar ambiguidade. */
@@ -192,20 +202,37 @@ export function timelineSubtitle(item: RhAjustePonto | RhFerias | RhAtestado, ty
   return (item as RhAtestado).has_file ? "Documento anexado" : "Sem documento anexado";
 }
 
+/**
+ * Intl lanca RangeError quando recebe uma data invalida. Como esses helpers
+ * rodam durante o render da area do funcionario, um unico valor ausente ou
+ * fora do padrao derrubava a rota inteira no errorElement. Formata quando da,
+ * devolve um texto legivel quando nao da.
+ */
+function safeFormat(value: string | null | undefined, options: Intl.DateTimeFormatOptions) {
+  if (!value) {
+    return "Nao informado";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat("pt-BR", options).format(date);
+}
+
 export function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return safeFormat(value, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+  });
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return safeFormat(value, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  }).format(new Date(value));
+  });
 }

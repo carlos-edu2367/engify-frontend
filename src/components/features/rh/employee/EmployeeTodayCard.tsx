@@ -4,8 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatDuracao } from "@/features/rh/shared/utils/formatters";
 import type { RhPontoHoje } from "@/types/rh.types";
 
-function formatHora(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+function formatHora(value: string | null | undefined): string {
+  if (!value) {
+    return "--:--";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "--:--";
+  }
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
 function tipoLabel(tipo: string): string {
@@ -33,6 +40,8 @@ export function EmployeeTodayCard({ hoje }: { hoje?: RhPontoHoje | null }) {
     );
   }
 
+  const batidas = Array.isArray(hoje.batidas) ? hoje.batidas : [];
+
   const resumo = hoje.jornada_aberta
     ? "Jornada em aberto"
     : hoje.minutos_trabalhados != null
@@ -49,12 +58,12 @@ export function EmployeeTodayCard({ hoje }: { hoje?: RhPontoHoje | null }) {
         <CardDescription>{resumo}</CardDescription>
       </CardHeader>
       <CardContent>
-        {hoje.batidas.length === 0 ? (
+        {batidas.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum registro hoje ainda.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {hoje.batidas.map((batida) => (
-              <Badge key={batida.timestamp} variant="secondary">
+            {batidas.map((batida, index) => (
+              <Badge key={batida.timestamp ?? index} variant="secondary">
                 {formatHora(batida.timestamp)} {tipoLabel(batida.tipo)}
               </Badge>
             ))}
