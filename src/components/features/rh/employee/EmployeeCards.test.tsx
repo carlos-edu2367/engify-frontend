@@ -58,7 +58,7 @@ describe("EmployeePointStateSection", () => {
     expect(() => renderToStaticMarkup(<EmployeePointStateSection state={state} />)).not.toThrow();
   });
 
-  // Um dia com situacao desconhecida so aparece depois de "Ver todos os 7 dias",
+  // Um dia com situacao desconhecida so aparece depois de "Ver todos os dias do mês",
   // entao o render inicial nao cobre esse caminho — o helper cobre.
   it("resolves a badge for a situacao the frontend does not know yet", () => {
     expect(() => resolveSituacaoBadge("compensado" as never)).not.toThrow();

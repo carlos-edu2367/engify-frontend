@@ -134,7 +134,7 @@ export function EmployeePointStateSection({ state }: { state?: RhEstadoPonto7Dia
     return (
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="text-xl">Seus últimos 7 dias</CardTitle>
+          <CardTitle className="text-xl">Seu mês atual</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
@@ -158,7 +158,7 @@ export function EmployeePointStateSection({ state }: { state?: RhEstadoPonto7Dia
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2 text-xl">
           <CalendarDays className="h-5 w-5" />
-          Seus últimos 7 dias
+          Seu mês atual
         </CardTitle>
         <CardDescription>
           De {formatPeriodo(state.inicio)} a {formatPeriodo(state.fim)} — não inclui o dia de hoje.
@@ -203,7 +203,7 @@ export function EmployeePointStateSection({ state }: { state?: RhEstadoPonto7Dia
                 className="w-full"
                 onClick={() => setMostrarTodos((atual) => !atual)}
               >
-                {mostrarTodos ? "Mostrar só os dias com pendência" : "Ver todos os 7 dias"}
+                {mostrarTodos ? "Mostrar só os dias com pendência" : "Ver todos os dias do mês"}
               </Button>
             )}
           </div>
