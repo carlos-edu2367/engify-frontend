@@ -2,7 +2,9 @@ const reloadMarker = "engify:chunk-reload-attempted";
 
 export function isDynamicImportFetchError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error ?? "");
-  return /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk \d+ failed|ChunkLoadError/i.test(message);
+  return /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Loading chunk \d+ failed|ChunkLoadError|Failed to load module script|Expected a JavaScript module script/i.test(
+    message
+  );
 }
 
 export function reloadOnceForUpdatedChunks() {

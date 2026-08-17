@@ -98,11 +98,13 @@ export function RequestAtestadosView({ startDate, endDate, status }: RequestAtes
                 <SelectValue placeholder="Selecione" />
               </SelectTrigger>
               <SelectContent>
-                {(tiposAtestadoQuery.data?.items ?? []).map((tipo) => (
-                  <SelectItem key={tipo.id} value={tipo.id}>
-                    {tipo.nome}
-                  </SelectItem>
-                ))}
+                {(tiposAtestadoQuery.data?.items ?? [])
+                  .filter((tipo) => !!tipo.id)
+                  .map((tipo) => (
+                    <SelectItem key={tipo.id} value={tipo.id}>
+                      {tipo.nome}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </Field>
@@ -136,6 +138,8 @@ export function RequestAtestadosView({ startDate, endDate, status }: RequestAtes
         items={meusAtestadosQuery.data?.items ?? []}
         loading={meusAtestadosQuery.isLoading}
         type="atestado"
+        isError={meusAtestadosQuery.isError}
+        onRetry={() => meusAtestadosQuery.refetch()}
         renderActions={(item) =>
           "has_file" in item && item.has_file ? (
             <Button variant="outline" size="sm" onClick={() => openAtestado(item.id)}>

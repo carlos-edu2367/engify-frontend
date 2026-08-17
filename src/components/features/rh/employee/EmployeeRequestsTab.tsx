@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppErrorBoundary } from "@/components/layout/AppErrorBoundary";
 import type { RhStatusAtestado } from "@/types/rh.types";
 import { Field } from "../rh-shared";
 import { RequestAjustesView } from "./RequestAjustesView";
@@ -67,15 +68,21 @@ export function EmployeeRequestsTab() {
         </TabsList>
 
         <TabsContent value="ajustes">
-          <RequestAjustesView startDate={requestStart} endDate={requestEnd} />
+          <AppErrorBoundary>
+            <RequestAjustesView startDate={requestStart} endDate={requestEnd} />
+          </AppErrorBoundary>
         </TabsContent>
 
         <TabsContent value="ferias">
-          <RequestFeriasView startDate={requestStart} endDate={requestEnd} />
+          <AppErrorBoundary>
+            <RequestFeriasView startDate={requestStart} endDate={requestEnd} />
+          </AppErrorBoundary>
         </TabsContent>
 
         <TabsContent value="atestados">
-          <RequestAtestadosView startDate={requestStart} endDate={requestEnd} status={atestadoStatus} />
+          <AppErrorBoundary>
+            <RequestAtestadosView startDate={requestStart} endDate={requestEnd} status={atestadoStatus} />
+          </AppErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

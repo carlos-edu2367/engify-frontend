@@ -2,6 +2,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isDynamicImportFetchError, reloadOnceForUpdatedChunks } from "@/lib/chunk-reload";
+import { APP_VERSION } from "@/lib/app-version";
 
 type Props = {
   children: ReactNode;
@@ -56,6 +57,11 @@ export class AppErrorBoundary extends Component<Props, State> {
                   ? "O aplicativo foi atualizado enquanto sua sessao ainda usava arquivos antigos. Vamos carregar a versao mais recente."
                   : "A tela encontrou um erro inesperado. Tente recarregar a pagina."}
               </p>
+              {!isChunkError && error.message ? (
+                <p className="break-words rounded bg-muted/50 p-2 font-mono text-xs text-muted-foreground">
+                  {error.message}
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-2">
@@ -67,6 +73,7 @@ export class AppErrorBoundary extends Component<Props, State> {
               Ir para o dashboard
             </Button>
           </div>
+          <p className="mt-4 text-xs text-muted-foreground/70">Versao {APP_VERSION}</p>
         </div>
       </div>
     );

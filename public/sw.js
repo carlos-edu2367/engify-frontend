@@ -1,4 +1,10 @@
-const CACHE_NAME = "engify-cache-v2";
+// v3: o rewrite catch-all da Vercel devolve o index.html (200, text/html) para
+// qualquer /assets/* que nao exista mais apos um deploy. A v2 cacheava essa
+// resposta sob a URL do .js/.css porque so checava response.ok — bastava um
+// dispositivo pedir um asset de build antigo para o cache ficar com HTML no
+// lugar de codigo. Subir a versao descarta esse cache envenenado na base
+// instalada; o guard de content-type abaixo evita que aconteca de novo.
+const CACHE_NAME = "engify-cache-v3";
 const ASSETS_TO_CACHE = [
   "/",
   "/index.html",
@@ -86,14 +92,24 @@ self.addEventListener("fetch", (event) => {
         })
     );
   } else {
-    const isCodeAsset = event.request.destination === "script" || event.request.destination === "style";
+    // O campo "destination" vem vazio em navegadores antigos/Safari; cair no
+    // ramo de imagem faria um JS/CSS ficar preso em cache-first para sempre.
+    // A extensão cobre esse caso mesmo sem destination confiável.
+    const isCodeAsset =
+      event.request.destination === "script" ||
+      event.request.destination === "style" ||
+      /\.(js|css)$/.test(url.pathname);
 
     if (isCodeAsset) {
       // Network-First para JS/CSS: evita que uma versão antiga do app fique presa no celular.
       event.respondWith(
         fetch(event.request)
           .then((response) => {
-            if (response.ok) {
+            const contentType = response.headers.get("content-type") || "";
+            // Um /assets/*.js inexistente é servido como o index.html (200,
+            // text/html) pelo rewrite catch-all da Vercel. Sem esse guard, essa
+            // resposta seria gravada em cache sob a URL do .js/.css.
+            if (response.ok && !contentType.includes("text/html")) {
               const responseClone = response.clone();
               caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
             }

@@ -3,6 +3,7 @@ import { PublicOnlyRoute } from "./PublicOnlyRoute";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { AppShell } from "@/components/layout/AppShell";
 import { RouteErrorElement } from "./RouteErrorElement";
+import { AppErrorBoundary } from "@/components/layout/AppErrorBoundary";
 
 // Public pages
 import { LandingPage } from "@/pages/public/LandingPage";
@@ -171,8 +172,22 @@ export const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
-      { path: "/meu-rh", element: <MeuRhPage /> },
-      { path: "/app/meu-rh", element: <MeuRhPage /> },
+      {
+        path: "/meu-rh",
+        element: (
+          <AppErrorBoundary>
+            <MeuRhPage />
+          </AppErrorBoundary>
+        ),
+      },
+      {
+        path: "/app/meu-rh",
+        element: (
+          <AppErrorBoundary>
+            <MeuRhPage />
+          </AppErrorBoundary>
+        ),
+      },
       ...rhAdminRouteElements.map((route) => ({
         path: route.path,
         element: (

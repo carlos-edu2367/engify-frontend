@@ -71,7 +71,13 @@ export function RequestFeriasView({ startDate, endDate }: RequestFeriasViewProps
           </Field>
         </div>
       </EmployeeRequestCard>
-      <EmployeeTimeline items={minhasFeriasQuery.data?.items ?? []} loading={minhasFeriasQuery.isLoading} type="ferias" />
+      <EmployeeTimeline
+        items={minhasFeriasQuery.data?.items ?? []}
+        loading={minhasFeriasQuery.isLoading}
+        type="ferias"
+        isError={minhasFeriasQuery.isError}
+        onRetry={() => minhasFeriasQuery.refetch()}
+      />
     </>
   );
 }

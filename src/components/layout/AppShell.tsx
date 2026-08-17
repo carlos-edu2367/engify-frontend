@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { ExpirationBanner } from "@/components/shared/ExpirationBanner";
+import { UpdateAvailableBanner } from "@/components/shared/UpdateAvailableBanner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ArkyWidget } from "@/features/arky/ArkyWidget";
 
@@ -16,6 +17,7 @@ export function AppShell() {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <UpdateAvailableBanner />
         <ExpirationBanner />
         <Header onOpenMobileNav={() => setMobileNavOpen(true)} />
 

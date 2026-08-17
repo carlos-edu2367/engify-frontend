@@ -2,6 +2,7 @@ import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isDynamicImportFetchError, reloadOnceForUpdatedChunks } from "@/lib/chunk-reload";
+import { APP_VERSION } from "@/lib/app-version";
 
 function errorDetail(error: unknown): string | null {
   if (error instanceof Error) {
@@ -56,6 +57,7 @@ export function RouteErrorElement() {
             Ir para o dashboard
           </Button>
         </div>
+        <p className="mt-4 text-xs text-muted-foreground/70">Versao {APP_VERSION}</p>
       </div>
     </div>
   );

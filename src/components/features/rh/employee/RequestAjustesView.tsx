@@ -412,7 +412,13 @@ export function RequestAjustesView({ startDate, endDate }: RequestAjustesViewPro
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <EmployeeTimeline items={meusAjustesQuery.data?.items ?? []} loading={meusAjustesQuery.isLoading} type="ajuste" />
+      <EmployeeTimeline
+        items={meusAjustesQuery.data?.items ?? []}
+        loading={meusAjustesQuery.isLoading}
+        type="ajuste"
+        isError={meusAjustesQuery.isError}
+        onRetry={() => meusAjustesQuery.refetch()}
+      />
     </>
   );
 }

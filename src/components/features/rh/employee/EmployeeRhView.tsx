@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AppErrorBoundary } from "@/components/layout/AppErrorBoundary";
 import { EmployeeOverviewTab } from "./EmployeeOverviewTab";
 import { EmployeeTimeTrackingTab } from "./EmployeeTimeTrackingTab";
 import { EmployeeRequestsTab } from "./EmployeeRequestsTab";
@@ -26,19 +27,27 @@ export function EmployeeRhView() {
         </TabsList>
 
         <TabsContent value="overview">
-          <EmployeeOverviewTab />
+          <AppErrorBoundary>
+            <EmployeeOverviewTab />
+          </AppErrorBoundary>
         </TabsContent>
 
         <TabsContent value="ponto">
-          <EmployeeTimeTrackingTab />
+          <AppErrorBoundary>
+            <EmployeeTimeTrackingTab />
+          </AppErrorBoundary>
         </TabsContent>
 
         <TabsContent value="requests">
-          <EmployeeRequestsTab />
+          <AppErrorBoundary>
+            <EmployeeRequestsTab />
+          </AppErrorBoundary>
         </TabsContent>
 
         <TabsContent value="holerites">
-          <EmployeePayslipsTab />
+          <AppErrorBoundary>
+            <EmployeePayslipsTab />
+          </AppErrorBoundary>
         </TabsContent>
       </Tabs>
     </div>

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { RhErrorState } from "@/features/rh/shared/components/RhErrorState";
 import { formatCurrency } from "@/lib/utils";
 import { classifyDayPunches, intervalRoles, punchRoleLabel } from "@/features/rh/shared/utils/punchClassification";
 import type { FuncionarioFormValues } from "@/lib/schemas/rh.schemas";
@@ -427,14 +428,22 @@ export function EmployeeTimeline({
   loading,
   type,
   renderActions,
+  isError,
+  onRetry,
 }: {
   items: RhAjustePonto[] | RhFerias[] | RhAtestado[];
   loading: boolean;
   type: "ajuste" | "ferias" | "atestado";
   renderActions?: (item: RhAjustePonto | RhFerias | RhAtestado) => ReactNode;
+  isError?: boolean;
+  onRetry?: () => void;
 }) {
   const title =
     type === "ajuste" ? "Minhas solicitacoes de ajuste" : type === "ferias" ? "Minhas ferias" : "Meus atestados";
+  // Uma resposta fora do formato esperado (proxy, erro serializado diferente)
+  // nao pode derrubar a tela inteira so porque .length/.map foram chamados
+  // num valor que nao e array.
+  const safeItems = Array.isArray(items) ? items : [];
 
   return (
     <Card>
@@ -448,7 +457,13 @@ export function EmployeeTimeline({
               <Skeleton key={index} className="h-16" />
             ))}
           </div>
-        ) : items.length === 0 ? (
+        ) : isError ? (
+          <RhErrorState
+            title="Nao foi possivel carregar suas solicitacoes"
+            description="Tente novamente em instantes."
+            onRetry={onRetry}
+          />
+        ) : safeItems.length === 0 ? (
           <EmptyState
             title="Nenhum item encontrado"
             description="Quando novos envios forem feitos, eles aparecerao aqui."
@@ -456,7 +471,7 @@ export function EmployeeTimeline({
           />
         ) : (
           <div className="space-y-3">
-            {items.map((item) => (
+            {safeItems.map((item) => (
               <div key={item.id} className="rounded-lg border p-4">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div>
